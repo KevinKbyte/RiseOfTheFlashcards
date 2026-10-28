@@ -1,4 +1,4 @@
-# Flashcards Fight Back
+# Rise of the Flashcards
 
 Seated mixed-reality flashcard combat for Meta Quest 3/3S. Humanity abandoned its flashcards, deciding they were boring and
 procrastinating on them all the time, so now the flashcards are on a rampage. Card-enemies emerge from your real walls (scene
