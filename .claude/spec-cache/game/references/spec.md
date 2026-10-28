@@ -13,10 +13,26 @@ Source plan: docs/plans/2026-10-28-vr-flashcard-game.md (D-, S-, M-IDs there).
 - RELAY-004: Deck validation server-side: body <=200 KB UTF-8 (413); valid JSON object root
   {version:1,title,cards:[{front,back,aliases?,reject?}]} (400); <=500 cards; non-empty trimmed front/back;
   >=4 distinct normalized backs; no rich-text tags (/<\/?[A-Za-z][^>]*>/) in any string (400).
-- RELAY-005: Rate limit POSTs only, 10 per 60 s per IP (both routes); 11th -> 429. GETs never rate-limited.
+- RELAY-005: Rate limit POSTs only, 10 per 60 s per IP (both routes); 11th -> 429. GETs never rate-limited
+  (**Superseded by RELAY-009**: GETs have their own bucket and never draw on this POST budget).
 - RELAY-006: RELAY_ENABLED !== "true" -> 503 on every route.
 - RELAY-007: The handler never passes request bodies or deck text to its logger.
 - RELAY-008: The Upstash token is read server-side only; it never appears in any file under the static page directory.
+- RELAY-009: GET /pair/<code> is rate-limited per client key in its own bucket, 120 per 60 s (121st -> 429, also for
+  unknown codes), separate from the POST bucket (Upstash prefix relay:ratelimit:poll vs relay:ratelimit) in both
+  directions, so 1/s headset polling is never throttled. relay/lib/http.mjs POLL_RATE_LIMIT = {limit:120, windowSec:60}.
+- RELAY-010: The stored and served deck is rebuilt from a field allowlist (version, title; per card front, back,
+  aliases, reject); unknown fields (incl. __proto__) are dropped silently, never a 400. Caps, 400 one past, accepted
+  at the cap: title <=120 chars, front/back <=200, each alias/reject entry <=100, <=10 aliases and <=10 rejects per
+  card. Rejection errors never echo deck content; a rejected deck is not stored.
+- RELAY-011: relay/lib/http.mjs clientKey = first x-vercel-forwarded-for entry, else x-real-ip, else first trimmed
+  x-forwarded-for entry, else "unknown" (blank header = absent). readBody refuses a declared Content-Length >204800
+  with 413 before reading the body (undeclared or <=204800: read normally). A throwing POST or GET rate limiter
+  -> 503 (fail closed: nothing stored, no body or deck text logged).
+- RELAY-012: relay/vercel.json rewrites /pair -> /api/pair and /pair/:code -> /api/pair/:code; every route sends a CSP
+  (default-src 'self', no inline script), X-Content-Type-Options: nosniff, Referrer-Policy: no-referrer. Paste page
+  script/style live in public/app.js + public/app.css (same-origin src, no inline event handlers). codeFromPath reads
+  /pair/<code> or /api/pair/<code>; one trailing slash on /pair/<code>/ is ignored for GET and POST.
 
 ## Normalization (plan D3/D6)
 
@@ -33,3 +49,9 @@ Source plan: docs/plans/2026-10-28-vr-flashcard-game.md (D-, S-, M-IDs there).
   .cs .meta .asmdef .asmref .cpp .h .hpp .c (Unreal *.Build.cs / *.Target.cs fall under .cs).
 - CRED-002: Exit 0 when all covered (including when no asset root exists), exit 1 listing each uncovered path,
   exit 2 when CREDITS.md is missing.
+
+## Repo hygiene
+
+- REPO-001: .gitignore ignores .claude/* except !.claude/spec-cache/ (local settings, worktrees stay out) and no
+  longer ignores Build/Android/ (UE Android manifest stays trackable); Binaries/, Intermediate/, Saved/, *.keystore,
+  *.apk, .env stay ignored; Config/DefaultEngine.ini and relay/vercel.json stay trackable.
