@@ -1,6 +1,9 @@
 # VR flashcard combat game: build plan (Meta VR Start 2026, Gaming / New Experience)
 Date: 2026-10-28. Status: hardened by /super-plan (2 adversary rounds + finisher). Source: offload run vr-flashcard-superplan-20261028-075442.
-GOAL: judged Quest 3/3S build; seated player slashes card-enemies by hand, answers by voice or silent orbs; live in "Competition" channel by Nov 18 12:00 PT, unchanged to ~Dec 11. Success = Devpost submitted + invite URL installs on a non-org account + >=60 fps on device + voice answer works after a fresh invite-URL install. Decision: stack at gate G1 (Nov 3, off the MemriPal Nov 4 deadline).
+GOAL: judged Quest 3/3S build (dev + test on Quest 2 only, A4 waiver; residuals A4-R1..R4); seated player slashes card-enemies by
+  hand, answers by voice or silent orbs; live in "Competition" channel by Nov 18 12:00 PT, unchanged to ~Dec 11. Success = Devpost
+  submitted + invite URL installs on a non-org account + >=60 fps on device (Quest 2; 3/3S unmeasured, A4-R1) + voice answer works
+  after a fresh invite-URL install. Decision: stack at gate G1 (Nov 3, off the MemriPal Nov 4 deadline).
 Out of scope: multiplayer, LLM grading, MemriPal or realm-of-recall code/assets (recon R19), VR (non-passthrough) arena,
   post-Dec-11 MemriPal import (separate branch, never the judged channel).
 Facts: R1-R20 in [2026-10-28-vr-flashcard-recon.md](2026-10-28-vr-flashcard-recon.md).
@@ -47,9 +50,17 @@ A2 Unreal Engine 5.7 + Meta XR plugins v207 (ISDK Unreal v207 lists UE 5.8/5.7; 
 A3 Wit.ai cloud (Unreal: direct HTTP, since voicesdk-unreal is archived, last push 2025-06-03, verified 2026-10-28; Unity fallback:
   Meta Voice SDK) p95 <=1.5 s end-of-speech -> transcript for 1-4 word answers on Quest (unverified; SP2 measures). Wit per-app rate
   limits unverified; SP2 records the published figures in ADR 0002.
-A4 Quest 2 is the dev device only; Quest 3/3S test is required before S12 (Kev borrow/buy; Kev may waive in writing, then logged as residual risk).
-  The UE spike needs a Quest by ~Nov 1 (Kev manual Quest access target pulled from Nov 12 to Nov 1, 2026-10-28).
-A5 Quest 2 passthrough + manual Space Setup is a dev stand-in for MRUK, not evidence of judge-room behaviour (S8 matrix covers the gap). On-device capture of passthrough is unverified (SP1 checks it).
+A4 WAIVED 2026-10-28 (Kev, verbatim: "i am not going to buy quest 3/3s, just going to use quest 2"). Quest 2 is the dev device and
+  the only test device; the former "Quest 3/3S test required before S12" step runs on Quest 2. The UE spike's Nov 1 device need is met
+  by the Quest 2 in hand. Judges still play on Quest 3/3S (M6), so each gap is logged residual risk, not a blocker:
+  A4-R1 perf: 3/3S (newer SoC) expected faster than Quest 2, so Quest 2 fps is the conservative bound, but 3/3S fps is unmeasured.
+  A4-R2 scene: Quest 2 greyscale passthrough + manual Space Setup vs 3/3S colour passthrough + their own Space Setup; judge-room MRUK
+    spawns are unverified (A5, S8).
+  A4-R3 FoV: Quest 2 FoV differs from both 3S (~96 deg) and 3 (~110 deg) (A12); D8 arc-edge readability on judge FoV is unverified (S11).
+  A4-R4 footage: no 3/3S colour-passthrough capture path; SP1 capture fallback is XR Simulator room footage only (D12).
+A5 Quest 2 passthrough + manual Space Setup is a dev stand-in for MRUK, not evidence of judge-room behaviour (S8 matrix covers the
+  gap). With no 3/3S (A4 waiver) it is also the only test rig: S8 runs on Quest 2; 3/3S colour passthrough + Space Setup stays
+  residual A4-R2. On-device capture of passthrough is unverified (SP1 checks it).
 A6 Repo (MIT) on a private GitHub remote with CI gitleaks from 2026-10-28; flipped public at G1 (Q2); privacy page + relay on
   Vercel free tier until Dec 11.
 A7 Video public (rules.md:141) on a new YouTube channel for the game, not Kev's personal channel (Q1; M17 still never links that one).
@@ -59,7 +70,8 @@ A10 Starter decks Kev-authored, no identifiable people or brands (R12). Q4 (2026
   disputed capitals; aliases e.g. Kyiv/Kiev), Basic Science (element names with one-word English answers, e.g. "Fe" -> "iron"); no
   Spanish. Topics locked by Oct 30 (SP2 recordings use real answers). Lint gate in S2.
 A11 Wit transcript API may return only one hypothesis; plan uses the top hypothesis only.
-A12 Quest 3S horizontal FoV ~96 deg, Quest 3 ~110 deg (recalled, not cited); D8 arc sized under both with margin; S11 verifies on a 3/3S.
+A12 Quest 3S horizontal FoV ~96 deg, Quest 3 ~110 deg (recalled, not cited); D8 arc sized under both with margin; S11 verifies on
+  Quest 2 only (A4 waiver; Quest 2 FoV differs again, residual A4-R3).
 A13 The Wit Client Access Token is public once the APK ships (invite URL is on the Devpost page, rules.md:140); it cannot be rotated during the freeze.
 A14 EditMode tests run on Mono in the Editor; the device runs IL2CPP with managed stripping. String.Normalize(FormKD) and char.GetUnicodeCategory on IL2CPP/Android are unverified (normalization tables may be stripped or unsupported), so EditMode green does not prove device matcher behaviour (S4 on-device self-test).
   Under Unreal (2026-10-28): A14 is N/A (C++ on desktop and device); kept for the Unity fallback.
@@ -213,8 +225,8 @@ S9 Nov 13 first-five-minutes tutorial (incl. per-player strike-slot calibration,
   pass, D15 Experimental pane + gaze-dwell select, on/off calibration of each D15 toggle, D16 phone-breakout intro (cuttable).
 S10 Nov 14 relay (D6) + automated function tests + headset pairing + imported-deck list + privacy policy final; relay circuit
   breaker (G0b); Upstash idle-archive check (free database must not be archived while idle through Dec 11).
-S11 Nov 15 perf + polish + CREDITS audit (script) + Quest 3/3S test (incl. FoV; target device in hand by Nov 1 for the UE spike,
-  A4, so S8 walls also run on a 3/3S; hard deadline Nov 15) + RC upload.
+S11 Nov 15 perf + polish + CREDITS audit (script) + device test on Quest 2 (incl. FoV at the arc edge; re-scoped from Quest 3/3S
+  by the A4 waiver, so the Nov 1 / Nov 15 3/3S device dates are void and S8 walls run on Quest 2; residuals A4-R1..R3) + RC upload.
 S12 Nov 16 buffer + RC invite install verify + fresh-install save check + video capture (D12).
 S13 Nov 17 video review + Devpost (rules.md:139-144,155; hackathon.md:80: tagline (140 chars), track Gaming, division (New Experience
   per G0a unless re-ruled; editable until Nov 18 12:00 PT, guidelines.md:101), invite URL (judges-only field if one exists), video link,
@@ -227,7 +239,9 @@ F Nov 18-Dec 11 freeze; weekly checks, each with its action: Wit utterance (fail
   Dec 11: Kev purges the Wit utterance log and Upstash keys per the privacy policy retention.
 
 ## Evaluation criteria (CRITERIA, countable, pre-code)
-SP1 release-signed install via invite URL on non-org account 1/1; versionCode 1 accepted 1/1; hands 2/2; passthrough on; >=72 fps empty scene; 10 s capture shows room 1/1 (fail -> plan Quest 3 or XR Simulator room footage before S12).
+SP1 (on Quest 2, A4) release-signed install via invite URL on non-org account 1/1; versionCode 1 accepted 1/1; hands 2/2; passthrough
+  on; >=72 fps empty scene; 10 s capture shows room 1/1 (fail -> plan XR Simulator room footage before S12; the Quest 3 option is
+  dropped by the A4 waiver, residual A4-R4).
 SP2 corpus = real deck answers, Kev + several TTS voices/accents as the second speaker (Q6; residual: TTS cleaner than real speech,
   logged in ADR 0002): >=27/30 correct accepts; >=15 wrong-answer/noise utterances with 0 false accepts; p95 <=1.5 s from end of
   speech; 0 first-word clips/30 (clip = transcript lacks the scripted first word); 0 crashes/30; burst 5 concurrent x 6 rounds executed
@@ -275,7 +289,9 @@ S10 round-trip 3/3 (headset shows code, page posts, deck in headset <=5 s after 
   bundle (grep); rich-text tags rendered literal 1/1; deck delete needs confirm and Undo restores 1/1; privacy page lists 7/7 (Wit
   audio+transcripts with retention, bystander speech, rate-limit IP keys with TTL, function logs without bodies, deck 15-min storage,
   scene data stays on device, deletion contact).
-S11 median >=72 fps, 1% low >=60 over 5 min Quest 2; same on Quest 3/3S 1/1 (or Kev waiver logged); on 3/3S: card text + telegraph readable at arc edge 1/1; credits audit script exit 0 (0 uncredited assets); on-device normalization self-test 10/10 on the RC build; RC upload accepted.
+S11 median >=72 fps, 1% low >=60 over 5 min Quest 2; Quest 3/3S run waived 2026-10-28 (A4), residual A4-R1 logged 1/1; on Quest 2:
+  card text + telegraph readable at arc edge 1/1 (judge-FoV residual A4-R3); credits audit script exit 0 (0 uncredited assets);
+  on-device normalization self-test 10/10 on the RC build; RC upload accepted.
 S12 RC invite install non-org account 1/1; cold launch 3/3; fresh install -> answer 3 cards -> relaunch -> boxes persist 1/1; voice answer after fresh install 1/1.
 S13 video <180 s public logged-out; frame review 0 hits (people, logos, brands, screens, photos); Devpost "submitted" with D11
   paragraph; Devpost fields 9/9 (tagline <=140 chars, track Gaming, division set per G0a, invite URL, public video link, description
@@ -291,7 +307,7 @@ Per slice (FLOW-016): SP1 Meta dashboard versionCode 1 + invite install on non-o
   SP3 GitHub Pages/Vercel URL loads on Quest Browser. G0 none. G1 CI gitleaks full-history run green before the public flip. S1
   gitleaks local hook. S2 none. S3 none. S4 Wit dashboard (requests visible, forced-429 run). S5 none. S6a none. S6 none. S7 none. S8
   none. S9 none. S10 Vercel deploy + Firewall/ratelimit log + Upstash usage dashboard (incl. idle-archive setting). S11 OVR Metrics
-  (Quest 2 + 3/3S) + dashboard RC versionCode. S12 invite install on non-org account. S13 logged-out video playback + Devpost
+  (Quest 2; 3/3S waived, A4) + dashboard RC versionCode. S12 invite install on non-org account. S13 logged-out video playback + Devpost
   "submitted" page. F Wit dashboard, Upstash dashboard, privacy URL, channel install.
 
 ## Blast radius / rollback
@@ -306,7 +322,7 @@ Devpost Join Hackathon (+ check for a judges-only invite-URL field); forum Start
   (SP1); private GitHub remote + CI gitleaks (now), public flip at G1 (Q2); dedicated Wit.ai app + client token (SP2); second speaker
   for SP2 (Q6: TTS voices); UE 5.7 + Android NDK r27c + JDK (Unity 6.3 LTS + Android module only on fallback); backup Meta dashboard
   app (Q7); Vercel account + Upstash integration; new YouTube channel for the game (Q1); cleared room for capture (D12); privacy
-  deletion contact address; Quest 3/3S access (target Nov 1 for the UE spike, hard Nov 15); 2 fresh S9 testers (Nov 13); content
+  deletion contact address; Quest 3/3S access dropped (A4 waiver 2026-10-28: Quest 2 only); 2 fresh S9 testers (Nov 13); content
   rating choice (S13, target 10+); Devpost tagline + division field + description + testing instructions sign-off (S13); optional: email
   MetaHorizonStart@meta.com for a division pre-ruling (G0a); log every judging-period op with timestamp + reason (G0b); after Dec 11
   purge Wit utterance log + Upstash keys.
@@ -363,7 +379,7 @@ Resolved 2026-10-28 (Kev):
 | FIN-15 | minor | Devpost requirements beyond the D11 paragraph unscheduled (rules.md:142 inspiration/how built/future plans/launch date, rules.md:155 testing instructions, rules.md:154 content rating) | S13 scope + 7/7 criterion; Kev actions |
 | FIN-16 | minor | Network-off and hand-tracking-loss paths untested | S4 Wi-Fi-off run; D7 pause + S6 3/3 |
 | FIN-17 | minor | C# and JS normalizations can drift (server accepts deck device rejects) | Shared normalize.json fixture run by both suites |
-| FIN-18 | minor | Quest 3/3S first seen Nov 15 leaves 1 day for MRUK/FoV fixes | Target device by Nov 12 so S8 runs on it; hard Nov 15 unchanged |
+| FIN-18 | minor | Quest 3/3S first seen Nov 15 leaves 1 day for MRUK/FoV fixes | Target device by Nov 12 so S8 runs on it; hard Nov 15 unchanged. Superseded 2026-10-28 by the A4 waiver: no 3/3S, S8 + S11 on Quest 2 (A4-R2, A4-R3) |
 
 ## Ledger (adversary round 2)
 | ID | Sev | Finding | Verdict | Reason / change |
@@ -371,7 +387,7 @@ Resolved 2026-10-28 (Kev):
 | R2-COR-F1 | major | Fuzzy 0.85 accepts afferent/efferent, Prussia/Russia, hypo/hyper without reject list | ACCEPT | D3 adds exact 4-char prefix rule; S2 near-miss cases run with empty reject lists. Trade-off accepted: a garbled first syllable becomes a miss (no damage), never a false accept. |
 | R2-COR-F2 | major | Outcome/SR grading undefined for orb-after-wrong, ultimate, wrong orb, margin fail, short answer, out-of-deck wrong | ACCEPT | D4 single outcome table; first scored attempt sets grade; non-empty unmatched = miss (blocks promotion, no damage); S2 9/9 row tests. Out-of-deck wrong stays no-damage (indistinguishable from STT garble) but can no longer promote. |
 | R2-COR-F3 | major | Rolling baseline absorbs held/early dodge | ACCEPT | D7 frozen baseline at telegraph onset; S6 held/slow/accessibility lean tests (dup R2-FM-F2). |
-| R2-COR-F4 | major | 120 deg arc exceeds Quest 3/3S FoV | ACCEPT | D8 +/-35 deg arc + in-view telegraph gate; S11 FoV check (dup R2-AA-F1). |
+| R2-COR-F4 | major | 120 deg arc exceeds Quest 3/3S FoV | ACCEPT | D8 +/-35 deg arc + in-view telegraph gate; S11 FoV check (dup R2-AA-F1); FoV check on Quest 2 since the A4 waiver (A4-R3). |
 | R2-COR-F5 | major | File.Replace throws on first save | ACCEPT | D5 Move-if-missing else Replace; S6a fresh-dir EditMode + S12 fresh-install device check. |
 | R2-COR-x1 | minor | NFKD without dropping Mn | ACCEPT | D3 drops combining marks; S2 accented case. |
 | R2-COR-x2 | minor | Shared answers break margin/orbs; no min deck size | ACCEPT | D3 candidates owned by card sets; orbs from distinct answers; >=4 distinct answers at validation. |
@@ -446,7 +462,7 @@ Resolved 2026-10-28 (Kev):
 | SC-F5 | minor | Matcher over-built (number words, n-best) | ACCEPT | Dropped (D3); aliases cover. |
 | SC-x1 | minor | Covers tags vs NUnit; no spec file | ACCEPT (adapted) | `// Covers:` above each [TestFixture]; spec file created in S1. Tag mandate itself kept. |
 | AA-1 | major | Upload late; 2nd-account test can falsely pass via App Sharing/org | ACCEPT | Non-org account, App Sharing off (SP1, S12). |
-| AA-2 | major | Quest 2 not a Quest 3 proxy; scene-but-no-wall gap | ACCEPT | A4 Quest 3/3S test required (waiver logged); D8 fallback case added. |
+| AA-2 | major | Quest 2 not a Quest 3 proxy; scene-but-no-wall gap | ACCEPT | A4 Quest 3/3S test required (waiver logged); D8 fallback case added. Waived 2026-10-28 (A4; residuals A4-R1..R4). |
 | AA-3 | major | SP2 corpus single speaker, undefined words/latency start | ACCEPT | Deck-derived corpus, 2+ speakers, noisy take, end-of-speech latency, false-accept count. |
 | AA-4 | major | Spike/schedule collides with MemriPal | ACCEPT (modified) | Same as FM-F5; named cut list (S7, S10) REJECTED as M-items. |
 | AA-5 | minor | Conception evidence; Q3 reads as concealment | ACCEPT | D11 + Q3 reworded. |
