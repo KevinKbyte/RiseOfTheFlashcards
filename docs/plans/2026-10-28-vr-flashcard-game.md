@@ -323,8 +323,8 @@ Devpost Join Hackathon (+ check for a judges-only invite-URL field); forum Start
   for SP2 (Q6: TTS voices); UE 5.7 + Android NDK r27c + JDK (Unity 6.3 LTS + Android module only on fallback); backup Meta dashboard
   app (Q7); Vercel account + Upstash integration; new YouTube channel for the game (Q1); cleared room for capture (D12); privacy
   deletion contact address; Quest 3/3S access dropped (A4 waiver 2026-10-28: Quest 2 only); 2 fresh S9 testers (Nov 13); content
-  rating choice (S13, target 10+); Devpost tagline + division field + description + testing instructions sign-off (S13); optional: email
-  MetaHorizonStart@meta.com for a division pre-ruling (G0a); log every judging-period op with timestamp + reason (G0b); after Dec 11
+  rating choice (S13, target 10+); Devpost tagline + division field + description + testing instructions sign-off (S13); pre-ruling
+  email dropped (G0a); log every judging-period op with timestamp + reason (G0b); after Dec 11
   purge Wit utterance log + Upstash keys.
 
 ## Open questions
@@ -354,8 +354,9 @@ Resolved 2026-10-28 (Kev):
   early-end rate; pacing is the tuning knob, not counts (D13, D14, S2, S9).
 - Q9 Base build = 1 ultimate type fired repeatedly; second mastery-unlocked type is a D15 experimental toggle (S7, ladder).
 - D15 Experimental settings pane (new; S9 calibrates each toggle on/off; underperformers ship OFF, unmentioned).
-- G0a New Experience claim kept with D11 disclosure; division field set at S13 (guidelines.md:101); optional pre-ruling email (Kev
-  actions).
+- G0a New Experience claim kept with D11 disclosure; division field set at S13 (guidelines.md:101). Pre-ruling email
+  (MetaHorizonStart@meta.com) dropped 2026-10-28 (Kev): repo first commit 37d0378 is 2026-10-28, inside the window starting
+  2026-09-24 (rules.md:91), with no pre-existing code, so the New Experience Division is not in question.
 - G0b Relay fail-soft automatic; judging-period ops only {RELAY_ENABLED off, byte-identical privacy redeploy}, logged + disclosed in
   Devpost testing instructions; S10 Upstash idle-archive check (D6, S10, F, S13).
 
