@@ -6,7 +6,7 @@
 // KV_REST_API_URL/_TOKEN fallbacks) via Redis.fromEnv(), server-side only (RELAY-008).
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
-import { POLL_RATE_LIMIT } from '../lib/http.mjs';
+import { clientKey, POLL_RATE_LIMIT, readBody } from '../lib/http.mjs';
 import { createRelay } from '../lib/relay.mjs';
 
 // Swap the value only while it still equals the expected one; KEEPTTL preserves the
@@ -48,14 +48,18 @@ const relay = createRelay({
   logger: console,
 });
 
-// Vercel sets x-forwarded-for to the real client address; the first entry is the client.
-function clientIp(request) {
-  const forwarded = request.headers.get('x-forwarded-for') ?? '';
-  return forwarded.split(',')[0].trim() || request.headers.get('x-real-ip') || 'unknown';
-}
-
 export async function handleRequest(request, path) {
-  const body = request.method === 'POST' ? await request.text() : '';
-  const result = await relay.handle({ method: request.method, path, ip: clientIp(request), body });
+  let body = '';
+  if (request.method === 'POST') {
+    const read = await readBody(request);
+    if (!read.ok) {
+      return new Response(JSON.stringify({ error: read.error }), {
+        status: read.status,
+        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+      });
+    }
+    body = read.body;
+  }
+  const result = await relay.handle({ method: request.method, path, ip: clientKey(request.headers), body });
   return new Response(result.body, { status: result.status, headers: result.headers });
 }

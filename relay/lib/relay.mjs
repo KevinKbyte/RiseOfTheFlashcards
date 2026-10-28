@@ -77,7 +77,13 @@ export function createRelay({ store, rateLimiter, pollRateLimiter, env, logger, 
 
     // POSTs and GET polls draw on separate buckets, so polling never spends the POST budget.
     const limiter = method === 'POST' ? rateLimiter : pollRateLimiter;
-    const { success } = await limiter.limit(String(ip ?? 'unknown'));
+    let success;
+    try {
+      ({ success } = await limiter.limit(String(ip ?? 'unknown')));
+    } catch {
+      // Fail closed: an unreachable limiter must not turn into unlimited access.
+      return error(503, 'rate limiter unavailable, try again');
+    }
     if (!success) return error(429, 'too many requests');
     if (isPair) return createCode();
 
