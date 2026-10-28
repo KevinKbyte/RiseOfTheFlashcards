@@ -1,5 +1,6 @@
-# Agent worktree registry
-.claude/worktrees/
+# Claude Code local state (settings, worktree registry); the spec cache is committed.
+.claude/*
+!.claude/spec-cache/
 
 # Secrets + signing (D10)
 *.keystore
@@ -26,4 +27,3 @@ DerivedDataCache/
 .vs/
 *.sln
 *.VC.db
-Build/Android/
