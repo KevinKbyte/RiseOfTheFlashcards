@@ -1,0 +1,21 @@
+# Agent worktree registry
+.claude/worktrees/
+
+# Secrets + signing (D10)
+*.keystore
+*.jks
+**/VoiceSDK/*Config*.asset
+**/WitConfig*.asset
+.env
+.env.*
+
+# Build outputs (D10)
+Builds/
+*.apk
+*.aab
+
+# Node / Vercel
+node_modules/
+.vercel/
+
+# Engine-specific ignores land with the engine decision (ADR 0001).
