@@ -1,6 +1,6 @@
 # Privacy policy (draft)
 
-Last updated: 2026-10-28. Applies to the game `<TITLE>` for Meta Quest and its companion deck-paste page.
+Last updated: 2026-10-28. Applies to the game Cards: Uprising for Meta Quest and its companion deck-paste page.
 
 The game has no accounts. This page lists everything it sends off your headset, how long it is kept, and how to have it deleted.
 

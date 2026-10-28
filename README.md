@@ -1,8 +1,10 @@
-# <TITLE>
+# Cards: Uprising
 
-Seated mixed-reality flashcard combat for Meta Quest 3/3S. Card-enemies emerge from your real walls (scene understanding); you slash a
-card with your hand, then say the answer aloud. Correct answers deal damage, bigger enemies carry multi-card health pools, and you dodge
-their attacks by leaning or ducking. Silent mode swaps voice for slashable answer orbs. Spaced repetition decides which cards come back.
+Seated mixed-reality flashcard combat for Meta Quest 3/3S. Humanity abandoned its flashcards, deciding they were boring and
+procrastinating on them all the time, so now the flashcards are on a rampage. Card-enemies emerge from your real walls (scene
+understanding); you slash a card with your hand, then say the answer aloud. Correct answers deal damage, bigger enemies carry multi-card
+health pools, and you dodge their attacks by leaning or ducking. Silent mode swaps voice for slashable answer orbs. Spaced repetition
+decides which cards come back.
 
 - Status: pre-alpha. Entry for Meta VR Start Developer Competition 2026 (Gaming track).
 - Engine: per ADR 0001, pending.

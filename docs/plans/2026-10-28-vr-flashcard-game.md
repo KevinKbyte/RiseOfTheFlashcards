@@ -303,7 +303,6 @@ Devpost Join Hackathon (+ check for a judges-only invite-URL field); forum Start
   purge Wit utterance log + Upstash keys.
 
 ## Open questions
-Q3 Title distinct from existing titles; prior realm-of-recall disclosed on Devpost.
 
 Resolved 2026-10-28 (Kev):
 - ENGINE Unreal 5.7 + Meta XR v207, spike-gated by Nov 2; Unity 6.3 LTS fallback (M9, M13, A2, A3, A14, D1, D2, D5, G1).
@@ -315,6 +314,8 @@ Resolved 2026-10-28 (Kev):
   scheduled (D1, SP3, G1).
 - Q2 Repo public when? Private GitHub remote now with CI gitleaks; public Nov 3 (G1) once a full-history scan is green and .gitignore
   covers .claude/ (A6, D10, G1).
+- Q3 Title "Cards: Uprising"; web-checked 2026-10-28, no video game with this name (only tabletop card sets named "Uprising":
+  Netrunner, Epic Card Game, Flesh and Blood, VS System); prior realm-of-recall still disclosed on Devpost.
 - Q4 Starter decks: Opposites, World Capitals, Basic Science; no Spanish; locked by Oct 30; S2 deck-lint gate; cut Basic Science
   first (A10, SP2, S2, ladder).
 - Q5 Gaze: the D8 +/-40 deg in-view gate is the head-gaze mechanic in ADR 0001 + Devpost; gaze-dwell select (1.2 s) is a D15

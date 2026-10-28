@@ -6,7 +6,7 @@ Plan S13 (submit by 2026-11-17 21:00 PT; deadline 2026-11-18 12:00 PT, rules.md:
 
 | Field | Value |
 |---|---|
-| Submission name | `<TITLE>` (plan Q3: distinct from existing titles) |
+| Submission name | Cards: Uprising (plan Q3: distinct from existing titles) |
 | Tagline (140 chars, hackathon.md:80) | `<TAGLINE>` |
 | Track (rules.md:143) | Gaming |
 | Division (rules.md:144) | New Experience (plan G0a 2026-10-28, ADR 0003; set at S13, editable until 2026-11-18 12:00 PT, guidelines.md:101) |
@@ -19,7 +19,9 @@ Plan S13 (submit by 2026-11-17 21:00 PT; deadline 2026-11-18 12:00 PT, rules.md:
 ## Description (suggested <=500 words, hackathon.md:83)
 
 **Inspiration.** Flashcards work, but reviewing them feels like a chore. This game turns each card into an enemy you fight in your own
-room, so recall becomes something you do with your hands and voice. It builds on a theme from my earlier 2D prototype (see below).
+room, so recall becomes something you do with your hands and voice. The story: humanity abandoned its flashcards, deciding they were
+boring and procrastinating on them all the time, so now the flashcards are on a rampage. It builds on a theme from my earlier 2D
+prototype (see below).
 
 **How we built it.** Engine: `<ENGINE: Unreal Engine 5.7 (spike-gated; Unity 6.3 LTS fallback), final per ADR 0001>` with Meta's hand
 tracking, passthrough and scene understanding. Enemies emerge from detected walls; a small play area keeps every move within a seated
