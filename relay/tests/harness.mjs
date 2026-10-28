@@ -5,13 +5,15 @@ import { createFakeClock, createFakeRateLimiter, createFakeStore, createSpyLogge
 export const CODE_PATTERN = /^[0-9A-HJKMNP-TV-Z]{6}$/;
 export const ENABLED_ENV = Object.freeze({ RELAY_ENABLED: 'true' });
 
-export function setup({ env = ENABLED_ENV, randomCode, rateLimiter } = {}) {
+// pollRateLimiter is the separate GET bucket (RELAY-009); the default mirrors 120 per 60 s.
+export function setup({ env = ENABLED_ENV, randomCode, rateLimiter, pollRateLimiter } = {}) {
   const clock = createFakeClock();
   const store = createFakeStore(clock);
   const logger = createSpyLogger();
   const options = {
     store,
     rateLimiter: rateLimiter ?? createFakeRateLimiter(clock),
+    pollRateLimiter: pollRateLimiter ?? createFakeRateLimiter(clock, { limit: 120 }),
     env,
     logger,
   };

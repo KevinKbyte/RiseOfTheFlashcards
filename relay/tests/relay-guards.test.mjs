@@ -12,7 +12,8 @@ function postPair(relay, ip) {
 
 // Covers: RELAY-005
 // Requirement: each IP may make at most 10 POSTs per 60 s across /pair and
-// /pair/<code> (the 11th is 429); GET polling is never rate-limited.
+// /pair/<code> (the 11th is 429); GET polling never draws on this POST budget
+// (GETs have their own bucket, RELAY-009).
 describe('POST rate limit', () => {
   test('11th POST /pair within 60 s is 429', async () => {
     const { relay } = setup();
@@ -56,7 +57,7 @@ describe('POST rate limit', () => {
     assert.equal((await postPair(relay, '1.1.1.1')).status, 201);
   });
 
-  test('GETs are never limited, even after the POST budget is spent', async () => {
+  test('GETs are not limited by a spent POST budget', async () => {
     const { relay } = setup();
     const code = await createCode(relay, '1.1.1.1');
     for (let i = 0; i < 10; i += 1) await postPair(relay, '1.1.1.1');
@@ -65,7 +66,7 @@ describe('POST rate limit', () => {
     }
   });
 
-  test('GETs never consult the rate limiter', async () => {
+  test('GETs never consult the POST rate limiter', async () => {
     const { relay } = setup({ rateLimiter: denyAll });
     assert.equal((await postPair(relay, '1.1.1.1')).status, 429);
     assert.equal((await getDeck(relay, 'ZZZZZZ', '1.1.1.1')).status, 404);
