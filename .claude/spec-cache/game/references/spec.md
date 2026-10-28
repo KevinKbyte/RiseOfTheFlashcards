@@ -13,8 +13,8 @@ Source plan: docs/plans/2026-10-28-vr-flashcard-game.md (D-, S-, M-IDs there).
 - RELAY-004: Deck validation server-side: body <=200 KB UTF-8 (413); valid JSON object root
   {version:1,title,cards:[{front,back,aliases?,reject?}]} (400); <=500 cards; non-empty trimmed front/back;
   >=4 distinct normalized backs; no rich-text tags (/<\/?[A-Za-z][^>]*>/) in any string (400).
-- RELAY-005: Rate limit POSTs only, 10 per 60 s per IP (both routes); 11th -> 429. GETs never rate-limited
-  (**Superseded by RELAY-009**: GETs have their own bucket and never draw on this POST budget).
+- RELAY-005: Rate limit POSTs, 10 per 60 s per client key (RELAY-011 clientKey; both routes); 11th -> 429. GETs
+  never rate-limited (**Superseded by RELAY-009**: GETs have their own bucket and never draw on this POST budget).
 - RELAY-006: RELAY_ENABLED !== "true" -> 503 on every route.
 - RELAY-007: The handler never passes request bodies or deck text to its logger.
 - RELAY-008: The Upstash token is read server-side only; it never appears in any file under the static page directory.
