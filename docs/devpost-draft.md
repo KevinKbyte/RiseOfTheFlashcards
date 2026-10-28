@@ -7,7 +7,7 @@ Plan S13 (submit by 2026-11-17 21:00 PT; deadline 2026-11-18 12:00 PT, rules.md:
 | Field | Value |
 |---|---|
 | Submission name | Rise of the Flashcards (plan Q3: distinct from existing titles) |
-| Tagline (140 chars, hackathon.md:80) | `<TAGLINE>` |
+| Tagline (140 chars, hackathon.md:80) | Humanity forgot them. They didn't forget. |
 | Track (rules.md:143) | Gaming |
 | Division (rules.md:144) | New Experience (plan G0a 2026-10-28, ADR 0003; set at S13, editable until 2026-11-18 12:00 PT, guidelines.md:101) |
 | Project link (rules.md:140) | `<INVITE_URL>` (Competition release channel invite URL; fill in the last-green URL as soon as one exists and keep it current, plan Q7; use a judges-only field if Devpost offers one) |
@@ -15,6 +15,8 @@ Plan S13 (submit by 2026-11-17 21:00 PT; deadline 2026-11-18 12:00 PT, rules.md:
 | Screenshots | `<SCREENSHOTS>` (>=3, each passing the frame review: no people, logos, brands, screens, photos) |
 | Content rating (rules.md:154) | Target 10+ |
 | Target launch date (rules.md:142) | `<TARGET_LAUNCH_DATE>` |
+
+Trailer/store copy taglines (plan Q3): "You skipped your reviews. They noticed." / "The cards remember."
 
 ## Description (suggested <=500 words, hackathon.md:83)
 

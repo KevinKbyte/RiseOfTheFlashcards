@@ -315,9 +315,12 @@ Resolved 2026-10-28 (Kev):
 - Q2 Repo public when? Private GitHub remote now with CI gitleaks; public Nov 3 (G1) once a full-history scan is green and .gitignore
   covers .claude/ (A6, D10, G1).
 - Q3 Title "Rise of the Flashcards" (Kev 2026-10-28, after "Cards: Uprising" and "Flashcards Fight Back"); nods to Rise of the Planet
-  of the Apes without copying the franchise title (trademark risk; "Rise of the Planet of the Flashcards" allowed only as
-  trailer/Devpost tagline); web-checked 2026-10-28, no game by this name; nearest concept itch.io "Flashcard Hero" (flashcard RPG
-  combat), so Devpost differentiates on VR + voice answers; prior realm-of-recall still disclosed on Devpost.
+  of the Apes without copying the franchise title; the "Planet of the ..." riff is NOT used anywhere (Planet of the Apes is a
+  Disney/20th Century trademark; Jack Daniel's v. VIP 2023 weakens parody defense for source-identifying use; R11 originality rule
+  makes it a disqualification risk); web-checked 2026-10-28, no game by this name; nearest concept itch.io "Flashcard Hero" (flashcard
+  RPG combat), so Devpost differentiates on VR + voice answers; prior realm-of-recall still disclosed on Devpost.
+  Taglines (Kev 2026-10-28): "Humanity forgot them. They didn't forget." / "You skipped your reviews. They noticed." / "The cards
+  remember."
 - Q4 Starter decks: Opposites, World Capitals, Basic Science; no Spanish; locked by Oct 30; S2 deck-lint gate; cut Basic Science
   first (A10, SP2, S2, ladder).
 - Q5 Gaze: the D8 +/-40 deg in-view gate is the head-gaze mechanic in ADR 0001 + Devpost; gaze-dwell select (1.2 s) is a D15
