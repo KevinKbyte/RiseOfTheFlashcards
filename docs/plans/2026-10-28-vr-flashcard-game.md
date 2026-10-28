@@ -135,8 +135,11 @@ D11 Provenance: ADR 0003 records conception (2026-10-27 VR concept session) and 
   (realm-of-recall SPECIFICATION.md:50-53,531). New: VR hand-slash, voice answers, MR wall spawns, real-time dodge, multi-card health
   pools (one correct answer strips one card). The same list is written as a standalone Devpost paragraph that also serves as the Adapted
   "summary of new features" (rules.md:142) if the Sponsor re-assigns the division (rules.md:90). Devpost discloses realm-of-recall plainly.
-D12 Video + screenshots: captured in a cleared room (no screens, photos, logos, branded products, windows to identifiable views, or people other than Kev) or room shots via XR Simulator (rules.md:141); frame-by-frame review before upload (rules.md:157, 161). Video leads with the slash-then-speak moment in the real room (hackathon.md:75 "lead with your best material"); no AI-generated footage (rules.md:237).
-  Trailer cold open: see docs/devpost-draft.md; skit <=30 s, rest gameplay; D12 rules apply to the skit.
+D12 Video + screenshots: captured in a cleared room (no screens, photos, logos, branded products, windows to identifiable views, or people
+  other than Kev) or room shots via XR Simulator (rules.md:141); frame-by-frame review before upload (rules.md:157, 161). Video opens
+  with a 2-3 s flash-forward of the slash-then-speak moment in the real room (hackathon.md:75 "lead with your best material"), then the
+  skit (tension + backstory), then full gameplay; no AI-generated footage (rules.md:237).
+  Trailer beat sheet: see docs/devpost-draft.md; flash-forward + skit <=33 s, rest gameplay; D12 rules apply to the skit; breakout = D16.
 D13 Engagement distance (finisher-added; resolves A15): an enemy emerges at its wall spawn (D8, 1.2-3.5 m, keeps M15), then advances
   along its spawn bearing to a strike slot 0.5 m in front of the play-forward head position, inside the +/-35 deg arc; slash contact,
   telegraphs and attacks happen only in the strike slot. Q8 (2026-10-28): 0.5 m is the default; the slot is calibrated per player
@@ -151,6 +154,9 @@ D15 Experimental settings pane (Kev, 2026-10-28): one on/off toggle per experime
   orbs and menu buttons (1.2 s dwell, Q5) and a second, mastery-unlocked ultimate type (Q9; base build = 1 ultimate type fired
   repeatedly). S9 calibrates each with it on and off; anything that underperforms ships OFF in the submitted build and is not
   mentioned in Devpost or the video.
+D16 In-game intro scene (Kev, 2026-10-28): on first launch a virtual phone placed on a detected table surface (MRUK) cracks and sad
+  flashcards band together and swarm out, then combat starts; doubles as the trailer breakout shot (rules.md:237, no AI footage). Scope
+  ~1 day UE, built in S9. Cuttable: if behind at S12, the skit falls back to paper cards + drawer and the intro is skipped.
 
 ## Slices
 UE spike (Kev, 2026-10-28; D1): SP1 + SP2 run on UE 5.7 + Meta XR 207 (MetaXRPlatform OFF) with direct Wit.ai HTTP voice; pass = SP1
@@ -202,7 +208,7 @@ S6 Nov 10 health pools, telegraphed attacks (in-view gate), dodge (frozen baseli
 S7 Nov 11 ultimates (5 correct, two-palm push; 1 type, Q9) + experimental second, mastery-unlocked ultimate type behind its D15 toggle.
 S8 Nov 12 MR walls + arc + fallback + test matrix. CHECKPOINT Nov 12 evening: apply constraint ladder if any of S1-S8 open.
 S9 Nov 13 first-five-minutes tutorial (incl. per-player strike-slot calibration, D13), pause/resume (voice re-arm), accessibility
-  pass, D15 Experimental pane + gaze-dwell select, on/off calibration of each D15 toggle.
+  pass, D15 Experimental pane + gaze-dwell select, on/off calibration of each D15 toggle, D16 phone-breakout intro (cuttable).
 S10 Nov 14 relay (D6) + automated function tests + headset pairing + imported-deck list + privacy policy final; relay circuit
   breaker (G0b); Upstash idle-archive check (free database must not be archived while idle through Dec 11).
 S11 Nov 15 perf + polish + CREDITS audit (script) + Quest 3/3S test (incl. FoV; target device in hand by Nov 1 for the UE spike,

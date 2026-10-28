@@ -22,16 +22,21 @@ Trailer/store copy taglines (plan Q3): "You skipped your reviews. They noticed."
 
 | Time | Beat |
 |---|---|
-| 0-6 s | Kev (college kid) writes flashcards, says "I'll review them later tonight", tosses the stack in a drawer. |
-| 6-12 s | Gets ready to go out (jacket on, door closes); party heard off-screen only. |
-| 12-18 s | Exam: big red F on a blank-header paper; shrugs, walks past the drawer. |
-| 18-24 s | Drawer rattles; title card "Humanity forgot them. They didn't forget." |
-| 24-30 s | Puts on Quest; passthrough: cards burst from the drawer; cut to gameplay. |
-| 30-170 s | Gameplay: voice answers, hand combat, armor tiers. |
-| End | Optional callback line from the cards, "Later tonight?", then title "Rise of the Flashcards". |
+| 0-3 s | Flash-forward: Kev slashes a card and speaks the answer (headset capture). Hard cut, "Earlier..." card. |
+| 3-9 s | Kev (college kid) writes flashcards on his phone, says "I'll review them later tonight", sets the phone face-down on the table. |
+| 9-15 s | Goes out partying: jacket on, door closes; party audio only. |
+| 15-21 s | Exam: big red F on a blank-header paper; he shrugs and never touches the phone again. |
+| 21-27 s | Phone buzzes on the table; title card "Humanity forgot them. They didn't forget." |
+| 27-33 s | Kev puts on the Quest; in passthrough a virtual phone on his real table cracks; the saddened cards band together and break out. |
+| 33-170 s | Gameplay: voice answers, hand combat, armor tiers. |
+| End | Cards: "Later tonight?", then title "Rise of the Flashcards". |
 
-Skit constraints (plan D12): Kev is the only person in frame; party is audio-only (no other people, no branded drinks/products); no
-visible screens (no phone scrolling); exam paper has no school name/logo; cleared room. Skit shot on phone during S12 (Nov 16).
+The 27-33 s breakout is the game's own first-launch intro scene (plan D16), not post VFX; no AI footage (rules.md:237). If D16 is cut at
+S12, the skit falls back to paper cards + a drawer.
+
+Skit constraints (plan D12): Kev is the only person in frame; party is audio-only (no other people, no branded drinks/products); phone
+screen always faces away from camera and its logo is hidden (no visible screens); exam paper has no school name/logo; cleared room. Skit
+shot on phone during S12 (Nov 16).
 
 ## Description (suggested <=500 words, hackathon.md:83)
 
