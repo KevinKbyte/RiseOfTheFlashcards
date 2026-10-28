@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runInNewContext } from 'node:vm';
 
 const VERCEL_JSON = fileURLToPath(new URL('../vercel.json', import.meta.url));
 const PUBLIC_DIR = fileURLToPath(new URL('../public/', import.meta.url));
@@ -89,5 +90,74 @@ describe('companion page has no inline script', () => {
 
   test('no inline event handler attributes', () => {
     assert.doesNotMatch(html, /<[^>]+\son[a-z]+\s*=/i);
+  });
+});
+
+// Runs public/app.js against a minimal fake DOM and returns the fetch calls one submit makes.
+async function submitPastePage(codeInput, deck) {
+  const calls = [];
+  let onSubmit;
+  const button = { disabled: false };
+  const elements = {
+    'send-form': {
+      addEventListener: (type, handler) => { if (type === 'submit') onSubmit = handler; },
+      querySelector: () => button,
+    },
+    status: { textContent: '', className: '' },
+    code: { value: codeInput },
+    deck: { value: deck },
+  };
+  const context = {
+    document: { getElementById: (id) => elements[id] },
+    fetch: async (url, init) => {
+      calls.push({ url: String(url), method: init?.method });
+      return { ok: true, status: 201, json: async () => ({}) };
+    },
+  };
+  runInNewContext(readFileSync(join(PUBLIC_DIR, 'app.js'), 'utf8'), context);
+  assert.equal(typeof onSubmit, 'function', 'app.js must register a submit handler on #send-form');
+  await onSubmit({ preventDefault() {} });
+  return calls;
+}
+
+// Vercel source pattern -> params when path matches: literal segments, ':name' is one segment.
+function rewriteMatch(source, path) {
+  const names = [];
+  const pattern = source.split('/').map((seg) => {
+    if (!seg.startsWith(':')) return seg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    names.push(seg.slice(1));
+    return '([^/]+)';
+  }).join('/');
+  const m = new RegExp(`^${pattern}$`).exec(path);
+  return m ? Object.fromEntries(names.map((n, i) => [n, m[i + 1]])) : null;
+}
+
+// Covers: RELAY-012
+// Requirement: the paste page sends a deck to the public /pair/<code> route (not the
+// internal /api path), and that route is one vercel.json rewrites onto the
+// /api/pair/[code] function, so the page and the rewrite config stay in step.
+describe('paste page posts via the public /pair rewrite', () => {
+  test('submitting a valid code POSTs to /pair/<code> (code upper-cased)', async () => {
+    const calls = await submitPastePage(' 7k3m9q ', '{"version":1}');
+    assert.equal(calls.length, 1, 'expected exactly one fetch per submit');
+    assert.equal(calls[0].method, 'POST');
+    assert.equal(calls[0].url, '/pair/7K3M9Q');
+  });
+
+  test('the POST path is matched by a vercel.json rewrite onto an existing /api/pair function', async () => {
+    const [{ url }] = await submitPastePage('7K3M9Q', '{"version":1}');
+    const rewrites = loadConfig().rewrites ?? [];
+    const hit = rewrites
+      .map((r) => ({ r, params: rewriteMatch(r.source, url) }))
+      .find(({ params }) => params);
+    assert.ok(hit, `no vercel.json rewrite source matches the paste page POST path ${url}`);
+    const target = hit.r.destination.replace(/:([A-Za-z_]\w*)/g, (_, n) => hit.params[n]);
+    assert.equal(target, '/api/pair/7K3M9Q');
+    const fn = fileURLToPath(new URL('../api/pair/[code].mjs', import.meta.url));
+    assert.ok(existsSync(fn), `rewrite target has no function file at ${fn}`);
+  });
+
+  test('an invalid code makes no request', async () => {
+    assert.deepEqual(await submitPastePage('ABC', '{}'), []);
   });
 });
