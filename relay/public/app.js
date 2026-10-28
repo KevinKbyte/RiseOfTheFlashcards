@@ -30,7 +30,7 @@ form.addEventListener('submit', async (event) => {
   button.disabled = true;
   show('Sending...', '');
   try {
-    const res = await fetch('/api/pair/' + code, {
+    const res = await fetch('/pair/' + code, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: deck,
