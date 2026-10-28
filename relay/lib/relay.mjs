@@ -14,7 +14,7 @@ const CODE_PATTERN = /^[0-9A-HJKMNP-TV-Z]{6}$/;
 // Value of a live code that has no deck yet; decks are JSON objects, so never equal it.
 const PENDING = 'pending';
 const PAIR_ROUTE = /^\/pair\/?$/;
-const CODE_ROUTE = /^\/pair\/([^/]*)$/;
+const CODE_ROUTE = /^\/pair\/([^/]*)\/?$/;
 
 // 32 divides 256, so masking a random byte to 5 bits is uniform over the alphabet.
 export function randomCrockfordCode() {

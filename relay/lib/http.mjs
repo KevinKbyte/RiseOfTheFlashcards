@@ -5,7 +5,13 @@ import { MAX_BODY_BYTES } from './validate.mjs';
 // GET polling bucket (RELAY-009): a headset polling once per second never hits it.
 export const POLL_RATE_LIMIT = Object.freeze({ limit: 120, windowSec: 60 });
 
-const firstEntry = (value) => (value ?? '').split(',')[0].trim();
+// The code is the last segment of /pair/<code> or /api/pair/<code> (a rewrite may
+// surface either), ignoring one trailing slash; the relay core validates its format.
+export function codeFromPath(pathname) {
+  return pathname.replace(/\/$/, '').split('/').pop();
+}
+
+const firstEntry =(value) => (value ?? '').split(',')[0].trim();
 
 // Vercel sets x-vercel-forwarded-for itself, so a client-forged x-forwarded-for cannot
 // choose its own rate-limit key; the other headers are fallbacks only.

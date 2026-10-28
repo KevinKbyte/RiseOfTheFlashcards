@@ -1,0 +1,9 @@
+body { font-family: system-ui, sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+label { display: block; margin-top: 1rem; font-weight: 600; }
+input, textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 0.5rem; }
+input { text-transform: uppercase; letter-spacing: 0.2em; max-width: 12rem; }
+textarea { min-height: 18rem; font-family: ui-monospace, monospace; font-size: 0.9rem; }
+button { margin-top: 1rem; font: inherit; padding: 0.5rem 1.5rem; }
+#status { margin-top: 1rem; min-height: 1.5em; }
+.error { color: #b00020; }
+.ok { color: #1b5e20; }
