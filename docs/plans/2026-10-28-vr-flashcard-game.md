@@ -171,6 +171,19 @@ D16 In-game intro scene (Kev, 2026-10-28): on first launch a virtual phone place
   ~1 day UE, built in S9. Cuttable: if behind at S12, the skit falls back to paper cards + drawer and the intro is skipped. First
   launch only, <=10 s, skippable by any trigger or pinch. No-table fallback (D8 ring-fallback triggers, or no qualifying table): the
   phone spawns at waist height ~0.8 m in front of the player, facing them, and the same intro plays.
+D17 Onboarding cues, show don't tell (Kev, 2026-10-28; workshop notes show-dont-tell.md + which-cue-when.png, Jelitza): pick the cue
+  that answers the player's current question: How? -> ghost hand; What? -> glow + motion; Where? -> signage in the world; names/
+  numbers? -> text + a visual. Max 1 active cue at a time; step up with idle time (rim glow -> pulse/bob -> ghost hand); retire each
+  cue on success; a hint toggle replays cues. Slash (M1): ghost of the player's input (controller model on controllers; hand model +
+  handedness when hand-tracked) loops a slash through the strike-slot card (D13); first run (D14) only; retired at first contact.
+  Which enemy: rim glow only on the strike-slot enemy; wall-queued enemies unlit. Multi-layer enemies (M2; Kev: "higher level cards
+  have multiple layers"): visible card stack, only the top card highlighted/answerable, each correct answer peels one. Answer: D2
+  mic-live earcon + pulsing mic glyph on the card. Silent-mode orbs (M10): all pulse equally on idle, never singling out the correct
+  one. Where: wall-crack light at each spawn (M15, D13). Dodge (M3, D7): floor lean-direction marker on the first telegraph of the
+  first run; retired after the first dodge. Ultimate (M4, two-palm push): palms glow when charged; ghost-hands demo on first charge
+  only. Text only for card prompt/answer/numbers, always paired with a glow. Built per slice: S3 slash/glow/stack, S4 mic glyph, S5
+  orbs, S6 dodge marker, S7 ultimate. Cuttable: falls back to the constraint ladder's "tutorial as 3 prompts" (Must-keep). Open:
+  diegetic wrist-turn UI (pop-up in the hand on a wrist turn) for hints/mastery (Kev's note).
 
 ## Slices
 UE spike (Kev, 2026-10-28; D1): SP1 + SP2 run on UE 5.7 + Meta XR 207 (MetaXRPlatform OFF) with direct Wit.ai HTTP voice; pass = SP1
@@ -214,12 +227,13 @@ S2 Nov 5 PM core logic (may spill to Nov 6 AM; slip charged to the Nov 16 buffer
   duplicate-ID drop, caps, >=4 distinct answers, reject list), matcher (D3), outcome table (D4) + orb trigger + ultimate charge, Leitner
   + study-ahead, run loop (D14), combat rules. Deck-lint gate (Q4): numeric answers rejected; answers <4 normalized chars flagged
   (exact-match only under D3) for SP2 measurement; homophone answers need an alias (e.g. sun/son).
-S3 Nov 6 slash + card enemy (wall emerge -> advance to strike slot, D13) + answer window + damage.
-S4 Nov 7 voice via IAnswerRecognizer + D4 outcomes (per-card fallback, 3 s timeout, 429) + earcon + mic re-acquire on resume.
-S5 Nov 8 silent orbs + toggle.
+S3 Nov 6 slash + card enemy (wall emerge -> advance to strike slot, D13) + answer window + damage + D17 cues.
+S4 Nov 7 voice via IAnswerRecognizer + D4 outcomes (per-card fallback, 3 s timeout, 429) + earcon + mic re-acquire on resume + D17 cue.
+S5 Nov 8 silent orbs + toggle + D17 cue.
 S6a Nov 9 (half day, MemriPal finals) Leitner persistence (D5 save) + EditMode save tests + mastery screen.
-S6 Nov 10 health pools, telegraphed attacks (in-view gate), dodge (frozen baseline), hand-tracking-loss pause (D7), shield pips + run end (D14), accessibility toggle.
-S7 Nov 11 ultimates (5 correct, two-palm push; 1 type, Q9) + experimental second, mastery-unlocked ultimate type behind its D15 toggle.
+S6 Nov 10 health pools, telegraphed attacks (in-view gate), dodge (frozen baseline), hand-tracking-loss pause (D7), shield pips + run
+  end (D14), accessibility toggle + D17 cue.
+S7 Nov 11 ultimates (5 correct, two-palm push; 1 type, Q9) + experimental second, mastery-unlocked ultimate type behind its D15 toggle + D17 cue.
 S8 Nov 12 MR walls + arc + fallback + test matrix. CHECKPOINT Nov 12 evening: apply constraint ladder if any of S1-S8 open.
 S9 Nov 13 first-five-minutes tutorial (incl. per-player strike-slot calibration, D13), pause/resume (voice re-arm), accessibility
   pass, D15 Experimental pane + gaze-dwell select, on/off calibration of each D15 toggle, D16 phone-breakout intro (cuttable).
