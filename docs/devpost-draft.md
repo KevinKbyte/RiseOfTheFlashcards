@@ -18,6 +18,21 @@ Plan S13 (submit by 2026-11-17 21:00 PT; deadline 2026-11-18 12:00 PT, rules.md:
 
 Trailer/store copy taglines (plan Q3): "You skipped your reviews. They noticed." / "The cards remember."
 
+### Trailer beat sheet (Kev, 2026-10-28; total <180 s, rules.md:141)
+
+| Time | Beat |
+|---|---|
+| 0-6 s | Kev (college kid) writes flashcards, says "I'll review them later tonight", tosses the stack in a drawer. |
+| 6-12 s | Gets ready to go out (jacket on, door closes); party heard off-screen only. |
+| 12-18 s | Exam: big red F on a blank-header paper; shrugs, walks past the drawer. |
+| 18-24 s | Drawer rattles; title card "Humanity forgot them. They didn't forget." |
+| 24-30 s | Puts on Quest; passthrough: cards burst from the drawer; cut to gameplay. |
+| 30-170 s | Gameplay: voice answers, hand combat, armor tiers. |
+| End | Optional callback line from the cards, "Later tonight?", then title "Rise of the Flashcards". |
+
+Skit constraints (plan D12): Kev is the only person in frame; party is audio-only (no other people, no branded drinks/products); no
+visible screens (no phone scrolling); exam paper has no school name/logo; cleared room. Skit shot on phone during S12 (Nov 16).
+
 ## Description (suggested <=500 words, hackathon.md:83)
 
 **Inspiration.** Flashcards work, but reviewing them feels like a chore. This game turns each card into an enemy you fight in your own

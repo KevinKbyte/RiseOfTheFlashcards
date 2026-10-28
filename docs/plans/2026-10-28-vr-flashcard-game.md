@@ -136,6 +136,7 @@ D11 Provenance: ADR 0003 records conception (2026-10-27 VR concept session) and 
   pools (one correct answer strips one card). The same list is written as a standalone Devpost paragraph that also serves as the Adapted
   "summary of new features" (rules.md:142) if the Sponsor re-assigns the division (rules.md:90). Devpost discloses realm-of-recall plainly.
 D12 Video + screenshots: captured in a cleared room (no screens, photos, logos, branded products, windows to identifiable views, or people other than Kev) or room shots via XR Simulator (rules.md:141); frame-by-frame review before upload (rules.md:157, 161). Video leads with the slash-then-speak moment in the real room (hackathon.md:75 "lead with your best material"); no AI-generated footage (rules.md:237).
+  Trailer cold open: see docs/devpost-draft.md; skit <=30 s, rest gameplay; D12 rules apply to the skit.
 D13 Engagement distance (finisher-added; resolves A15): an enemy emerges at its wall spawn (D8, 1.2-3.5 m, keeps M15), then advances
   along its spawn bearing to a strike slot 0.5 m in front of the play-forward head position, inside the +/-35 deg arc; slash contact,
   telegraphs and attacks happen only in the strike slot. Q8 (2026-10-28): 0.5 m is the default; the slot is calibrated per player
