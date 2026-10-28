@@ -8,7 +8,9 @@ Out of scope: multiplayer, LLM grading, MemriPal or realm-of-recall code/assets 
   post-Dec-11 MemriPal import (separate branch, never the judged channel).
 Facts: R1-R20 in [2026-10-28-vr-flashcard-recon.md](2026-10-28-vr-flashcard-recon.md).
 Kev decisions 2026-10-28: ENGINE (Unreal 5.7, spike-gated; D1), Q1, Q2, Q4-Q10, G0a, G0b, new D15 (see Open questions).
-Changes from v1: see Ledger (finisher), then Ledger (adversary round 2). Round-1 ledger carried below them unchanged. Sources re-checked in the primary checkout for this pass: rules.md:88-143,154-168,195-239,318-330; guidelines.md:44-62,102-112; hackathon.md:63-75.
+Changes from v1: see Ledger (finisher), then Ledger (adversary round 2), then round 1, in
+  [2026-10-28-vr-flashcard-game-ledgers.md](2026-10-28-vr-flashcard-game-ledgers.md). Sources re-checked in the primary checkout for
+  this pass: rules.md:88-143,154-168,195-239,318-330; guidelines.md:44-62,102-112; hackathon.md:63-75.
 
 ## Must-keep (Kev verbatim asks; never defer/cut/descope without Kev's explicit ask)
 M1 Enemies are flash cards; slash with hand, then say the answer aloud; correct = damage.
@@ -31,8 +33,16 @@ M16 Separate from MemriPal; no shared code. Post-Dec-11 MemriPal cards on a sepa
 M17 MIT license; credit GitHub KevinKbyte / "Kev" only; never link the YouTube channel.
 M18 CREDITS.md for every asset from day 1 (sponsor may demand license proof); starter decks own/public-domain/CC only; Meta SDKs keep their own license, never vendored; Meta gets the judging/promo license only (guidelines.md:44; rules.md:342 wording is broader, recon R13).
 M19 Privacy policy (required for a mic/camera app).
-M20 Hosting: Vercel/Netlify free tier if web (GitHub Pages from a private repo needs a paid plan). Reconciled with D1 in FIN-3.
+M20 Hosting: Vercel/Netlify free tier if web (GitHub Pages from a private repo needs a paid plan). Reconciled with D1 in FIN-3 (ledgers file).
 M21 Post-Dec-11: integrate MemriPal cards (separate branch, never the judged channel; see M16).
+M22 Agent validation loop (Kev 2026-10-28; D18): "could you have a validation loop without me having to check in vr myself till it's
+  complete? so that you can see what the game looks like yourself while you play it and fix bugs"
+M23 Reusable E2E suite, affected-only (Kev 2026-10-28; D18): "we should have E2E testing too, that are reusable so that we can ensure
+  stability as featuresets grow"; "E2E is expensive isnt it? so it shouldnt be run all the time - only hte ones that would be affected
+  by the changed code should run"; "same as the other tests (unit tests etc) - but that should already be part of your plan considering
+  i think agent workflow user level configuration enforces that already for this"; "we need to make this deterministic as possible
+  otherwise youll be like next session i am running every E2E test (and then it just slows everyhting to a halt and then i ask why and
+  you say my e2e tests)"
 Scope constraint ladder (fidelity, not features) if behind at the Nov 12 checkpoint: 2 starter decks instead of 3 (floor 2: M11 says
   "decks", plural; cut Basic Science first, Q4); D15 experimental features cut (base build already has 1 ultimate type fired repeatedly, Q9);
   placeholder VFX/audio; mastery screen as text list; tutorial as 3 prompts; imported-deck list capped at 1 slot (still with delete
@@ -184,6 +194,52 @@ D17 Onboarding cues, show don't tell (Kev, 2026-10-28; workshop notes show-dont-
   only. Text only for card prompt/answer/numbers, always paired with a glow. Built per slice: S3 slash/glow/stack, S4 mic glyph, S5
   orbs, S6 dodge marker, S7 ultimate. Cuttable: falls back to the constraint ladder's "tutorial as 3 prompts" (Must-keep). Open:
   diegetic wrist-turn UI (pop-up in the hand on a wrist turn) for hints/mastery (Kev's note).
+D18 Agent validation loop + reusable E2E suite (Kev, 2026-10-28; M22, M23): the agent plays, sees and fixes the game unattended; Kev
+  checks in VR at 3 points only (after the Nov 2 spike, once the core loop works, before submission) for what tooling cannot judge:
+  comfort/sickness, slash feel, real hand-tracking accuracy, mic in a noisy room, video sign-off. Debug input layer: console commands
+  for slash, dodge, ultimate (two-palm push) and "answer <text>" (injects text past Wit.ai, so logic is tested without a mic);
+  stripped from shipping builds. Structured event log (spawn, hit, layer peel, answer, grade, dodge, pip lost, frame time) is the
+  assertion surface.
+  T0 headless logic: UE Automation, `-nullrhi`, seconds, on every change.
+  T1 rendered E2E on PC with the Meta XR Simulator (OpenXR runtime, synthetic rooms), before each commit:
+    `UnrealEditor-Cmd <proj> -ExecCmds="Automation RunTests <filter>; Quit" -unattended`, real RHI (screenshots need it, never -nullrhi).
+    Functional tests save screenshots + the event log; the agent reads the screenshots for visual bugs (missing glow, >1 active D17
+    cue, clipping, layout).
+  T2 on-device Quest 2, at milestones: Gauntlet `RunUnreal -platform=Android -device=<serial>` (fallback BuildCookRun -deploy -run);
+    headset unworn via the proximity bypass `adb shell am broadcast -a com.oculus.vrpowermanager.prox_close` (re-send each run);
+    capture with `adb shell screenrecord`/`screencap`; fps via OVR Metrics Tool CSV over adb; asserts M6 fps.
+  Selection (M23; restates rules.global/full-suite-only-when-deterministically-required.md, whose paths: cover agent-workflow only, so
+    nothing enforces it here): every tier is affected-only by default; no flag, script option or default offers an opt-in full run.
+    Each test/scenario declares mechanic tags (slash, layers, answer, orbs, dodge, ultimate, cues, spawn, ...); a checked-in
+    path-to-tag map (source dirs/assets -> tags) + `git diff <base>` picks them. A path the map lacks goes through a deterministic
+    reference scan (class/asset path, module name, literal path): tests referencing it are selected, 0 references = 0 tests, NEVER a
+    full-suite fallback; the missing map entry gets added. The full suite runs only when dependency resolution itself selects every
+    test (e.g. a shared step helper every scenario uses). Bases: per commit = main; slice close = slice start commit (the affected set
+    for the slice's whole diff is green); T2 = last T2 sha (affected scenarios + the fps check). Pattern only: agent-workflow
+    scripts/affected_tests.py (OPS-438, OPS-680; pytest-centric, cannot select UE tests).
+  Enforcement (deterministic, not prose; M23): (1) one runner script (scripts/, own test + README entry) is the ONLY entry point for
+    every tier; it computes the selection from `git diff <base>` itself, takes no test-name/filter/"all" argument, exits non-zero
+    with no base and on any failure. (2) A repo-level Claude Code PreToolUse Bash hook in the game repo's `.claude/` denies direct
+    engine test calls that skip the runner (`UnrealEditor-Cmd ... Automation RunTests`, `RunUAT ... RunUnreal`/Gauntlet; Unity
+    fallback `-runTests`), naming the runner in the deny reason. (3) Every run prints and logs the selected count, a per-test reason
+    (map tag / reference hit / dependency) and wall time; a whole-suite selection prints the deterministic reason that pulled in
+    every test, so "why did everything run" always has a logged answer. (4) Selector regression tests. Each is an S1 CRITERIA line.
+  Reusable suite (M23): each mechanic slice S3-S7 adds >=1 scenario built from shared step helpers (start run, spawn card, slash,
+    answer, dodge, ultimate); scenario = scripted inputs + event-log asserts + baseline screenshots compared with tolerance. The
+    suite never shrinks: a superseded scenario is replaced, not deleted.
+  Unverified premises (docs-checked 2026-10-28; SP1/Nov 2 spike checks, each with a fallback): (1) UE 5.7 + Meta XR Simulator
+    compatibility not stated in Meta docs; check the Meta XR plugin release notes; fallback T1 without the simulator (flat-screen
+    pawn) + T2 on device. (2) Simulator replay has no CLI: a `session_capture` block in
+    %APPDATA%/MetaXR/MetaXrSimulator/persistent_data.json (exec_state=replay, quit_when_complete) drives it, removed after each run;
+    the app must exit on the OpenXR session-exit request; .vrs record/replay verified, hand-tracking recording undocumented;
+    fallback scenarios driven by the debug input layer only. (3) Synthetic environments supplying MRUK scene data is inferred, not
+    documented; fallback T1 covers the D8 ring fallback, wall spawns on T2/S8. (4) Simulator hand tracking exists only on some
+    device profiles; fallback debug slash/dodge/ultimate commands, hand feel at Kev's check-ins. (5) Proximity bypass unverified on
+    Quest 2, may reset on sleep/reboot; fallback Kev starts T2 runs in person. (6) OVR Metrics CSV pull worked on Quest 2 per a
+    forum report, package name needs re-checking; fallback fps from the event-log frame time. Sources:
+    developers.meta.com/horizon/documentation/unreal/xrsim-intro/,
+    developers.meta.com/horizon/documentation/unreal/xrsim-session-capture/, dev.epicgames.com Gauntlet docs,
+    communityforums.atmeta.com proximity thread.
 
 ## Slices
 UE spike (Kev, 2026-10-28; D1): SP1 + SP2 run on UE 5.7 + Meta XR 207 (MetaXRPlatform OFF) with direct Wit.ai HTTP voice; pass = SP1
@@ -192,7 +248,7 @@ UE spike (Kev, 2026-10-28; D1): SP1 + SP2 run on UE 5.7 + Meta XR 207 (MetaXRPla
 SP1 Oct 28-Nov 1 (~7 h): Android toolchain (UE: NDK r27c + JDK; Unity fallback: Android module); Quest 2 dev mode; release keystore
   + 2 backups; versionCode build script; hello-hands+passthrough APK release-signed; Meta dashboard app + Competition channel; upload
   versionCode 1; invite URL install on a non-org account with App Sharing off; 10 s on-device capture shows the passthrough room. Kev
-  checks whether Devpost has a judges-only field for the invite URL.
+  checks whether Devpost has a judges-only field for the invite URL. D18 premise checks (1)-(6), each with its fallback.
 SP2 Oct 30-Nov 2 (~5 h), DEPENDS SP1 (Android toolchain + signed pipeline): starter-deck answers locked by Oct 30 (Q4 topics,
   A10; answers <4 normalized chars flagged and measured in the corpus); Wit app (client token only); privacy page stub deployed
   (needed before a mic-permission upload); Wit.ai voice spike (UE: direct HTTP; Unity fallback: Voice SDK) on deck-derived corpus;
@@ -222,25 +278,29 @@ S1 Nov 5 AM scaffold in the G1 engine. UE 5.7 (default): Meta XR plugins v207 (v
   canary script, CREDITS/README/CHANGELOG, spec file .claude/spec-cache/game/references/spec.md with FEAT IDs, shared
   tests/fixtures/normalize.json, credits audit script (lists non-code files under the engine asset root, Content/ or Assets/, missing
   from CREDITS.md; exit 1 on any; own test + README entry), headless test runner script (UE Automation tests; Unity: batchmode
-  EditMode) (versionCode script already exists from SP1).
+  EditMode) = the D18 runner (T0/T1, affected selector + path-to-tag map + reference scan, run log), D18 runner-bypass hook, debug
+  input layer, event log, first scenario (start run) (versionCode script already exists from SP1).
 S2 Nov 5 PM core logic (may spill to Nov 6 AM; slip charged to the Nov 16 buffer): deck parser (JsonUtility, stable IDs,
   duplicate-ID drop, caps, >=4 distinct answers, reject list), matcher (D3), outcome table (D4) + orb trigger + ultimate charge, Leitner
   + study-ahead, run loop (D14), combat rules. Deck-lint gate (Q4): numeric answers rejected; answers <4 normalized chars flagged
   (exact-match only under D3) for SP2 measurement; homophone answers need an alias (e.g. sun/son).
-S3 Nov 6 slash + card enemy (wall emerge -> advance to strike slot, D13) + answer window + damage + D17 cues.
-S4 Nov 7 voice via IAnswerRecognizer + D4 outcomes (per-card fallback, 3 s timeout, 429) + earcon + mic re-acquire on resume + D17 cue.
-S5 Nov 8 silent orbs + toggle + D17 cue.
+S3 Nov 6 slash + card enemy (wall emerge -> advance to strike slot, D13) + answer window + damage + D17 cues + D18 scenario.
+S4 Nov 7 voice via IAnswerRecognizer + D4 outcomes (per-card fallback, 3 s timeout, 429) + earcon + mic re-acquire on resume + D17 cue
+  + D18 scenario.
+S5 Nov 8 silent orbs + toggle + D17 cue + D18 scenario.
 S6a Nov 9 (half day, MemriPal finals) Leitner persistence (D5 save) + EditMode save tests + mastery screen.
 S6 Nov 10 health pools, telegraphed attacks (in-view gate), dodge (frozen baseline), hand-tracking-loss pause (D7), shield pips + run
-  end (D14), accessibility toggle + D17 cue.
-S7 Nov 11 ultimates (5 correct, two-palm push; 1 type, Q9) + experimental second, mastery-unlocked ultimate type behind its D15 toggle + D17 cue.
-S8 Nov 12 MR walls + arc + fallback + test matrix. CHECKPOINT Nov 12 evening: apply constraint ladder if any of S1-S8 open.
+  end (D14), accessibility toggle + D17 cue + D18 scenario.
+S7 Nov 11 ultimates (5 correct, two-palm push; 1 type, Q9) + experimental second, mastery-unlocked ultimate type behind its D15 toggle
+  + D17 cue + D18 scenario.
+S8 Nov 12 MR walls + arc + fallback + test matrix. CHECKPOINT Nov 12 evening: D18 T2 run; apply constraint ladder if any of S1-S8 open.
 S9 Nov 13 first-five-minutes tutorial (incl. per-player strike-slot calibration, D13), pause/resume (voice re-arm), accessibility
   pass, D15 Experimental pane + gaze-dwell select, on/off calibration of each D15 toggle, D16 phone-breakout intro (cuttable).
 S10 Nov 14 relay (D6) + automated function tests + headset pairing + imported-deck list + privacy policy final; relay circuit
   breaker (G0b); Upstash idle-archive check (free database must not be archived while idle through Dec 11).
 S11 Nov 15 perf + polish + CREDITS audit (script) + device test on Quest 2 (incl. FoV at the arc edge; re-scoped from Quest 3/3S
-  by the A4 waiver, so the Nov 1 / Nov 15 3/3S device dates are void and S8 walls run on Quest 2; residuals A4-R1..R3) + RC upload.
+  by the A4 waiver, so the Nov 1 / Nov 15 3/3S device dates are void and S8 walls run on Quest 2; residuals A4-R1..R3) + D18 T2 run
+  + RC upload.
 S12 Nov 16 buffer + RC invite install verify + fresh-install save check + video capture (D12).
 S13 Nov 17 video review + Devpost (rules.md:139-144,155; hackathon.md:80: tagline (140 chars), track Gaming, division (New Experience
   per G0a unless re-ruled; editable until Nov 18 12:00 PT, guidelines.md:101), invite URL (judges-only field if one exists), video link,
@@ -272,6 +332,13 @@ S1 headless test runner exit 0 (UE Automation; Unity: EditMode); 0 vendored Meta
   scratch engine config file, never committed) -> exit 1; git check-ignore 6/6 (Wit config, x.keystore, x.jks, Builds/x, x.apk,
   x.aab); spec file exists; Core compiles with 0 engine references (UE: no engine-module dependencies; Unity: 0 UnityEngine
   references); credits audit script exit 0 on a clean tree and exit 1 on an uncredited fixture file (2/2).
+  D18 runner: exit 0 on T0 and T1 1/1 each; T1 >=1 screenshot for the first scenario 1/1; no base -> exit non-zero 1/1; grep finds 0
+  full-run flags, env vars, defaults or test-name/filter/"all" arguments 1/1.
+  D18 bypass hook tests: direct `UnrealEditor-Cmd ... Automation RunTests`, `RunUAT ... RunUnreal` and Unity `-runTests` -> deny
+  naming the runner 3/3; runner call -> allow 1/1.
+  D18 run log: selected count + per-test reason + wall time printed and logged 1/1; whole-suite selection logs the reason 1/1.
+  D18 selector regression tests 4/4: unmapped path with 0 references -> 0 tests; unmapped path referenced by scenario X -> X only;
+  single-mechanic change -> only that mechanic's scenarios; full suite only when dependency resolution selects every test.
 S2 >=40 matcher golden cases, all run with EMPTY reject lists unless the case tests the reject list: >=10 generic near-miss rejects
   (afferent/efferent, hypertonic/hypotonic, exothermic/endothermic, Prussia/Russia, hypo/hyperthyroidism, "not X", "X or Y", answer "A",
   accented vs unaccented, shared-answer cards) + topic cases added after SP2; D4 table: 1 test per row (9/9) incl. wrong-then-orb-correct
@@ -288,6 +355,9 @@ S5 full run with mic off 1/1.
 S6a EditMode: fresh dir first save then load 1/1; corrupt primary -> .bak 1/1; truncated primary + missing .bak -> fresh state 1/1; boxes persist across app restart on device 3/3.
 S6 3-card pool with no ultimate needs exactly 3 correct; dodge at >=20 cm lateral/down; lean at telegraph start held through a 2 s telegraph -> dodged 3/3; same with accessibility slow telegraph 3/3; slow 1 s lean -> dodged 3/3; 0 false dodges in 20 forward-lean slashes; recenter + resume then dodge correct 3/3; enemy outside +/-40 deg never starts a telegraph 3/3; hands hidden mid-telegraph -> 0 hits and prompt shown 3/3; telemetry over 1 full run: max head displacement from run start <=30 cm 1/1 and 100% of slash contacts <=0.65 m from the head.
 S7 ultimate at exactly 5; 0 ultimate triggers in 60 s of slashing; D15 toggle OFF -> second ultimate type never offered 1/1.
+D18 per slice S3-S7: >=1 new tagged scenario 5/5; T1 >=1 screenshot per scenario; affected set for the slice's whole diff (base =
+  slice start commit) green at slice close 5/5; per-commit runs affected-only; scenario count never decreases.
+D18 T2 (S8 checkpoint, S11): scenarios affected since the last T2 sha green + OVR Metrics fps >= M6 target (60) 1/1 each.
 S8 matrix 8/8 (no scene, permission denied, walls only behind, far wall >3.5 m, cluttered room, MRUK timeout, head outside loaded room, recenter after chair turn) -> correct spawn or ring fallback; 100% spawns within +/-35 deg of play-forward at 1.2-3.5 m.
 S9 first correct kill <90 s, timed from D16 intro end or skip (2 testers who have not played it; if none by Nov 13, Kev on a fresh
   install, residual logged); 3 runs: median 4-8 min, max <=10 min, early-end rate (runs ended at 0 pips / runs) recorded (Q8);
@@ -316,12 +386,16 @@ S13 video <180 s public logged-out; frame review 0 hits (people, logos, brands, 
 OVR Metrics on device; Meta dashboard channel status + versionCode; invite URL on non-org account; Vercel deploy + Firewall/ratelimit
   logs; Upstash usage dashboard; gitleaks local hook + CI on the private GitHub remote (Q2); logged-out video playback; Devpost page; Wit
   app dashboard (usage, 429s).
+D18 premises (SP1/Nov 2 spike): Meta XR plugin release notes state UE 5.7 + simulator support; a simulator session_capture replay
+  run exits cleanly; a synthetic room returns MRUK scene data; simulator hand tracking on the chosen device profile; Quest 2
+  proximity bypass holds for a full run; OVR Metrics CSV pulled over adb (package name re-checked).
 Per slice (FLOW-016): SP1 Meta dashboard versionCode 1 + invite install on non-org account + OVR Metrics. SP2 Wit dashboard (burst
   429s) + dashboard versionCode 2 + invite install + privacy URL HTTP 200. SP2b on-device run only (none external beyond SP2's upload).
   SP3 GitHub Pages/Vercel URL loads on Quest Browser. G0 none. G1 CI gitleaks full-history run green before the public flip. S1
   gitleaks local hook. S2 none. S3 none. S4 Wit dashboard (requests visible, forced-429 run). S5 none. S6a none. S6 none. S7 none. S8
-  none. S9 none. S10 Vercel deploy + Firewall/ratelimit log + Upstash usage dashboard (incl. idle-archive setting). S11 OVR Metrics
-  (Quest 2; 3/3S waived, A4) + dashboard RC versionCode. S12 invite install on non-org account. S13 logged-out video playback + Devpost
+  OVR Metrics CSV (D18 T2). S9 none. S10 Vercel deploy + Firewall/ratelimit log + Upstash usage dashboard (incl. idle-archive
+  setting). S11 OVR Metrics (Quest 2; 3/3S waived, A4) + dashboard RC versionCode. S12 invite install on non-org account. S13
+  logged-out video playback + Devpost
   "submitted" page. F Wit dashboard, Upstash dashboard, privacy URL, channel install.
 
 ## Blast radius / rollback
@@ -374,115 +448,8 @@ Resolved 2026-10-28 (Kev):
 - G0b Relay fail-soft automatic; judging-period ops only {RELAY_ENABLED off, byte-identical privacy redeploy}, logged + disclosed in
   Devpost testing instructions; S10 Upstash idle-archive check (D6, S10, F, S13).
 
-## Ledger (finisher)
-| ID | Sev | Finding | Change |
-|---|---|---|---|
-| FIN-1 | major | Slash needs hand contact within the 30 cm hand radius, but enemies spawn 1.2-3.5 m away; nothing brought them in reach | D13 strike slot at 0.5 m (wall emergence kept for M15); S3 travel + no-early-slash criteria; A15 |
-| FIN-2 | major | Core asmdef is noEngineReferences (S1) but the deck parser is UnityEngine.JsonUtility (D5) | Game.Json adapter asmdef; validation in Core; object-root schema; missing-field and top-level-array rejects in S2 |
-| FIN-3 | major | Kev's verbatim hosting constraint (Vercel/Netlify if web) conflicts with D1 (GitHub Pages) and was missing from must-keep, as were CREDITS-day-1, decks own/PD/CC, never-vendor, privacy policy, post-Dec-11 MemriPal | M18-M21 added; D1 GitHub Pages only from the public repo (free, matches M20's rationale), else Vercel; Q2 |
-| FIN-4 | major | Constraint ladder cut starter decks to 1; M11 says "decks" | Ladder floor = 2 decks |
-| FIN-5 | major | No session structure: player "hit" had no consequence, no run end, no <=10 min check (rules.md:126,128 bus-stop test) | D14 run loop + shield pips; S2 + S6 + S9 run-length criteria; Q8 |
-| FIN-6 | major | EditMode (Mono) cannot prove String.Normalize/GetUnicodeCategory on IL2CPP Android with stripping | A14; on-device 10-case self-test in SP2 v2 and S11 RC; Latin-fold fallback |
-| FIN-7 | major | Lingering doubt: G1 picks the recognizer on accuracy only, ignoring freeze resilience | ADR 0002 freeze-resilience row required at G1 (criterion). Default unchanged; Kev sees the trade-off |
-| FIN-8 | major | Unfinished SP1/SP2 checks may run Nov 5, after the Nov 4 re-plan point; no rule if they fail then | Post-G1 failure rule: no engine switch after Nov 4; SP2b inside S4; pipeline escalation; Q7 |
-| FIN-9 | minor | Card ID "hash" unspecified (GetHashCode is not stable) | D5 SHA-256 first 16 bytes hex; golden value test |
-| FIN-10 | minor | Repeated wrong voice answers never reach orbs (trigger counted only misses) | D4 orb trigger = any 2 non-correct attempts; S2 3/3 mixes |
-| FIN-11 | minor | Ultimate charge source/reset undefined (M4) | D4 charge rule; S2 tests |
-| FIN-12 | minor | Answer window length undefined, so "0 mic opens outside window" was unverifiable | D2 6 s no-speech cap; S4 3/3 |
-| FIN-13 | minor | Unverifiable or always-passing CRITERIA: "or limits documented", "all motion within 30 cm", "0 uncredited assets", "POST over limit" with no limit, "first-word clip" undefined, "2 testers" undefined | Each restated as a countable check (SP2 burst rule, S6 telemetry, credits audit script, 10 POST/min, clip definition, fresh testers) |
-| FIN-14 | minor | SIGNALS not stated per slice (FLOW-016) | Per-slice SIGNALS line, "none" where none |
-| FIN-15 | minor | Devpost requirements beyond the D11 paragraph unscheduled (rules.md:142 inspiration/how built/future plans/launch date, rules.md:155 testing instructions, rules.md:154 content rating) | S13 scope + 7/7 criterion; Kev actions |
-| FIN-16 | minor | Network-off and hand-tracking-loss paths untested | S4 Wi-Fi-off run; D7 pause + S6 3/3 |
-| FIN-17 | minor | C# and JS normalizations can drift (server accepts deck device rejects) | Shared normalize.json fixture run by both suites |
-| FIN-18 | minor | Quest 3/3S first seen Nov 15 leaves 1 day for MRUK/FoV fixes | Target device by Nov 12 so S8 runs on it; hard Nov 15 unchanged. Superseded 2026-10-28 by the A4 waiver: no 3/3S, S8 + S11 on Quest 2 (A4-R2, A4-R3) |
-
-## Ledger (adversary round 2)
-| ID | Sev | Finding | Verdict | Reason / change |
-|---|---|---|---|---|
-| R2-COR-F1 | major | Fuzzy 0.85 accepts afferent/efferent, Prussia/Russia, hypo/hyper without reject list | ACCEPT | D3 adds exact 4-char prefix rule; S2 near-miss cases run with empty reject lists. Trade-off accepted: a garbled first syllable becomes a miss (no damage), never a false accept. |
-| R2-COR-F2 | major | Outcome/SR grading undefined for orb-after-wrong, ultimate, wrong orb, margin fail, short answer, out-of-deck wrong | ACCEPT | D4 single outcome table; first scored attempt sets grade; non-empty unmatched = miss (blocks promotion, no damage); S2 9/9 row tests. Out-of-deck wrong stays no-damage (indistinguishable from STT garble) but can no longer promote. |
-| R2-COR-F3 | major | Rolling baseline absorbs held/early dodge | ACCEPT | D7 frozen baseline at telegraph onset; S6 held/slow/accessibility lean tests (dup R2-FM-F2). |
-| R2-COR-F4 | major | 120 deg arc exceeds Quest 3/3S FoV | ACCEPT | D8 +/-35 deg arc + in-view telegraph gate; S11 FoV check (dup R2-AA-F1); FoV check on Quest 2 since the A4 waiver (A4-R3). |
-| R2-COR-F5 | major | File.Replace throws on first save | ACCEPT | D5 Move-if-missing else Replace; S6a fresh-dir EditMode + S12 fresh-install device check. |
-| R2-COR-x1 | minor | NFKD without dropping Mn | ACCEPT | D3 drops combining marks; S2 accented case. |
-| R2-COR-x2 | minor | Shared answers break margin/orbs; no min deck size | ACCEPT | D3 candidates owned by card sets; orbs from distinct answers; >=4 distinct answers at validation. |
-| R2-COR-x3 | minor | Card-ID collisions not rejected | ACCEPT | D5 ID without punctuation strip; duplicate-ID drop; S2 tests. |
-| R2-COR-x4 | minor | SP2b lacks 0-false-accept bar | ACCEPT | SP2b criterion restates it. |
-| R2-COR-x5 | minor | 8 h budget cannot cover SP1+SP2 | ACCEPT | Dup R2-SC-F1. |
-| R2-COR-S | simplicity | Negation and or/and guards redundant under prefix rule | ACCEPT (partial) | Negation guard dropped. or/and hedge guard KEPT: prefix rule does not block "X or Y" for long X, and hedges must be wrong, not miss. |
-| R2-FM-F1 | major | Silent mode latches permanently on one transient STT error | ACCEPT | D4 per-card fallback, only mic denial latches; D2 mic re-acquire on resume; S4/S9 re-arm tests. |
-| R2-FM-F2 | major | Rolling baseline absorbs early dodge | ACCEPT | Dup R2-COR-F3. |
-| R2-FM-F3 | major | First release-config build with real SDKs/permissions only at S11 | ACCEPT | SP2 spike uploaded as v2 in release config with final permissions + stripping; voice + MRUK verified after invite install before G1. Replaces SP1's hello-hands v2. |
-| R2-FM-F4 | major | Shared Wit app, unchecked quotas; F checks have no action | ACCEPT | ADR 0002 records limits; SP2 5-concurrent burst script; 429 -> per-card orbs; every F check names its action. |
-| R2-FM-F5 | minor | Stale room scan; arc frame after recenter | ACCEPT | D8 head-outside-room fallback + play-forward recomputed on recenter; S8 8/8. |
-| R2-FM-x1 | minor | Guard rejection damage unstated; duplicate IDs; arc frame | ACCEPT | D4 (hedge = wrong), D5, D8. |
-| R2-FM-S | simplicity | Upload SP2 spike as v2 instead of hello-hands v2 | ACCEPT | Same as R2-FM-F3. |
-| R2-SD-F1 | major | Wit token effectively public via APK + public invite URL | ACCEPT | D10 client token only, no intents/data, treated public (A13); judges-only Devpost field if available; ADR 0002 residual. |
-| R2-SD-F2 | major | Passthrough video exposes home/brands/people | ACCEPT | D12; S13 frame review 0 hits; XR Simulator alternative. |
-| R2-SD-F3 | major | gitleaks green proves nothing; build outputs not ignored | ACCEPT | S1 canary (uncommitted) + custom Wit rule; ignores Builds/, *.apk, *.aab, Temp/; check-ignore 6/6. |
-| R2-SD-F4 | major | Per-IP KV counter drains quota; no freeze remedy | ACCEPT (modified) | D6: GET limit dropped, POST limit via Firewall rule or stock ratelimit with TTL keys, RELAY_ENABLED kill switch. "Server patches allowed during freeze" REJECTED (rules.md:168 risk): kill-switch flip only, Kev confirms at G0. |
-| R2-SD-F5 | minor | Privacy page omits transcripts, IPs, logs, bystanders, deletion path | ACCEPT | S10 7/7 list; function never logs bodies; post-Dec-11 purge (Kev action). |
-| R2-SD-x1 | minor | Read-then-delete not atomic | ACCEPT | D6 GETDEL; S10 concurrent GET case. |
-| R2-SD-x2 | minor | "len >3" unit undefined | ACCEPT | D3 ">=4 normalized chars". |
-| R2-SD-x3 | minor | Device JSON parser unspecified | ACCEPT | D5 JsonUtility. |
-| R2-SD-S | simplicity | Drop GET counter, edge limit POST, KV = code -> deck + TTL | ACCEPT | D6. |
-| R2-SC-F1 | major | 8 h spike budget not credible | ACCEPT | A1 ~14 h stated; SP1 trimmed (1 upload); restore test + v2 + privacy stub moved into SP2's single release-config upload; G1 default + Nov 5 AM overflow rule. |
-| R2-SC-F2 | major | VR code entry + deck management unscheduled; KV stale | ACCEPT | D6 headset shows code, page posts; Upstash; S10 device criteria incl. delete confirm + Undo. M11 kept (pairing code + paste page both remain). |
-| R2-SC-F3 | minor | SP3 trigger overlaps SP2b; no post-SP3 plan | ACCEPT | SP3 only on SP1 failure; Nov 4 re-plan if it wins; M13 evaluation via ADR 0001 (not a descope: M13 asks for evaluation). |
-| R2-SC-F4 | minor | Device kill-mid-write test nondeterministic | ACCEPT | S6a EditMode corrupt/missing tests + 3/3 restart persistence. |
-| R2-SC-F5 | minor | Nov 5 overloaded; versionCode script and CI misplaced | ACCEPT | Script in SP1; CI deferred to remote (Q2); S2 may spill Nov 6 AM, charged to Nov 16 buffer. |
-| R2-SC-x1 | minor | IWSDK submission is a GitHub page link | ACCEPT | D1/SP3 GitHub Pages (rules.md:138 allows others, :140 and guidelines.md:60 name GitHub page; take the stricter). |
-| R2-SC-S | simplicity | Headset-shows-code, Upstash TTL/ratelimit, SP3 on SP1 only, EditMode save test | ACCEPT | As above. |
-| R2-AA-F1 | major | 120 deg arc vs FoV-aware rubric | ACCEPT | Dup R2-COR-F4; chose +/-35 deg (70 deg) + in-view gate over off-screen indicator (less UI). |
-| R2-AA-F2 | major | Disclosure may trigger Adapted re-assignment without the required summary | ACCEPT | D11 dual-use Devpost paragraph; G0 shows risk. M5 claim unchanged. |
-| R2-AA-F3 | major | Headset capture of passthrough unverified | ACCEPT | SP1 10 s capture criterion with XR Simulator fallback. |
-| R2-AA-F4 | major | Budget; SP2 depends on SP1; second speaker unnamed; no G1 default | ACCEPT | SP2 DEPENDS SP1; G1 default; Q6 + 1-speaker fallback corpus with residual logged. |
-| R2-AA-F5 | minor | AIO v81 vs ISDK v207; no gaze | ACCEPT (partial) | S1 version check + ADR 0001 record. Premise that v81 misses v207 REJECTED: hackathon.md:63 pairs "v81+ (v207)". Gaze affordance DEFERRED to Kev as Q5 (unrequested feature). |
-| R2-AA-x1 | minor | S6 "exactly 3" vs ultimates | ACCEPT | D4 ultimate row; S6 criterion "with no ultimate". |
-| R2-AA-x2 | minor | Typo fix resets progress; duplicates collide | ACCEPT (partial) | Duplicates handled (D5). Typo-reset REJECTED: content-addressed ID is intended (edited card = new card); starter decks freeze Nov 17. |
-| R2-AA-x3 | minor | Golden pairs fixed before topic chosen | ACCEPT | S2 generic cases + topic cases after SP2. |
-| R2-AA-S | simplicity | Drop GET counter | ACCEPT | Dup R2-SD-S. |
-
-## Ledger (adversary round 1)
-| ID | Sev | Finding | Verdict | Reason / change |
-|---|---|---|---|---|
-| COR-F1 | critical | SP2/G1 counts only true accepts; grammar ASR + n-best bias to false accepts | ACCEPT | SP2 adds >=15 wrong/noise utterances, 0 false accepts; grammar = all deck answers + [unk] (D2); n-best dropped (D3). |
-| FM-F1 | critical | First Competition upload + invite install only at S12 (Nov 15) | ACCEPT | Moved into SP1, G1 gated on it (dup: COR-F4, AA-1). |
-| COR-F2 | major | Lev 0.8 accepts antonym-like pairs; token-set, negation, "A", undefined ratio | ACCEPT | D3 rewritten: defined ratio, in-deck nearest + margin, reject list, negation/"or" guard, article guard; golden cases in S2. |
-| COR-F3 | major | Empty due queue undefined | ACCEPT | Study-ahead rule (D5) + S2 test. |
-| COR-F4 | major | No upload until S12; no keystore step | ACCEPT | SP1 (merged with FM-F1, SD-F2). |
-| COR-F5 | major | New Experience needs conception in window; realm-of-recall predates | ACCEPT | G0 Kev confirmation + ADR 0003 + Devpost disclosure (D11). Division stays (M5). |
-| COR-x1 | minor | "0 Meta SDK files under Assets/" unmeetable | ACCEPT | S1 criterion reworded to vendored sources only. |
-| COR-x2 | minor | 2 ft is diameter per guidelines.md:47 | ACCEPT | <=30 cm radius satisfies both readings (M6, D7). |
-| COR-x3 | minor | "2 timeouts" can't tell don't-know from STT failure | ACCEPT | D4 outcomes; orbs after 2 misses either way. |
-| COR-x4 | minor | G1 on MemriPal deadline day | ACCEPT | G1 Nov 3. |
-| COR-S | simplicity | Replace stacked matcher with normalize/aliases/nearest+margin | ACCEPT | D3. |
-| FM-F2 | major | Soft STT errors count as wrong; cold mic clips words | ACCEPT | D4 no-damage path; D2 mic at slash contact + earcon; SP2 clip metric. |
-| FM-F3 | major | Wall spawns not limited to arc; single-room test | ACCEPT | D8 distance+arc filter; S8 6-case matrix (dup AA-2). |
-| FM-F4 | major | Fixed head center breaks on recenter; lean-in false dodge | ACCEPT | D7 rolling baseline, reset events, forward lean ignored; S6 tests. |
-| FM-F5 | major | 13 back-to-back slices, no slack/cut order, Nov 9 overlap | ACCEPT (modified) | Nov 12 checkpoint + Nov 16 buffer + fidelity ladder. Cut order of features REJECTED where it hits M-items (relay, ultimates). |
-| FM-x1 | major | Non-atomic save | ACCEPT | D5 temp + File.Replace + .bak; S6a test (dup SD-F5). |
-| FM-S | simplicity | Drop relay | OVERRULE | M11 is Kev's verbatim ask; hardened instead (D6). |
-| SD-F1 | major | Wit token in public repo; unrotatable after freeze | ACCEPT | D10 gitignore + build-time injection + gitleaks + dedicated app; weekly token check in F. |
-| SD-F2 | major | Keystore not created/excluded/backed up | ACCEPT | D10 + SP1 restore test + versionCode 2 upload. |
-| SD-F3 | major | KV token/validation/rate limit unspecified | ACCEPT | D6 function-only KV client, server-side validation, per-IP KV counter; S10 bundle grep. |
-| SD-F4 | major | "No PII" false; enumerable digit codes | ACCEPT | Privacy page discloses Wit audio + deck retention; 32-symbol code, delete on first read, GET rate limit. |
-| SD-F5 | minor | Non-atomic Leitner save | ACCEPT | Same as FM-x1. |
-| SD-x1 | minor | TMP rich-text injection; device caps; stable card ID | ACCEPT | D6 rich text off + device re-validation; D5 hash ID. |
-| SD-S | simplicity | Move relay to post-Dec-11 branch | OVERRULE | M11 must-keep, non-deferrable. |
-| SC-F1 | major | Cut S10 relay | OVERRULE | M11 must-keep; risk reduced by D6 minimal design and fail-soft. |
-| SC-F2 | major | Spikes overflow 6 h, land on Nov 4; drop SP3, test Voice SDK only | ACCEPT (partial) | Spikes start Oct 28, budget 8 h, SP2 Voice SDK only (SP2b conditional), G1 Nov 3. SP3 kept as conditional (M13 evaluation; costs 0 unless triggered). |
-| SC-F3 | major | S6 overloaded on half day; shield vs ultimate collide | ACCEPT (partial) | S6 moved to Nov 10; Nov 9 = S6a; shield replaced by accessibility toggle. Poke-orb ultimate REJECTED: collision gone once shield removed. |
-| SC-F4 | minor | VR arena unscheduled, penalized | ACCEPT | MR only (D8). |
-| SC-F5 | minor | Matcher over-built (number words, n-best) | ACCEPT | Dropped (D3); aliases cover. |
-| SC-x1 | minor | Covers tags vs NUnit; no spec file | ACCEPT (adapted) | `// Covers:` above each [TestFixture]; spec file created in S1. Tag mandate itself kept. |
-| AA-1 | major | Upload late; 2nd-account test can falsely pass via App Sharing/org | ACCEPT | Non-org account, App Sharing off (SP1, S12). |
-| AA-2 | major | Quest 2 not a Quest 3 proxy; scene-but-no-wall gap | ACCEPT | A4 Quest 3/3S test required (waiver logged); D8 fallback case added. Waived 2026-10-28 (A4; residuals A4-R1..R4). |
-| AA-3 | major | SP2 corpus single speaker, undefined words/latency start | ACCEPT | Deck-derived corpus, 2+ speakers, noisy take, end-of-speech latency, false-accept count. |
-| AA-4 | major | Spike/schedule collides with MemriPal | ACCEPT (modified) | Same as FM-F5; named cut list (S7, S10) REJECTED as M-items. |
-| AA-5 | minor | Conception evidence; Q3 reads as concealment | ACCEPT | D11 + Q3 reworded. |
-| AA-x1 | minor | Nothing increments versionCode | ACCEPT | D10 build-script counter; SP1 v2 upload. |
-| AA-S | simplicity | Drop relay, optional static JSON URL | OVERRULE | M11 must-keep. |
+## Ledgers
+Finisher, adversary round 2 and round 1 ledgers: [2026-10-28-vr-flashcard-game-ledgers.md](2026-10-28-vr-flashcard-game-ledgers.md).
 
 Round-1 cheat sheet superseded by the one below.
 
