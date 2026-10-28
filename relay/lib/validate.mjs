@@ -4,6 +4,11 @@ import { normalize } from './normalize.mjs';
 export const MAX_BODY_BYTES = 200 * 1024;
 export const MAX_CARDS = 500;
 export const MIN_DISTINCT_BACKS = 4;
+// Per-field caps (RELAY-010), in characters.
+export const MAX_TITLE_CHARS = 120;
+export const MAX_SIDE_CHARS = 200;
+export const MAX_ENTRY_CHARS = 100;
+export const MAX_ENTRIES = 10;
 const RICH_TEXT_TAG = /<\/?[A-Za-z][^>]*>/;
 
 const reject = (status, error) => ({ ok: false, status, error });
@@ -26,9 +31,15 @@ function cardError(card, index) {
   if (!isPlainObject(card)) return `${where} must be an object`;
   if (!isNonBlankString(card.front)) return `${where}: front must be a non-empty string`;
   if (!isNonBlankString(card.back)) return `${where}: back must be a non-empty string`;
+  for (const side of ['front', 'back']) {
+    if (card[side].length > MAX_SIDE_CHARS) return `${where}: ${side} exceeds ${MAX_SIDE_CHARS} characters`;
+  }
   for (const field of ['aliases', 'reject']) {
-    if (card[field] !== undefined && !isStringList(card[field])) {
-      return `${where}: ${field} must be a list of strings`;
+    if (card[field] === undefined) continue;
+    if (!isStringList(card[field])) return `${where}: ${field} must be a list of strings`;
+    if (card[field].length > MAX_ENTRIES) return `${where}: at most ${MAX_ENTRIES} ${field} entries allowed`;
+    if (card[field].some((s) => s.length > MAX_ENTRY_CHARS)) {
+      return `${where}: each ${field} entry must be at most ${MAX_ENTRY_CHARS} characters`;
     }
   }
   const strings = [card.front, card.back, ...(card.aliases ?? []), ...(card.reject ?? [])];
@@ -53,6 +64,7 @@ export function validateDeck(body) {
   if (!isPlainObject(deck)) return reject(400, 'deck must be a JSON object');
   if (deck.version !== 1) return reject(400, 'version must be 1');
   if (typeof deck.title !== 'string') return reject(400, 'title must be a string');
+  if (deck.title.length > MAX_TITLE_CHARS) return reject(400, `title exceeds ${MAX_TITLE_CHARS} characters`);
   if (RICH_TEXT_TAG.test(deck.title)) return reject(400, 'title contains a rich-text tag');
   if (!Array.isArray(deck.cards) || deck.cards.length === 0) {
     return reject(400, 'cards must be a non-empty list');
@@ -69,5 +81,20 @@ export function validateDeck(body) {
     return reject(400, `at least ${MIN_DISTINCT_BACKS} distinct answers required`);
   }
 
-  return { ok: true, deck };
+  return { ok: true, deck: allowlisted(deck) };
+}
+
+// Rebuilds the deck from known fields only, so unknown fields (including an own
+// "__proto__" key from JSON.parse) are never stored or served back.
+function allowlisted(deck) {
+  return {
+    version: deck.version,
+    title: deck.title,
+    cards: deck.cards.map((card) => {
+      const kept = { front: card.front, back: card.back };
+      if (card.aliases !== undefined) kept.aliases = [...card.aliases];
+      if (card.reject !== undefined) kept.reject = [...card.reject];
+      return kept;
+    }),
+  };
 }
