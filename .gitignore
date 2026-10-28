@@ -18,4 +18,12 @@ Builds/
 node_modules/
 .vercel/
 
-# Engine-specific ignores land with the engine decision (ADR 0001).
+# Unreal Engine 5 (ADR 0001). *.apk and *.keystore stay ignored via the D10 blocks above.
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+.vs/
+*.sln
+*.VC.db
+Build/Android/
