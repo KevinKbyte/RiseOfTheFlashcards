@@ -156,7 +156,9 @@ D15 Experimental settings pane (Kev, 2026-10-28): one on/off toggle per experime
   mentioned in Devpost or the video.
 D16 In-game intro scene (Kev, 2026-10-28): on first launch a virtual phone placed on a detected table surface (MRUK) cracks and sad
   flashcards band together and swarm out, then combat starts; doubles as the trailer breakout shot (rules.md:237, no AI footage). Scope
-  ~1 day UE, built in S9. Cuttable: if behind at S12, the skit falls back to paper cards + drawer and the intro is skipped.
+  ~1 day UE, built in S9. Cuttable: if behind at S12, the skit falls back to paper cards + drawer and the intro is skipped. First
+  launch only, <=10 s, skippable by any trigger or pinch. No-table fallback (D8 ring-fallback triggers, or no qualifying table): the
+  phone spawns at waist height ~0.8 m in front of the player, facing them, and the same intro plays.
 
 ## Slices
 UE spike (Kev, 2026-10-28; D1): SP1 + SP2 run on UE 5.7 + Meta XR 207 (MetaXRPlatform OFF) with direct Wit.ai HTTP voice; pass = SP1
@@ -259,10 +261,10 @@ S6a EditMode: fresh dir first save then load 1/1; corrupt primary -> .bak 1/1; t
 S6 3-card pool with no ultimate needs exactly 3 correct; dodge at >=20 cm lateral/down; lean at telegraph start held through a 2 s telegraph -> dodged 3/3; same with accessibility slow telegraph 3/3; slow 1 s lean -> dodged 3/3; 0 false dodges in 20 forward-lean slashes; recenter + resume then dodge correct 3/3; enemy outside +/-40 deg never starts a telegraph 3/3; hands hidden mid-telegraph -> 0 hits and prompt shown 3/3; telemetry over 1 full run: max head displacement from run start <=30 cm 1/1 and 100% of slash contacts <=0.65 m from the head.
 S7 ultimate at exactly 5; 0 ultimate triggers in 60 s of slashing; D15 toggle OFF -> second ultimate type never offered 1/1.
 S8 matrix 8/8 (no scene, permission denied, walls only behind, far wall >3.5 m, cluttered room, MRUK timeout, head outside loaded room, recenter after chair turn) -> correct spawn or ring fallback; 100% spawns within +/-35 deg of play-forward at 1.2-3.5 m.
-S9 first correct kill <90 s (2 testers who have not played it; if none by Nov 13, Kev on a fresh install, residual logged); 3 runs:
-  median 4-8 min, max <=10 min, early-end rate (runs ended at 0 pips / runs) recorded (Q8); pause/resume 3/3 AND voice answer works
-  after resume 3/3; system menu open/close then voice works 3/3; cold start <10 s; strike slot calibrates within 0.40-0.60 m 3/3;
-  gaze-dwell ON: 1.2 s dwell selects 3/3, shorter glance selects 0/3;
+S9 first correct kill <90 s, timed from D16 intro end or skip (2 testers who have not played it; if none by Nov 13, Kev on a fresh
+  install, residual logged); 3 runs: median 4-8 min, max <=10 min, early-end rate (runs ended at 0 pips / runs) recorded (Q8);
+  pause/resume 3/3 AND voice answer works after resume 3/3; system menu open/close then voice works 3/3; cold start <10 s; strike slot
+  calibrates within 0.40-0.60 m 3/3; gaze-dwell ON: 1.2 s dwell selects 3/3, shorter glance selects 0/3;
   Experimental pane lists 2/2 toggles, each flips live and persists across restart 2/2; each toggle run on and off against these S9
   metrics with the result logged 2/2; every underperformer is OFF in the RC build and absent from Devpost + video (D15).
 S10 round-trip 3/3 (headset shows code, page posts, deck in headset <=5 s after POST); oversize/malformed/<4-answers/expired/
