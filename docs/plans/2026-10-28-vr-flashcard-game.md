@@ -7,18 +7,19 @@ GOAL: judged Quest 3/3S build (dev + test on Quest 2 only, A4 waiver; residuals 
 Out of scope: multiplayer, LLM grading, MemriPal or realm-of-recall code/assets (recon R19), VR (non-passthrough) arena,
   post-Dec-11 MemriPal import (separate branch, never the judged channel).
 Facts: R1-R20 in [2026-10-28-vr-flashcard-recon.md](2026-10-28-vr-flashcard-recon.md).
-Kev decisions 2026-10-28: ENGINE (Unreal 5.7, spike-gated; D1), Q1, Q2, Q4-Q10, G0a, G0b, new D15 (see Open questions).
+Kev decisions 2026-10-28: ENGINE (Unreal 5.7, spike-gated; D1), Q1, Q2, Q4-Q12, G0a, G0b, new D15, D19 (see Open questions).
 Changes from v1: see Ledger (finisher), then Ledger (adversary round 2), then round 1, in
   [2026-10-28-vr-flashcard-game-ledgers.md](2026-10-28-vr-flashcard-game-ledgers.md). Sources re-checked in the primary checkout for
   this pass: rules.md:88-143,154-168,195-239,318-330; guidelines.md:44-62,102-112; hackathon.md:63-75.
 
 ## Must-keep (Kev verbatim asks; never defer/cut/descope without Kev's explicit ask)
-M1 Enemies are flash cards; slash with hand, then say the answer aloud; correct = damage.
+M1 Enemies are flash cards; slash with hand or controller (Q12), then say the answer aloud; correct = damage.
 M2 Bigger enemies = multi-card health pools.
 M3 Enemies attack; player dodges (lean/duck).
 M4 Ultimates unlocked after N correct answers.
 M5 Gaming track, New Experience division (G0a 2026-10-28: claim kept with D11 disclosure; Devpost division field final at S13).
-M6 Hands-first; seated, 2 ft (design limit <=30 cm head/hand radius satisfies both rules.md:122 radius and guidelines.md:47 diameter readings); judged on Quest 3/3S; >=60 fps.
+M6 Hands-first, controllers also supported (Q12); seated, 2 ft (design limit <=30 cm head/hand radius satisfies both rules.md:122 radius
+  and guidelines.md:47 diameter readings); judged on Quest 3/3S; >=60 fps.
 M7 Deadline Nov 18 12:00 PT; build live + unchanged to ~Dec 11.
 M8 Full-time VR from Nov 5; before Nov 4 only spikes.
 M9 Speech recognition in headset (Unreal: direct Wit.ai HTTP, sherpa-onnx offline fallback; Unity fallback: Meta Voice SDK; Web
@@ -43,6 +44,11 @@ M23 Reusable E2E suite, affected-only (Kev 2026-10-28; D18): "we should have E2E
   i think agent workflow user level configuration enforces that already for this"; "we need to make this deterministic as possible
   otherwise youll be like next session i am running every E2E test (and then it just slows everyhting to a halt and then i ask why and
   you say my e2e tests)"
+M24 Wave survival + win condition (Kev 2026-10-28; D19): "#1 - the win condition would be once you attain such high success rates for
+  the entire deck they are working towards that user is not getting anything out of it anymore. So a wave user can select what decks
+  they want to be part of the round, and theres an option to have all decks. There can also be endless mode but user would have to
+  select it intentionally"; "if the user goes through the entire deck and is beating everything with 99%+ accurracy and they keep it
+  going for 1-2 minutes we can say they won, unless if they selected endless mode"
 Scope constraint ladder (fidelity, not features) if behind at the Nov 12 checkpoint: 2 starter decks instead of 3 (floor 2: M11 says
   "decks", plural; cut Basic Science first, Q4); D15 experimental features cut (base build already has 1 ultimate type fired repeatedly, Q9);
   placeholder VFX/audio; mastery screen as text list; tutorial as 3 prompts; imported-deck list capped at 1 slot (still with delete
@@ -122,6 +128,7 @@ Orb trigger: any 2 non-correct voice attempts in one encounter (wrong, miss, did
 Ultimate charge: +1 per correct outcome (voice or orb, assisted or not); firing the ultimate resets charge to 0; ultimate kills do not add charge.
 D5 SR = Leitner 5 boxes (0,1,3,7,14 d), due dates as UTC calendar days; box = enemy armor tier (visual only: armor look per box, no mechanical effect); grading per D4. Card ID = lowercase hex of the first 16 bytes of SHA-256 over UTF-8 of (NFC, trimmed, whitespace-collapsed front + U+001F + back) (never string.GetHashCode; no punctuation strip, so "5-3" != "53"); parser keeps the first of any duplicate ID and reports the count; editing a card's text makes it a new card by design. Empty due queue -> study-ahead: spawn lowest box, earliest next-due first. Save = JSON in persistentDataPath: write temp + flush; if primary missing -> File.Move(temp, primary), else File.Replace(temp, primary, .bak); load order primary -> .bak -> fresh state. Deck parser on device = JsonUtility (no polymorphic deserialization). JsonUtility is UnityEngine, so it lives in a thin Game.Json adapter asmdef that maps to plain DTOs; all validation (caps, required non-empty fields, >=4 distinct answers, duplicate IDs) lives in Core (noEngineReferences, S1). Deck schema root is an object {"version":1,"title":...,"cards":[{"front","back","aliases":[],"reject":[]}]} because JsonUtility cannot parse a top-level array and silently defaults missing fields; Core rejects defaulted/empty required fields.
   Under Unreal (2026-10-28): the JsonUtility / Game.Json adapter workaround is N/A (C++ parser in Core); kept for the Unity fallback.
+  Every Leitner write (D4 grading, study-ahead included) obeys the D19 daily grade lock.
 D6 Pairing relay (M11), headset-shows-code direction: headset POST /pair -> function creates a 6-char Crockford code (32^6 ~ 1.07e9)
   with SET NX EX 900 and returns it; headset shows the code and polls GET /pair/<code> every 3 s for up to 15 min; companion paste page
   (laptop keyboard) POSTs the deck to /pair/<code>; function validates server-side (<=200 KB, <=500 cards, >=4 distinct normalized
@@ -168,10 +175,11 @@ D13 Engagement distance (finisher-added; resolves A15): an enemy emerges at its 
   within 0.40-0.60 m (S9). Max 1 enemy in the strike slot at a time; others queue at their walls. Card text sized for 0.5 m reading and
   checked again at the wall (S11).
 D14 Run loop (finisher-added; rules.md:126,128 "Satisfying in <=10 minutes", bus-stop test): a run = up to 12 due cards (study-ahead
-  fills if fewer) packed into enemies of 1, 2 or 3 cards (M2), in due order. Player has 5 shield pips; a hit removes 1, capped at 1 hit
-  per encounter (Q8); at 0 the run ends early. First run = 6 cards, no-fail (0 pips does not end it). Every run ends in the mastery
-  screen; Leitner grades are saved per answer (D5), so an early end loses no progress. Target run length 4-8 min. Q8 (2026-10-28): counts
-  (12 cards, 5 pips) stay fixed; pacing (advance speed, attack cadence) is the tuning knob.
+  fills if fewer) packed into enemies of 1, 2 or 3 cards (M2), in due order, as D19 graded waves, then D19 Overtime. Player has 5 shield
+  pips; a hit removes 1, capped at 1 hit per encounter (Q8); the run ends at 0 pips, on WIN or on Retreat (D19; Endless only at 0 pips).
+  First run = 6 cards, no-fail (0 pips does not end it), no Overtime: it ends after its graded waves. Every run ends in the mastery
+  screen; Leitner grades are saved per answer (D5), so an early end loses no progress. Target graded-phase length 4-8 min; Overtime and
+  Endless are open-ended. Q8 (2026-10-28): counts (12 cards, 5 pips) stay fixed; pacing (advance speed, attack cadence) is the tuning knob.
 D15 Experimental settings pane (Kev, 2026-10-28): one on/off toggle per experimental feature; initially gaze-dwell select of answer
   orbs and menu buttons (1.2 s dwell, Q5) and a second, mastery-unlocked ultimate type (Q9; base build = 1 ultimate type fired
   repeatedly). S9 calibrates each with it on and off; anything that underperforms ships OFF in the submitted build and is not
@@ -210,13 +218,13 @@ D18 Agent validation loop + reusable E2E suite (Kev, 2026-10-28; M22, M23): the 
     capture with `adb shell screenrecord`/`screencap`; fps via OVR Metrics Tool CSV over adb; asserts M6 fps.
   Selection (M23; restates rules.global/full-suite-only-when-deterministically-required.md, whose paths: cover agent-workflow only, so
     nothing enforces it here): every tier is affected-only by default; no flag, script option or default offers an opt-in full run.
-    Each test/scenario declares mechanic tags (slash, layers, answer, orbs, dodge, ultimate, cues, spawn, ...); a checked-in
-    path-to-tag map (source dirs/assets -> tags) + `git diff <base>` picks them. A path the map lacks goes through a deterministic
-    reference scan (class/asset path, module name, literal path): tests referencing it are selected, 0 references = 0 tests, NEVER a
-    full-suite fallback; the missing map entry gets added. The full suite runs only when dependency resolution itself selects every
-    test (e.g. a shared step helper every scenario uses). Bases: per commit = main; slice close = slice start commit (the affected set
-    for the slice's whole diff is green); T2 = last T2 sha (affected scenarios + the fps check). Pattern only: agent-workflow
-    scripts/affected_tests.py (OPS-438, OPS-680; pytest-centric, cannot select UE tests).
+    Each test/scenario declares mechanic tags (slash, layers, answer, orbs, dodge, ultimate, cues, spawn, waves, overtime, win,
+    endless, ...); a checked-in path-to-tag map (source dirs/assets -> tags) + `git diff <base>` picks them. A path the map lacks
+    goes through a deterministic reference scan (class/asset path, module name, literal path): tests referencing it are selected,
+    0 references = 0 tests, NEVER a full-suite fallback; the missing map entry gets added. The full suite runs only when dependency
+    resolution itself selects every test (e.g. a shared step helper every scenario uses). Bases: per commit = main; slice close =
+    slice start commit (the affected set for the slice's whole diff is green); T2 = last T2 sha (affected scenarios + the fps check).
+    Pattern only: agent-workflow scripts/affected_tests.py (OPS-438, OPS-680; pytest-centric, cannot select UE tests).
   Enforcement (deterministic, not prose; M23): (1) one runner script (scripts/, own test + README entry) is the ONLY entry point for
     every tier; it computes the selection from `git diff <base>` itself, takes no test-name/filter/"all" argument, exits non-zero
     with no base and on any failure. (2) A repo-level Claude Code PreToolUse Bash hook in the game repo's `.claude/` denies direct
@@ -240,6 +248,20 @@ D18 Agent validation loop + reusable E2E suite (Kev, 2026-10-28; M22, M23): the 
     developers.meta.com/horizon/documentation/unreal/xrsim-intro/,
     developers.meta.com/horizon/documentation/unreal/xrsim-session-capture/, dev.epicgames.com Gauntlet docs,
     communityforums.atmeta.com proximity thread.
+D19 Wave survival + win (Kev, 2026-10-28; M24, Q11, Q12): per round the player picks deck(s), incl. "all decks"; Endless is an explicit
+  opt-in (default off). Graded waves = the D14 run cards (due, study-ahead fills), 3 cards per wave (12 -> 4 waves, 6 -> 2); pool size
+  ramps 1 -> 2 -> 3 (M2), attack cadence ramps, last graded wave = one 3-card boss. Overtime waves follow until 0 pips: tonight's
+  misses first, then selected-deck cards not yet shown this run, then recycled seen cards; zero Leitner writes; each wave faster. WIN
+  (checked after every answer; never in Endless): every card in the selected deck(s) shown this run (not-due cards served ungraded,
+  no Leitner write) AND accuracy over the last 90 s of answers >=99% (window tuned 60-120 s in S9; answer = any D4 outcome except Hard
+  STT error and Ultimate; under 100 answers in the window, 99% means 0 non-correct). Endless ends only at 0 pips. Retreat any time ->
+  mastery screen. Mastery screen: waves survived, personal best (int in the D5 save), next-due count worded "next uprising: N cards"
+  (due dates are UTC days, so the count rolls at UTC midnight, not local midnight). Daily grade lock: max 1 Leitner write per card per
+  UTC day; closes the study-ahead hole (D4 grades the first scored attempt per encounter and D5 study-ahead re-serves not-due cards,
+  so repeat runs could walk one card box 0 -> 4 in a day). First run (D14) stays 6 cards, no-fail, no Overtime. Horde = the D13 wall
+  queue. Wreckage = the D17 wall-crack persists and grows one tier per wave on MRUK wall planes; ring fallback (D8) = a barricade
+  taking the same tiers; decal count capped, checked at S11 >=60 fps. Built: S2 packing + grade lock + Overtime + win check, S6 run
+  end, S6a mastery fields + PB save, S8 wreckage + barricade, S9 deck select + Endless + Retreat + window tuning, S11 decal cap.
 
 ## Slices
 UE spike (Kev, 2026-10-28; D1): SP1 + SP2 run on UE 5.7 + Meta XR 207 (MetaXRPlatform OFF) with direct Wit.ai HTTP voice; pass = SP1
@@ -347,9 +369,13 @@ S2 >=40 matcher golden cases, all run with EMPTY reject lists unless the case te
   top-level-array JSON and a card with a missing/empty front each rejected 2/2; normalize.json fixture N/N; orb trigger: wrong+miss,
   miss+didn't-catch, wrong+wrong each -> orbs 3/3; ultimate charge: orb correct counts 1/1, reset to 0 after firing 1/1, ultimate kills
   add 0 1/1; run loop: 12-card cap 1/1, pools only of size 1-3 1/1, 5th hit ends run 1/1, grades saved before run end 1/1, 2nd hit in
-  one encounter removes 0 pips 1/1, first run = 6 cards and not ended at 0 pips 1/1; deck-lint (Q4): numeric answer rejected, 3-char
-  answer flagged, homophone answer without alias flagged 3/3, 3 starter decks pass 3/3; `// Covers: FEAT-ID` above every [TestFixture].
-S3 20/20 slashes register (slash = fingertip speed >=1.0 m/s through the card collider in the strike slot); 0 false triggers in 60 s idle; 5/5 enemies travel wall -> strike slot and no slash registers before arrival.
+  one encounter removes 0 pips 1/1, first run = 6 cards, not ended at 0 pips and no Overtime 1/1; D19: wave packing 12 -> 4 waves and
+  6 -> 2 2/2, last graded wave = one 3-card pool 1/1; grade lock: 2nd scored attempt on a card in one UTC day -> 0 Leitner writes 1/1;
+  Overtime answers -> 0 Leitner writes 1/1; win check: 1 card unshown -> no WIN, window accuracy <99% -> no WIN, full coverage +
+  >=99% over the window -> WIN, Endless -> no WIN 4/4; deck-lint (Q4): numeric answer rejected, 3-char answer flagged, homophone
+  answer without alias flagged 3/3, 3 starter decks pass 3/3; `// Covers: FEAT-ID` above every [TestFixture].
+S3 20/20 slashes register per input, hands and controllers 2/2 (slash = fingertip or controller-tip speed >=1.0 m/s through the card
+  collider in the strike slot); 0 false triggers in 60 s idle; 5/5 enemies travel wall -> strike slot and no slash registers before arrival.
 S4 0 mic opens outside window; 3/3 forced hard STT errors -> orbs <1 s AND next card's voice answer works 3/3; forced 429 -> per-card orbs 1/1; empty transcript -> 0 damage 3/3; 2 non-correct attempts -> orbs 3/3; 6 s silence -> didn't catch 3/3; Wi-Fi off: every card reaches orbs <=4 s after its answer window opens and the run completes 1/1; silent mode not auto-latched by any error except mic denial 1/1.
 S5 full run with mic off 1/1.
 S6a EditMode: fresh dir first save then load 1/1; corrupt primary -> .bak 1/1; truncated primary + missing .bak -> fresh state 1/1; boxes persist across app restart on device 3/3.
@@ -360,7 +386,9 @@ D18 per slice S3-S7: >=1 new tagged scenario 5/5; T1 >=1 screenshot per scenario
 D18 T2 (S8 checkpoint, S11): scenarios affected since the last T2 sha green + OVR Metrics fps >= M6 target (60) 1/1 each.
 S8 matrix 8/8 (no scene, permission denied, walls only behind, far wall >3.5 m, cluttered room, MRUK timeout, head outside loaded room, recenter after chair turn) -> correct spawn or ring fallback; 100% spawns within +/-35 deg of play-forward at 1.2-3.5 m.
 S9 first correct kill <90 s, timed from D16 intro end or skip (2 testers who have not played it; if none by Nov 13, Kev on a fresh
-  install, residual logged); 3 runs: median 4-8 min, max <=10 min, early-end rate (runs ended at 0 pips / runs) recorded (Q8);
+  install, residual logged); 3 runs: graded phase median 4-8 min, max <=10 min, first cleared wave <=2 min 3/3, early-end rate (runs
+  ended at 0 pips before Overtime / runs) recorded (Q8); D19 win condition reachable 1/1 (window tuned 60-120 s); Retreat -> mastery
+  screen 3/3;
   pause/resume 3/3 AND voice answer works after resume 3/3; system menu open/close then voice works 3/3; cold start <10 s; strike slot
   calibrates within 0.40-0.60 m 3/3; gaze-dwell ON: 1.2 s dwell selects 3/3, shorter glance selects 0/3;
   Experimental pane lists 2/2 toggles, each flips live and persists across restart 2/2; each toggle run on and off against these S9
@@ -413,7 +441,9 @@ Devpost Join Hackathon (+ check for a judges-only invite-URL field); forum Start
   deletion contact address; Quest 3/3S access dropped (A4 waiver 2026-10-28: Quest 2 only); 2 fresh S9 testers (Nov 13); content
   rating choice (S13, target 10+); Devpost tagline + division field + description + testing instructions sign-off (S13); pre-ruling
   email dropped (G0a); log every judging-period op with timestamp + reason (G0b); after Dec 11
-  purge Wit utterance log + Upstash keys.
+  purge Wit utterance log + Upstash keys; 3 VR check-ins (D18): after the Nov 2 spike, once the core loop works, before submission.
+FLAG for Kev: the D18 harness (runner, selector, bypass hook, debug input, event log) is folded into S1, making the Nov 5 AM slice
+  heavy; D18 premises (2)-(6) carry agent-chosen fallbacks, not Kev-approved ones. Confirm or re-scope both.
 
 ## Open questions
 
@@ -439,9 +469,13 @@ Resolved 2026-10-28 (Kev):
 - Q5 Gaze: the D8 +/-40 deg in-view gate is the head-gaze mechanic in ADR 0001 + Devpost; gaze-dwell select (1.2 s) is a D15
   experimental toggle (D8, G1, S9).
 - Q8 Keep 0.5 m / 12 cards / 5 pips; max 1 hit per encounter; strike slot per-player 0.40-0.60 m; first run 6 cards, no-fail; S9 adds
-  early-end rate; pacing is the tuning knob, not counts (D13, D14, S2, S9).
+  early-end rate; pacing is the tuning knob, not counts (D13, D14, S2, S9). D19 leaves the graded counts unchanged; Overtime is ungraded.
 - Q9 Base build = 1 ultimate type fired repeatedly; second mastery-unlocked type is a D15 experimental toggle (S7, ladder).
 - D15 Experimental settings pane (new; S9 calibrates each toggle on/off; underperformers ship OFF, unmentioned).
+- Q11 99% win measure: every card in the selected deck(s) shown this run (not-due cards served ungraded, no Leitner write), then
+  accuracy over the last 90 s of answers >=99% -> WIN; window tuned 60-120 s in S9 (M24, D19, S2, S9).
+- Q12 Slash input: both controllers and hand tracking (M1, M6, D17, S3).
+- D19 Wave survival (new; M24): graded waves, ungraded Overtime, WIN unless Endless, daily grade lock.
 - G0a New Experience claim kept with D11 disclosure; division field set at S13 (guidelines.md:101). Pre-ruling email
   (MetaHorizonStart@meta.com) dropped 2026-10-28 (Kev): repo first commit 37d0378 is 2026-10-28, inside the window starting
   2026-09-24 (rules.md:91), with no pre-existing code, so the New Experience Division is not in question.
