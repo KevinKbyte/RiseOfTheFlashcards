@@ -6,6 +6,7 @@
 // KV_REST_API_URL/_TOKEN fallbacks) via Redis.fromEnv(), server-side only (RELAY-008).
 import { Ratelimit } from '@upstash/ratelimit';
 import { Redis } from '@upstash/redis';
+import { POLL_RATE_LIMIT } from '../lib/http.mjs';
 import { createRelay } from '../lib/relay.mjs';
 
 // Swap the value only while it still equals the expected one; KEEPTTL preserves the
@@ -37,6 +38,11 @@ const relay = createRelay({
     redis: Redis.fromEnv(),
     limiter: Ratelimit.fixedWindow(10, '60 s'),
     prefix: 'relay:ratelimit',
+  }),
+  pollRateLimiter: new Ratelimit({
+    redis: Redis.fromEnv(),
+    limiter: Ratelimit.fixedWindow(POLL_RATE_LIMIT.limit, `${POLL_RATE_LIMIT.windowSec} s`),
+    prefix: 'relay:ratelimit:poll',
   }),
   env: process.env,
   logger: console,

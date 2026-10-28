@@ -2,7 +2,7 @@
 // are injected so the Vercel adapters and the tests share one implementation.
 //
 // store:       { setIfAbsent(key, value, ttlSec), get(key), setIfEquals(key, expected, value), getDel(key) }
-// rateLimiter: { limit(ip) -> { success } }
+// rateLimiter: { limit(ip) -> { success } } -- POST bucket; pollRateLimiter has the same shape for GETs.
 // logger:      { info, warn, error } -- receives method, route and status only, never bodies.
 import { validateDeck } from './validate.mjs';
 
@@ -34,7 +34,7 @@ function json(status, payload) {
 
 const error = (status, message) => json(status, { error: message });
 
-export function createRelay({ store, rateLimiter, env, logger, randomCode = randomCrockfordCode }) {
+export function createRelay({ store, rateLimiter, pollRateLimiter, env, logger, randomCode = randomCrockfordCode }) {
   async function createCode() {
     for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt += 1) {
       const code = randomCode();
@@ -73,13 +73,13 @@ export function createRelay({ store, rateLimiter, env, logger, randomCode = rand
     const codeMatch = isPair ? null : CODE_ROUTE.exec(path);
     if (!isPair && !codeMatch) return error(404, 'not found');
 
-    if (method === 'POST') {
-      const { success } = await rateLimiter.limit(String(ip ?? 'unknown'));
-      if (!success) return error(429, 'too many requests');
-      if (isPair) return createCode();
-    } else if (method !== 'GET' || isPair) {
-      return error(405, 'method not allowed');
-    }
+    if (method !== 'POST' && (method !== 'GET' || isPair)) return error(405, 'method not allowed');
+
+    // POSTs and GET polls draw on separate buckets, so polling never spends the POST budget.
+    const limiter = method === 'POST' ? rateLimiter : pollRateLimiter;
+    const { success } = await limiter.limit(String(ip ?? 'unknown'));
+    if (!success) return error(429, 'too many requests');
+    if (isPair) return createCode();
 
     const code = codeMatch[1].toUpperCase();
     if (!CODE_PATTERN.test(code)) return error(400, 'bad code format');
