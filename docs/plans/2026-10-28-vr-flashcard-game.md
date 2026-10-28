@@ -314,8 +314,9 @@ Resolved 2026-10-28 (Kev):
   scheduled (D1, SP3, G1).
 - Q2 Repo public when? Private GitHub remote now with CI gitleaks; public Nov 3 (G1) once a full-history scan is green and .gitignore
   covers .claude/ (A6, D10, G1).
-- Q3 Title "Cards: Uprising"; web-checked 2026-10-28, no video game with this name (only tabletop card sets named "Uprising":
-  Netrunner, Epic Card Game, Flesh and Blood, VS System); prior realm-of-recall still disclosed on Devpost.
+- Q3 Title "Flashcards Fight Back" (Kev 2026-10-28, replaces "Cards: Uprising"); web-checked 2026-10-28, no game by this name;
+  nearest concept is itch.io "Flashcard Hero" (flashcard RPG combat), so the Devpost text should differentiate on VR + voice
+  answers; prior realm-of-recall still disclosed on Devpost.
 - Q4 Starter decks: Opposites, World Capitals, Basic Science; no Spanish; locked by Oct 30; S2 deck-lint gate; cut Basic Science
   first (A10, SP2, S2, ladder).
 - Q5 Gaze: the D8 +/-40 deg in-view gate is the head-gaze mechanic in ADR 0001 + Devpost; gaze-dwell select (1.2 s) is a D15

@@ -6,7 +6,7 @@ Plan S13 (submit by 2026-11-17 21:00 PT; deadline 2026-11-18 12:00 PT, rules.md:
 
 | Field | Value |
 |---|---|
-| Submission name | Cards: Uprising (plan Q3: distinct from existing titles) |
+| Submission name | Flashcards Fight Back (plan Q3: distinct from existing titles) |
 | Tagline (140 chars, hackathon.md:80) | `<TAGLINE>` |
 | Track (rules.md:143) | Gaming |
 | Division (rules.md:144) | New Experience (plan G0a 2026-10-28, ADR 0003; set at S13, editable until 2026-11-18 12:00 PT, guidelines.md:101) |
