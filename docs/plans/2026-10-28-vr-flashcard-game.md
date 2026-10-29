@@ -47,6 +47,10 @@ M24 Wave survival + win condition (Kev 2026-10-28; D19): "#1 - the win condition
   they want to be part of the round, and theres an option to have all decks. There can also be endless mode but user would have to
   select it intentionally"; "if the user goes through the entire deck and is beating everything with 99%+ accurracy and they keep it
   going for 1-2 minutes we can say they won, unless if they selected endless mode"
+Kev answers 2026-10-28 (FSRS pass; not M-items; ledgers E-K-a, E-K-b1..E-K-b3, E-K-e): "Any input pauses (Recommended)" (D7); "it should be
+  following fsrs principles (so we can do something similar to anki where we set the number of cards for a day)" (D5); "#1 - yeah otherwise user can
+  cheese it and dodge for 1-2 minutes after doing one correct" (D19); "ultimates can push cards further away, so yuo have more time to answer it"
+  (D4); "Two tiers (Recommended)" (D19); "12 new / 120 reviews (Recommended)" (D5); "Again / Hard / Good (Recommended)" (D4, D5).
 Scope constraint ladder (fidelity, not features) if behind at the Nov 12 checkpoint: 2 starter decks instead of 3 (floor 2: M11 says
   "decks", plural; cut Basic Science first, Q4); D15 experimental features cut (base build already has 1 ultimate type fired repeatedly, Q9);
   placeholder VFX/audio; mastery screen as text list; tutorial as 3 prompts; imported-deck list capped at 1 slot (still with delete
@@ -117,7 +121,7 @@ D4 Answer outcomes (single table; "encounter" = one card-enemy's card until it i
 | Orb correct (voice mode, after misses/errors) | slash correct orb | -1 card | none | Hard if a miss or Didn't catch preceded and no Again was written; else none |
 | Orb correct (silent mode, first pick) | slash correct orb | -1 card | none | Good (Q3) |
 | Orb wrong | slash distractor | none | hit | Again if first scored attempt; picked orb removed |
-| Ultimate (knockback) | ultimate fires (two-palm push, D7) | strike-slot enemy pushed back toward its wall spawn (max to wall/ring); its in-flight attack cancelled (the only allowed cancel), telegraph reset; 0 cards removed | none | none; encounter state kept (hit cap, attempt + orb counters, strike-slot reservation); an open mic window is left alone |
+| Ultimate (knockback) | ultimate fires (D7 input) | strike-slot enemy pushed back toward its wall spawn (max to wall/ring); its in-flight attack cancelled (the only allowed cancel), telegraph reset; 0 cards removed | none | none; encounter state kept (hit cap, attempt + orb counters, strike-slot reservation); an open mic window is left alone |
 
 Orbs = 1 correct + 3 distractors drawn from distinct normalized answers not owned by this card (deck validation guarantees >=4 distinct answers). Silent mode: user toggle any time; latches automatically ONLY on mic permission denial.
 Orb trigger: any 2 non-correct voice attempts in one encounter (wrong, miss, didn't catch, in any mix) -> orbs for this card; a player who keeps saying wrong answers is never stuck taking hits. Each voice attempt needs a fresh slash on the same card.
@@ -156,7 +160,19 @@ D6 Pairing relay (M11), headset-shows-code direction: headset POST /pair -> func
   Freeze policy (G0b, Kev 2026-10-28; rules.md:168): relay fail-soft is automatic (headset circuit breaker -> "import unavailable", no
   manual step). Nov 18-Dec 11 allowed ops are ONLY {RELAY_ENABLED flip off, byte-identical privacy-page redeploy}; no code changes. Each
   op is logged with timestamp + reason, and the policy is disclosed in the Devpost testing instructions.
-D7 Dodge: baseline = mean head position over the 1.5 s before telegraph onset, FROZEN from onset until the attack resolves (overlapping attacks share the earliest frozen baseline until all resolve); the baseline rolls only outside attack windows. Dodge = lateral or downward displacement >=20 cm from the frozen baseline at the hit frame; forward lean ignored; all motion within 30 cm radius. Recenter or pause during an attack cancels that attack; baseline resets on recenter, resume, pause. Hand tracking lost (both hands) pauses attack timers and shows a "show your hands" prompt; no hit lands while paused. "Lateral or downward displacement" = Euclidean distance in the head-local lateral/vertical plane (forward axis dropped). Accessibility toggle: slower telegraphs + auto-dodge option. Ultimate = two-palm push.
+D7 Dodge + interruptions (Kev 2026-10-28 "Any input pauses (Recommended)", ledgers E-K-a): baseline = mean head position over the 1.5 s before
+  telegraph onset, FROZEN from onset until the attack resolves (overlapping attacks share the earliest frozen baseline until all resolve); the
+  baseline rolls only outside attack windows. Dodge = lateral or downward displacement >=20 cm from the frozen baseline at the hit frame; forward
+  lean ignored; all motion within 30 cm radius. "Lateral or downward displacement" = Euclidean distance in the head-local lateral/vertical plane
+  (forward axis dropped). Interruptions (input-loss pause, system/menu pause, recenter) never cancel an attack: attack timers freeze and no hit
+  lands; on the first resume all frozen attacks take one fresh shared baseline (1.5 s) and each replays its full telegraph once. A replay runs on
+  through input loss and lands at its hit frame; a menu pause or recenter during a replay freezes it, re-takes the baseline, then resumes the
+  remaining telegraph (no second replay). Input-loss pause: no hand and no controller pose tracked for >0.5 s -> "show your hands" prompt; resumes
+  when any pose is tracked; never touches the mic or an open answer window. A system/menu pause during an open answer window closes the mic and
+  aborts the in-flight Wit request: speech already started -> Voice wrong (D4 rating and orb trigger), no hit; no speech yet -> Didn't catch.
+  Ultimate (charge >=5): hands = two-palm push (both palms face forward and move forward >=X cm in <0.3 s; X tuned in S7); controllers = press A+X
+  together; one controller + one hand = hold that controller's A or X for 0.5 s (SIG-1). Armed = charged with both palms facing forward; while
+  armed, a slash event waits <=0.3 s and is dropped only if the push fires. Accessibility toggle: slower telegraphs + auto-dodge option.
 D8 MR only. Play-forward yaw = tracking-space forward, recomputed on every recenter. Enemies emerge from MRUK walls 1.2-3.5 m away
   within +/-35 deg of play-forward (70 deg arc). An enemy's card text shows and its telegraph starts only while it is within +/-40 deg of
   current head yaw; otherwise its attack timer waits. Q5 (2026-10-28): this in-view gate is the head-gaze mechanic (rules.md:223), named
@@ -186,12 +202,15 @@ D13 Engagement distance (finisher-added; resolves A15): an enemy emerges at its 
   telegraphs and attacks happen only in the strike slot. Q8 (2026-10-28): 0.5 m is the default; the slot is calibrated per player
   within 0.40-0.60 m (S9). Max 1 enemy in the strike slot at a time; others queue at their walls. Card text sized for 0.5 m reading and
   checked again at the wall (S11).
-D14 Run loop (finisher-added; rules.md:126,128 "Satisfying in <=10 minutes", bus-stop test): a run = up to 12 due cards (study-ahead
-  fills if fewer) packed into enemies of 1, 2 or 3 cards (M2), in due order, as D19 graded waves, then D19 Overtime. Player has 5 shield
-  pips; a hit removes 1, capped at 1 hit per encounter (Q8); the run ends at 0 pips, on WIN or on Retreat (D19; Endless only at 0 pips).
-  First run = 6 cards, no-fail (0 pips does not end it), no Overtime: it ends after its graded waves. Every run ends in the mastery
-  screen; Leitner grades are saved per answer (D5), so an early end loses no progress. Target graded-phase length 4-8 min; Overtime and
-  Endless are open-ended. Q8 (2026-10-28): counts (12 cards, 5 pips) stay fixed; pacing (advance speed, attack cadence) is the tuning knob.
+D14 Run loop (finisher-added; rules.md:126,128 "Satisfying in <=10 minutes", bus-stop test; FSRS pass E-FS-6): a run reserves min(12, uncovered
+  queue) graded cards at start (uncovered = a today's-queue card with last_review_day < run_day, D5); reserved cards the run never reaches return to
+  the queue unspent. Fillers top the run up to 12: cards graded today (lapses first), then introduced not-due cards by lowest retrievability;
+  fillers are ungraded (0 FSRS writes, 0 budget), never New, never uncovered queue cards. Cards are packed into enemies of 1, 2 or 3 cards (M2; any
+  n 1..12), graded cards first in queue order, as D19 graded waves, then D19 Overtime. Study-ahead removed (it would overrun the daily budget).
+  Player has 5 shield pips; a hit removes 1, capped at 1 hit per encounter (Q8); the run ends at 0 pips, on WIN or on Retreat (D19; Endless only at
+  0 pips). First run = 6 cards, no-fail (0 pips does not end it), no Overtime: it ends after its graded waves. Every run ends in the mastery screen;
+  FSRS ratings are saved per encounter (D5), so an early end loses no progress. Target graded-phase length 4-8 min; Overtime and Endless are
+  open-ended. Q8 (2026-10-28): counts (12 cards, 5 pips) stay fixed; pacing (advance speed, attack cadence) is the tuning knob.
 D15 Experimental settings pane (Kev, 2026-10-28): one on/off toggle per experimental feature; initially gaze-dwell select of answer
   orbs and menu buttons (1.2 s dwell, Q5) and a second, mastery-unlocked ultimate type (Q9; base build = 1 ultimate type fired
   repeatedly). S9 calibrates each with it on and off; anything that underperforms ships OFF in the submitted build and is not
@@ -210,14 +229,14 @@ D17 Onboarding cues, show don't tell (Kev, 2026-10-28; workshop notes show-dont-
   have multiple layers"): visible card stack, only the top card highlighted/answerable, each correct answer peels one. Answer: D2
   mic-live earcon + pulsing mic glyph on the card. Silent-mode orbs (M10): all pulse equally on idle, never singling out the correct
   one. Where: wall-crack light at each spawn (M15, D13). Dodge (M3, D7): floor lean-direction marker on the first telegraph of the
-  first run; retired after the first dodge. Ultimate (M4, two-palm push): palms glow when charged; ghost-hands demo on first charge
-  only. Text only for card prompt/answer/numbers, always paired with a glow. Built per slice: S3 slash/glow/stack, S4 mic glyph, S5
+  first run; retired after the first dodge. Ultimate (M4, D7 input): palms or controllers glow when charged; ghost demo of the player's input on
+  first charge only. Text only for card prompt/answer/numbers, always paired with a glow. Built per slice: S3 slash/glow/stack, S4 mic glyph, S5
   orbs, S6 dodge marker, S7 ultimate. Cuttable: falls back to the constraint ladder's "tutorial as 3 prompts" (Must-keep). Open:
   diegetic wrist-turn UI (pop-up in the hand on a wrist turn) for hints/mastery (Kev's note).
 D18 Agent validation loop + reusable E2E suite (Kev, 2026-10-28; M22, M23): the agent plays, sees and fixes the game unattended; Kev
   checks in VR at 3 points only (after the Nov 2 spike, once the core loop works, before submission) for what tooling cannot judge:
   comfort/sickness, slash feel, real hand-tracking accuracy, mic in a noisy room, video sign-off. Debug input layer: console commands
-  for slash, dodge, ultimate (two-palm push) and "answer <text>" (injects text past Wit.ai, so logic is tested without a mic);
+  for slash, dodge, ultimate (input-agnostic event) and "answer <text>" (injects text past Wit.ai, so logic is tested without a mic);
   stripped from shipping builds. Structured event log (spawn, hit, layer peel, answer, grade, dodge, pip lost, frame time) is the
   assertion surface.
   T0 headless logic: UE Automation, `-nullrhi`, seconds, on every change.
@@ -228,41 +247,51 @@ D18 Agent validation loop + reusable E2E suite (Kev, 2026-10-28; M22, M23): the 
   T2 on-device Quest 2, at milestones: Gauntlet `RunUnreal -platform=Android -device=<serial>` (fallback BuildCookRun -deploy -run);
     headset unworn via the proximity bypass `adb shell am broadcast -a com.oculus.vrpowermanager.prox_close` (re-send each run);
     capture with `adb shell screenrecord`/`screencap`; fps via OVR Metrics Tool CSV over adb; asserts M6 fps.
-  Selection (M23; restates rules.global/full-suite-only-when-deterministically-required.md, whose paths: cover agent-workflow only, so
-    nothing enforces it here): every tier is affected-only by default; no flag, script option or default offers an opt-in full run.
-    Each test/scenario declares mechanic tags (slash, layers, answer, orbs, dodge, ultimate, cues, spawn, waves, overtime, win,
-    endless, ...); a checked-in path-to-tag map (source dirs/assets -> tags) + `git diff <base>` picks them. A path the map lacks
-    goes through a deterministic reference scan (class/asset path, module name, literal path): tests referencing it are selected,
-    0 references = 0 tests, NEVER a full-suite fallback; the missing map entry gets added. The full suite runs only when dependency
-    resolution itself selects every test (e.g. a shared step helper every scenario uses). Bases: per commit = main; slice close =
-    slice start commit (the affected set for the slice's whole diff is green); T2 = last T2 sha (affected scenarios + the fps check).
-    Pattern only: agent-workflow scripts/affected_tests.py (OPS-438, OPS-680; pytest-centric, cannot select UE tests).
-  Enforcement (deterministic, not prose; M23): (1) one runner script (scripts/, own test + README entry) is the ONLY entry point for
-    every tier; it computes the selection from `git diff <base>` itself, takes no test-name/filter/"all" argument, exits non-zero
-    with no base and on any failure. (2) A repo-level Claude Code PreToolUse Bash hook in the game repo's `.claude/` denies direct
-    engine test calls that skip the runner (`UnrealEditor-Cmd ... Automation RunTests`, `RunUAT ... RunUnreal`/Gauntlet; Unity
-    fallback `-runTests`), naming the runner in the deny reason. (3) Every run prints and logs the selected count, a per-test reason
-    (map tag / reference hit / dependency) and wall time; a whole-suite selection prints the deterministic reason that pulled in
-    every test, so "why did everything run" always has a logged answer. (4) Selector regression tests. Each is an S1 CRITERIA line.
+  Selection (M23: affected-only in every tier, no full-run opt-in, path-to-tag map + reference scan, never a
+    full-suite fallback) + Enforcement (sole runner script, runner-bypass hook, logged reasons, selector tests;
+    S1 CRITERIA): ledgers MV-9.
   Reusable suite (M23): each mechanic slice S3-S7 adds >=1 scenario built from shared step helpers (start run, spawn card, slash,
     answer, dodge, ultimate); scenario = scripted inputs + event-log asserts + baseline screenshots compared with tolerance. The
     suite never shrinks: a superseded scenario is replaced, not deleted.
   Unverified premises (1)-(6) (UE 5.7 + XR Simulator, replay w/o CLI, synthetic-room MRUK, sim hands, proximity bypass,
     OVR CSV), each a SP1/Nov 2 spike check with a fallback: ledgers MV-2.
-D19 Wave survival + win (Kev, 2026-10-28; M24, Q11, Q12): per round the player picks deck(s), incl. "all decks"; Endless is an explicit
-  opt-in (default off). Graded waves = the D14 run cards (due, study-ahead fills), 3 cards per wave (12 -> 4 waves, 6 -> 2); pool size
-  ramps 1 -> 2 -> 3 (M2), attack cadence ramps, last graded wave = one 3-card boss. Overtime waves follow until 0 pips: tonight's
-  misses first, then selected-deck cards not yet shown this run, then recycled seen cards; zero Leitner writes; each wave faster. WIN
-  (checked after every answer; never in Endless): every card in the selected deck(s) shown this run (not-due cards served ungraded,
-  no Leitner write) AND accuracy over the last 90 s of answers >=99% (window tuned 60-120 s in S9; answer = any D4 outcome except Hard
-  STT error and Ultimate; under 100 answers in the window, 99% means 0 non-correct). Endless ends only at 0 pips. Retreat any time ->
-  mastery screen. Mastery screen: waves survived, personal best (int in the D5 save), next-due count worded "next uprising: N cards"
-  (due dates are UTC days, so the count rolls at UTC midnight, not local midnight). Daily grade lock: max 1 Leitner write per card per
-  UTC day; closes the study-ahead hole (D4 grades the first scored attempt per encounter and D5 study-ahead re-serves not-due cards,
-  so repeat runs could walk one card box 0 -> 4 in a day). First run (D14) stays 6 cards, no-fail, no Overtime. Horde = the D13 wall
-  queue. Wreckage = the D17 wall-crack persists and grows one tier per wave on MRUK wall planes; ring fallback (D8) = a barricade
-  taking the same tiers; decal count capped, checked at S11 >=60 fps. Built: S2 packing + grade lock + Overtime + win check, S6 run
-  end, S6a mastery fields + PB save, S8 wreckage + barricade, S9 deck select + Endless + Retreat + window tuning, S11 decal cap.
+D19 Wave survival + win (Kev, 2026-10-28; M24, Q11, Q12; FSRS pass E-FS-6, E-FS-7): per round the player picks deck(s), incl. "all decks" (starter
+  decks + non-hidden imports, snapshotted at round start); Endless is an explicit opt-in (default off). Graded waves = the D14 run cards, 3 cards
+  per wave (12 -> 4 waves, 6 -> 2); pool size ramps 1 -> 2 -> 3 (M2), attack cadence ramps, last graded wave = one 3-card boss. Overtime waves
+  follow until 0 pips: tonight's misses (not-clean encounters) first, then the D14 filler order, then recycled seen cards; zero FSRS writes
+  (ungraded relearn, D5); each wave faster. Encounter result (computed, never written): clean = its first scored attempt would rate Good under D4
+  (voice correct with only Didn't catch before it, or a silent-mode first-pick orb); not clean = any other scored end; excluded = any Hard STT error
+  in it (never counted). WIN (checked after every answer; never in Endless) has two tiers (Kev "Two tiers (Recommended)"); each needs coverage
+  first, then a stretch after coverage (Kev #1, E-K-b2): >=90 s unpaused (window tuned 60-120 s in S9) holding >=4 counted (clean or not-clean)
+  encounters, all clean (99% under 100 encounters = 0 not clean).
+  - Tier 1 "Day cleared": today's queue for the selection is non-empty and every queue card has last_review_day == run_day (counted across today's
+    runs); the mastery screen shows "today: k/n faced" and any over-limit backlog.
+  - Tier 2 "Deck conquered" (M24 literal): the selection has 0 New and 0 due cards; that run serves the lowest-retrievability cards (min 6,
+    ungraded), coverage = each of them faced this run.
+  Any other empty queue = practice run, no WIN (blocks a free WIN at limits 0). Endless: neither tier; ends only at 0 pips. Retreat any time ->
+  mastery screen. Mastery screen: waves survived, tier won, personal best per (mode, selection) in the D5 save, next-due count worded "next
+  uprising: N cards" (rolls at the local 04:00 study-day boundary, D5). Grade lock: D5. First run (D14) stays 6 cards, no-fail, no Overtime. Horde =
+  the D13 wall queue. Wreckage = the D17 wall-crack persists and grows one tier per wave on MRUK wall planes; ring fallback (D8) = a barricade
+  taking the same tiers; decal count capped, checked at S11 >=60 fps. Built: S2 packing + budget + queue + grade lock + Overtime + win check, S6 run
+  end, S6a mastery fields + PB save, S8 wreckage + barricade, S9 deck select + limit steppers + Endless + Retreat + window tuning, S11 decal cap.
+D20 Quest 3S compatibility (Kev 2026-10-28 "yes add the 3S compat decision to the plan", ledgers E-K-d): Quest 2 baseline, Quest 3S compatible, one
+  APK; each rule cites a source or says UNVERIFIED. Hardware: 3S = XR2 Gen 2 / 8 GB vs Quest 2 XR2 Gen 1 / 6 GB, same 1832x1920 per eye (UNVERIFIED,
+  third-party: https://roadtovr.com/quest-3s-quest-3-quest-2-specs-compared/). Manifest: com.oculus.supportedDevices = quest2|quest3|quest3s
+  (https://developers.meta.com/horizon/resources/publish-mobile-manifest/), set in UE Project Settings > Platforms > Meta XR > Mobile > "Supported
+  Meta Quest devices" (https://developers.meta.com/horizon/documentation/unreal/os-compatibility-mode/); S1 checks the generated manifest lists
+  quest3s (older plugins may omit it; an unlisted device runs in OS compatibility mode as an older model). Input: OpenXR actions on the classic
+  Touch profile /interaction_profiles/oculus/touch_controller, never device-specific; runtime type via UOculusXRFunctionLibrary::GetControllerType()
+  (https://developers.meta.com/horizon/documentation/unreal/unreal-touch-controller/); Touch Plus profile
+  /interaction_profiles/meta/touch_controller_plus (XR_META_touch_controller_plus) and classic-binding fallback on 3S UNVERIFIED. Capabilities:
+  3S-only features (colour passthrough, Environment Depth, scene) gated by runtime capability checks with Quest 2 fallbacks, never by model string;
+  UOculusXRFunctionLibrary::GetDeviceType() for diagnostics only, never android.os.Build.MODEL
+  (https://developers.meta.com/horizon/documentation/unreal/unreal-set-get-device-type/); Environment Depth on 3S profiles per
+  https://developers.meta.com/horizon/documentation/unreal/xrsim-intro/ ; OpenXR extension names UNVERIFIED; the game uses no 3S-only feature today.
+  Display: query supported refresh rates/resolution at runtime, never assume Quest 2 values; 3S lists 72/90/120 Hz
+  (https://www.meta.com/quest/quest-3s/); API route XR_FB_display_refresh_rate UNVERIFIED. Hand tracking parity Quest 2 vs 3S: UNVERIFIED. Testing:
+  Meta XR Simulator has a Quest 3S device profile (xrsim-intro); its UE 5.7 support UNVERIFIED = D18 premise check (7) in SP1; Devpost testing notes
+  carry a 3S smoke checklist (S13); store review per declared device UNVERIFIED (only VRC.Quest.Packaging manifest checks found). Residual: real-3S
+  frame time and comfort unprovable without a device (A4).
 
 ## Slices
 UE spike (Kev, 2026-10-28; D1): SP1 + SP2 run on UE 5.7 + Meta XR 207 (MetaXRPlatform OFF) with direct Wit.ai HTTP voice; pass = SP1
@@ -271,7 +300,7 @@ UE spike (Kev, 2026-10-28; D1): SP1 + SP2 run on UE 5.7 + Meta XR 207 (MetaXRPla
 SP1 Oct 28-Nov 1 (~7 h): Android toolchain (UE: NDK r27c + JDK; Unity fallback: Android module); Quest 2 dev mode; release keystore
   + 2 backups; versionCode build script; hello-hands+passthrough APK release-signed; Meta dashboard app + Competition channel; upload
   versionCode 1; invite URL install on a non-org account with App Sharing off; 10 s on-device capture shows the passthrough room. Kev
-  checks whether Devpost has a judges-only field for the invite URL. D18 premise checks (1)-(6), each with its fallback.
+  checks whether Devpost has a judges-only field for the invite URL. D18 premise checks (1)-(6) + (7) (D20), each with its fallback.
 SP2 Oct 30-Nov 2 (~5 h), DEPENDS SP1 (Android toolchain + signed pipeline): starter-deck answers locked by Oct 30 (Q4 topics,
   A10; answers <4 normalized chars flagged and measured in the corpus); Wit app (client token only); privacy page stub deployed
   (needed before a mic-permission upload); Wit.ai voice spike (UE: direct HTTP; Unity fallback: Voice SDK) on deck-derived corpus;
@@ -302,22 +331,25 @@ S1 Nov 5 AM scaffold in the G1 engine. UE 5.7 (default): Meta XR plugins v207 (v
   from CREDITS.md; exit 1 on any; own test + README entry), headless test runner script (UE Automation tests; Unity: batchmode
   EditMode) = the D18 runner (T0/T1, affected selector + path-to-tag map + reference scan, run log), D18 runner-bypass hook, debug
   input layer, event log, first scenario (start run) (versionCode script already exists from SP1).
-S2 Nov 5 PM core logic (may spill to Nov 6 AM; slip charged to the Nov 16 buffer): deck parser (JsonUtility, stable IDs,
-  duplicate-ID drop, caps, >=4 distinct answers, reject list), matcher (D3), outcome table (D4) + orb trigger + ultimate charge, Leitner
-  + study-ahead, run loop (D14), combat rules. Deck-lint gate (Q4): numeric answers rejected; answers <4 normalized chars flagged
-  (exact-match only under D3) for SP2 measurement; homophone answers need an alias (e.g. sun/son).
+S2 Nov 5 PM core logic (may spill to Nov 6 AM; slip charged to the Nov 16 buffer): deck parser (JsonUtility, stable IDs, duplicate-ID drop, caps,
+  >=4 distinct answers, reject list), matcher (D3), outcome table (D4) + orb trigger + ultimate charge, FSRS-6 + daily budget + today's queue (D5;
+  ~3-4 h over Leitner, plus S9 steppers ~1 h and S6a fields ~0.5 h: ~0.5 day against the Nov 16 buffer), run loop (D14), combat rules. Deck-lint
+  gate (Q4): numeric answers rejected; answers <4 normalized chars flagged (exact-match only under D3) for SP2 measurement; homophone answers need
+  an alias (e.g. sun/son).
 S3 Nov 6 slash + card enemy (wall emerge -> advance to strike slot, D13) + answer window + damage + D17 cues + D18 scenario.
 S4 Nov 7 voice via IAnswerRecognizer + D4 outcomes (per-card fallback, 3 s timeout, 429) + earcon + mic re-acquire on resume + D17 cue
   + D18 scenario.
 S5 Nov 8 silent orbs + toggle + D17 cue + D18 scenario.
-S6a Nov 9 (half day, MemriPal finals) Leitner persistence (D5 save) + EditMode save tests + mastery screen.
-S6 Nov 10 health pools, telegraphed attacks (in-view gate), dodge (frozen baseline), hand-tracking-loss pause (D7), shield pips + run
+S6a Nov 9 (half day, MemriPal finals) FSRS persistence (D5 save: card state, daily counters, queue snapshot, run_day) + on-device golden vectors +
+  EditMode save tests + mastery screen.
+S6 Nov 10 health pools, telegraphed attacks (in-view gate), dodge (frozen baseline), input-loss pause + interruption replay (D7), shield pips + run
   end (D14), accessibility toggle + D17 cue + D18 scenario.
-S7 Nov 11 ultimates (5 correct, two-palm push; 1 type, Q9) + experimental second, mastery-unlocked ultimate type behind its D15 toggle
-  + D17 cue + D18 scenario.
+S7 Nov 11 ultimates (charge >=5; two-palm push, A+X, or one-controller A/X hold, D7; knockback, D4; 1 type, Q9) + experimental second,
+  mastery-unlocked ultimate type behind its D15 toggle + D17 cue + D18 scenario.
 S8 Nov 12 MR walls + arc + fallback + test matrix. CHECKPOINT Nov 12 evening: D18 T2 run; apply constraint ladder if any of S1-S8 open.
-S9 Nov 13 first-five-minutes tutorial (incl. per-player strike-slot calibration, D13), pause/resume (voice re-arm), accessibility
-  pass, D15 Experimental pane + gaze-dwell select, on/off calibration of each D15 toggle, D16 phone-breakout intro (cuttable).
+S9 Nov 13 first-five-minutes tutorial (incl. per-player strike-slot calibration, D13), pause/resume (voice re-arm), accessibility pass, D5
+  daily-limit steppers on deck select, D15 Experimental pane + gaze-dwell select, on/off calibration of each D15 toggle, D16 phone-breakout intro
+  (cuttable).
 S10 Nov 14 relay (D6) + automated function tests + headset pairing + imported-deck list + privacy policy final; relay circuit
   breaker (G0b); Upstash idle-archive check (free database must not be archived while idle through Dec 11).
 S11 Nov 15 perf + polish + CREDITS audit (script) + device test on Quest 2 (incl. FoV at the arc edge; re-scoped from Quest 3/3S
@@ -362,33 +394,53 @@ S1 headless test runner exit 0 (UE Automation; Unity: EditMode); 0 vendored Meta
   D18 selector regression tests 4/4: unmapped path with 0 references -> 0 tests; unmapped path referenced by scenario X -> X only;
   single-mechanic change -> only that mechanic's scenarios; full suite only when dependency resolution selects every test.
 S2 >=40 matcher golden cases, all run with EMPTY reject lists unless the case tests the reject list: >=10 generic near-miss rejects
-  (afferent/efferent, hypertonic/hypotonic, exothermic/endothermic, Prussia/Russia, hypo/hyperthyroidism, "not X", "X or Y", answer "A",
-  accented vs unaccented, shared-answer cards) + topic cases added after SP2; D4 table: 1 test per row (9/9) incl. wrong-then-orb-correct
-  -> no promote, ultimate -> no grade change; 5 Leitner transitions + study-ahead when 0 due; >=8 malformed decks rejected (incl. <4
-  distinct answers); ID stable across reorder; "5-3" vs "53" distinct IDs; duplicate card -> 1 ID kept; 1 fixed SHA-256 ID golden value;
-  top-level-array JSON and a card with a missing/empty front each rejected 2/2; normalize.json fixture N/N; orb trigger: wrong+miss,
-  miss+didn't-catch, wrong+wrong each -> orbs 3/3; ultimate charge: orb correct counts 1/1, reset to 0 after firing 1/1, ultimate kills
-  add 0 1/1; run loop: 12-card cap 1/1, pools only of size 1-3 1/1, 5th hit ends run 1/1, grades saved before run end 1/1, 2nd hit in
-  one encounter removes 0 pips 1/1, first run = 6 cards, not ended at 0 pips and no Overtime 1/1; D19: wave packing 12 -> 4 waves and
-  6 -> 2 2/2, last graded wave = one 3-card pool 1/1; grade lock: 2nd scored attempt on a card in one UTC day -> 0 Leitner writes 1/1;
-  Overtime answers -> 0 Leitner writes 1/1; win check: 1 card unshown -> no WIN, window accuracy <99% -> no WIN, full coverage +
-  >=99% over the window -> WIN, Endless -> no WIN 4/4; deck-lint (Q4): numeric answer rejected, 3-char answer flagged, homophone
-  answer without alias flagged 3/3, 3 starter decks pass 3/3; `// Covers: FEAT-ID` above every [TestFixture].
+  (afferent/efferent, hypertonic/hypotonic, exothermic/endothermic, Prussia/Russia, hypo/hyperthyroidism, "not X", "X or Y", answer "A", accented vs
+  unaccented, shared-answer cards) + topic cases added after SP2; D4 table: 1 test per row (9/9) incl. wrong-then-orb-correct -> 1 write (Again)
+  1/1, knockback -> 0 cards removed and no rating 1/1; FSRS golden vectors from the pinned py-fsrs script N/N (S and D within tolerance, interval
+  days exact; same vectors on device in S6a); rating map: Good, Hard, Again, Hard-STT-only -> no write, Didn't-catch-only -> no write, unresolved
+  with orbs shown -> Again 6/6; rollover: 03:59 and 04:01 local -> different study days 1/1, run_day frozen across a mid-run rollover 1/1; budget:
+  switching selections never exceeds the global 12/120 1/1, limit edit applies next study day 1/1, new/day >=1 while New remains 1/1, New stops at
+  the review cap 1/1; queue snapshot reused by a 2nd run the same day 1/1; empty queue (not Tier 2) -> practice run, no WIN 1/1; >=8 malformed decks
+  rejected (incl. <4 distinct answers); ID stable across reorder; "5-3" vs "53" distinct IDs; duplicate card -> 1 ID kept; 1 fixed SHA-256 ID golden
+  value; top-level-array JSON and a card with a missing/empty front each rejected 2/2; normalize.json fixture N/N; orb trigger: wrong+miss,
+  miss+didn't-catch, wrong+wrong each -> orbs 3/3; ultimate charge: orb correct counts 1/1, reset to 0 after firing 1/1; run loop: 12-card cap 1/1,
+  reserve = min(12, uncovered queue) and unreached reserved cards stay unspent 1/1, fillers 0 FSRS writes and never New 1/1, pools only of size 1-3
+  1/1, 5th hit ends run 1/1, ratings saved before run end 1/1, 2nd hit in one encounter removes 0 pips 1/1, first run = 6 cards, not ended at 0 pips
+  and no Overtime 1/1; D19: wave packing n = 1..12 12/12 incl. 12 -> 4 waves and 6 -> 2, last graded wave = one 3-card pool 1/1; grade lock: 2nd
+  scored attempt on a card in one study day -> 0 FSRS writes 1/1; Overtime answers -> 0 FSRS writes 1/1; win check: 1 queue card unfaced today -> no
+  WIN, 1 not-clean encounter in the window -> no WIN, coverage + full clean window -> Day cleared, 0 New + 0 due + same -> Deck conquered, Endless
+  -> no WIN 5/5; WIN floor: 0 or 3 counted encounters -> no WIN 2/2, 1 answer after a 90 s pause with a not-clean encounter in the 90 s of play
+  before the pause -> no WIN 1/1 (E-N2), all-Hard-STT window -> no WIN 1/1, silent-mode first-pick orbs -> WIN reachable 1/1, orb after 2 silences
+  -> not clean 1/1, hidden deck -> 0 of its cards in an all-decks round 1/1, PB kept per (mode, selection) 2/2; deck-lint (Q4): numeric answer
+  rejected, 3-char answer flagged, homophone answer without alias flagged 3/3, 3 starter decks pass 3/3; `// Covers: FEAT-ID` above every
+  [TestFixture].
 S3 20/20 slashes register per input, hands and controllers 2/2 (slash = fingertip or controller-tip speed >=1.0 m/s through the card
   collider in the strike slot); 0 false triggers in 60 s idle; 5/5 enemies travel wall -> strike slot and no slash registers before arrival.
 S4 0 mic opens outside window; 3/3 forced hard STT errors -> orbs <1 s AND next card's voice answer works 3/3; forced 429 -> per-card orbs 1/1; empty transcript -> 0 damage 3/3; 2 non-correct attempts -> orbs 3/3; 6 s silence -> didn't catch 3/3; Wi-Fi off: every card reaches orbs <=4 s after its answer window opens and the run completes 1/1; silent mode not auto-latched by any error except mic denial 1/1.
 S5 full run with mic off 1/1.
-S6a EditMode: fresh dir first save then load 1/1; corrupt primary -> .bak 1/1; truncated primary + missing .bak -> fresh state 1/1; boxes persist across app restart on device 3/3.
-S6 3-card pool with no ultimate needs exactly 3 correct; dodge at >=20 cm lateral/down; lean at telegraph start held through a 2 s telegraph -> dodged 3/3; same with accessibility slow telegraph 3/3; slow 1 s lean -> dodged 3/3; 0 false dodges in 20 forward-lean slashes; recenter + resume then dodge correct 3/3; enemy outside +/-40 deg never starts a telegraph 3/3; hands hidden mid-telegraph -> 0 hits and prompt shown 3/3; telemetry over 1 full run: max head displacement from run start <=30 cm 1/1 and 100% of slash contacts <=0.65 m from the head.
-S7 ultimate at exactly 5; 0 ultimate triggers in 60 s of slashing; D15 toggle OFF -> second ultimate type never offered 1/1.
+S6a EditMode: fresh dir first save then load 1/1; corrupt primary -> .bak 1/1; truncated primary + missing .bak -> fresh state 1/1; FSRS card state,
+  daily counters and queue snapshot persist across app restart on device 3/3; FSRS golden vectors on device N/N.
+S6 3-card pool with no ultimate needs exactly 3 correct; dodge at >=20 cm lateral/down; lean at telegraph start held through a 2 s telegraph ->
+  dodged 3/3; same with accessibility slow telegraph 3/3; slow 1 s lean -> dodged 3/3; 0 false dodges in 20 forward-lean slashes; recenter + resume
+  then dodge correct 3/3; enemy outside +/-40 deg never starts a telegraph 3/3; no pose tracked mid-telegraph -> prompt, freeze, fresh baseline, one
+  replay, lands at its hit frame 3/3 per input (hands, controllers); hide again during the replay -> still lands 3/3; menu pause and recenter
+  mid-telegraph -> same rule 2/2; recenter or 20 cm re-seat during a pause or replay -> 0 auto-dodges 3/3; 2 overlapping frozen attacks -> each
+  replays once 2/2; controller-only run -> attacks land 3/3; hands hidden during an answer window -> answer graded normally 3/3; menu pause
+  mid-speech -> mic closed, Wit request aborted, rated as Voice wrong (D4), 0 pips lost 3/3, before speech -> Didn't catch 3/3; telemetry over 1
+  full run: max head displacement from run start <=30 cm 1/1 and 100% of slash contacts <=0.65 m from the head.
+S7 ultimate at exactly 5; 6th correct while charged -> ultimate still fires 1/1; two-palm push -> ultimate 3/3 and 0 slash events; charged, palms
+  forward, one-hand slash -> registers 3/3; A+X charged -> ultimate 3/3, uncharged -> 0 3/3; one controller + one hand, 0.5 s A/X hold -> ultimate
+  3/3 (only if SIG-1 shows mixed input); 0 ultimate triggers in 60 s of charged slashing, hands and controllers 2/2; knockback: strike-slot enemy
+  pushed back toward its wall spawn, its in-flight attack cancelled, 0 cards removed, hit cap + attempt/orb counters held, open mic window untouched
+  3/3; charge 0 after firing 1/1; D15 toggle OFF -> second ultimate type never offered 1/1.
 D18 per slice S3-S7: >=1 new tagged scenario 5/5; T1 >=1 screenshot per scenario; affected set for the slice's whole diff (base =
   slice start commit) green at slice close 5/5; per-commit runs affected-only; scenario count never decreases.
 D18 T2 (S8 checkpoint, S11): scenarios affected since the last T2 sha green + OVR Metrics fps >= M6 target (60) 1/1 each.
 S8 matrix 8/8 (no scene, permission denied, walls only behind, far wall >3.5 m, cluttered room, MRUK timeout, head outside loaded room, recenter after chair turn) -> correct spawn or ring fallback; 100% spawns within +/-35 deg of play-forward at 1.2-3.5 m.
-S9 first correct kill <90 s, timed from D16 intro end or skip (2 testers who have not played it; if none by Nov 13, Kev on a fresh
-  install, residual logged); 3 runs: graded phase median 4-8 min, max <=10 min, first cleared wave <=2 min 3/3, early-end rate (runs
-  ended at 0 pips before Overtime / runs) recorded (Q8); D19 win condition reachable 1/1 (window tuned 60-120 s); Retreat -> mastery
-  screen 3/3;
+S9 first correct kill <90 s, timed from D16 intro end or skip (2 testers who have not played it; if none by Nov 13, Kev on a fresh install, residual
+  logged); 3 runs: graded phase median 4-8 min, max <=10 min, first cleared wave <=2 min 3/3, early-end rate (runs ended at 0 pips before Overtime /
+  runs) recorded (Q8); D19 WIN on a starter deck: 3 runs, time-to-WIN recorded 3/3; 0/3 WIN or median >15 min -> window 60 s, re-run (E-FIN-15);
+  daily-limit steppers change new/reviews, applied next study day 1/1; Retreat -> mastery screen 3/3;
   pause/resume 3/3 AND voice answer works after resume 3/3; system menu open/close then voice works 3/3; cold start <10 s; strike slot
   calibrates within 0.40-0.60 m 3/3; gaze-dwell ON: 1.2 s dwell selects 3/3, shorter glance selects 0/3;
   Experimental pane lists 2/2 toggles, each flips live and persists across restart 2/2; each toggle run on and off against these S9
@@ -403,8 +455,9 @@ S10 round-trip 3/3 (headset shows code, page posts, deck in headset <=5 s after 
   scene data stays on device, deletion contact).
 S11 median >=72 fps, 1% low >=60 over 5 min Quest 2; Quest 3/3S run waived 2026-10-28 (A4), residual A4-R1 logged 1/1; on Quest 2:
   card text + telegraph readable at arc edge 1/1 (judge-FoV residual A4-R3); credits audit script exit 0 (0 uncredited assets);
-  on-device normalization self-test 10/10 on the RC build; RC upload accepted.
-S12 RC invite install non-org account 1/1; cold launch 3/3; fresh install -> answer 3 cards -> relaunch -> boxes persist 1/1; voice answer after fresh install 1/1.
+  on-device normalization self-test 10/10 on the RC build; RC build registers 0 debug commands 1/1 (E-SEC-4); RC upload accepted.
+S12 RC invite install non-org account 1/1; cold launch 3/3; fresh install -> answer 3 cards -> relaunch -> FSRS card state persists 1/1; voice
+  answer after fresh install 1/1.
 S13 video <180 s public logged-out; frame review 0 hits (people, logos, brands, screens, photos); Devpost "submitted" with D11
   paragraph; Devpost fields 9/9 (tagline <=140 chars, track Gaming, division set per G0a, invite URL, public video link, description
   incl. inspiration/how built/future plans/target launch date, testing instructions incl. mic + scene permission prompts, silent-mode
@@ -415,14 +468,13 @@ OVR Metrics on device; Meta dashboard channel status + versionCode; invite URL o
   logs; Upstash usage dashboard; gitleaks local hook + CI on the private GitHub remote (Q2); logged-out video playback; Devpost page; Wit
   app dashboard (usage, 429s).
 D18 premises (SP1/Nov 2 spike): ledgers MV-3.
-Per slice (FLOW-016): SP1 Meta dashboard versionCode 1 + invite install on non-org account + OVR Metrics. SP2 Wit dashboard (burst
-  429s) + dashboard versionCode 2 + invite install + privacy URL HTTP 200. SP2b on-device run only (none external beyond SP2's upload).
-  G0 none. G1 CI gitleaks full-history run green before the public flip. S1
-  gitleaks local hook. S2 none. S3 none. S4 Wit dashboard (requests visible, forced-429 run). S5 none. S6a none. S6 none. S7 none. S8
-  OVR Metrics CSV (D18 T2). S9 none. S10 Vercel deploy + Firewall/ratelimit log + Upstash usage dashboard (incl. idle-archive
-  setting). S11 OVR Metrics (Quest 2; 3/3S waived, A4) + dashboard RC versionCode. S12 invite install on non-org account. S13
-  logged-out video playback + Devpost
-  "submitted" page. F Wit dashboard, Upstash dashboard, privacy URL, channel install.
+Per slice (FLOW-016): SP1 Meta dashboard versionCode 1 + invite install on non-org account + OVR Metrics. SP2 Wit dashboard (burst 429s) + dashboard
+  versionCode 2 + invite install + privacy URL HTTP 200. SP2b on-device run only (none external beyond SP2's upload). G0 none. G1 CI gitleaks
+  full-history run green before the public flip. S1 gitleaks local hook. S2 none. S3 none. S4 Wit dashboard (requests visible, forced-429 run). S5
+  none. S6a none. S6 SIG-1 (Meta docs: do Quest 2/3 report hands and controllers at once? check before S6). S7 none. S8 OVR Metrics CSV (D18 T2). S9
+  none. S10 Vercel deploy + Firewall/ratelimit log + Upstash usage dashboard (incl. idle-archive setting). S11 OVR Metrics (Quest 2; 3/3S waived,
+  A4) + dashboard RC versionCode. S12 invite install on non-org account. S13 logged-out video playback + Devpost "submitted" page. F Wit dashboard,
+  Upstash dashboard, privacy URL, channel install.
 
 ## Blast radius / rollback
 Missed deadline = no entry (submit early; pipeline proven in SP1/SP2 with a release-config build). Frozen bug unfixable (bugfix window, T-4h no uploads). Wit outage, abuse of the public client token, or quota exhaustion in judging -> per-card orbs, voice retried every card (residual: headline mechanic degraded while it lasts). Relay abused or down (incl. GET flood draining Upstash/Vercel quotas, no GET limit by design) -> RELAY_ENABLED off, starter decks work. IL2CPP normalization missing on device -> Latin fold table (caught in SP2, not S11). Lost keystore -> 2 backups (restore proven in SP2). One commit per slice; channel keeps prior build.
@@ -431,17 +483,8 @@ Missed deadline = no entry (submit early; pipeline proven in SP1/SP2 with a rele
 Moved to ledgers MV-5 2026-10-29 (FSRS now adopted in D5; Leitner rejected; SM-2 still rejected).
 
 ## Kev-only manual actions
-Devpost Join Hackathon (+ check for a judges-only invite-URL field); forum Start Member flair; workshop/office-hour dates; Meta
-  dashboard org/app/Competition channel/privacy URL (SP1-SP2); release keystore + 2 backups (SP1); non-org Meta account for invite test
-  (SP1); private GitHub remote + CI gitleaks (now), public flip at G1 (Q2); dedicated Wit.ai app + client token (SP2); second speaker
-  for SP2 (Q6: TTS voices); UE 5.7 + Android NDK r27c + JDK (Unity 6.3 LTS + Android module only on fallback); backup Meta dashboard
-  app (Q7); Vercel account + Upstash integration; new YouTube channel for the game (Q1); cleared room for capture (D12); privacy
-  deletion contact address; Quest 3/3S access dropped (A4 waiver 2026-10-28: Quest 2 only); 2 fresh S9 testers (Nov 13); content
-  rating choice (S13, target 10+); Devpost tagline + division field + description + testing instructions sign-off (S13); pre-ruling
-  email dropped (G0a); log every judging-period op with timestamp + reason (G0b); after Dec 11
-  purge Wit utterance log + Upstash keys; 3 VR check-ins (D18): after the Nov 2 spike, once the core loop works, before submission.
-FLAG for Kev: the D18 harness (runner, selector, bypass hook, debug input, event log) is folded into S1, making the Nov 5 AM slice
-  heavy; D18 premises (2)-(6) carry agent-chosen fallbacks, not Kev-approved ones. Confirm or re-scope both.
+Moved to ledgers MV-10 2026-10-29. FLAG for Kev (still open): S1 carries the whole D18 harness, and D18 premises
+  (2)-(6) carry agent-chosen fallbacks; confirm or re-scope both (ledgers MV-11).
 
 ## Open questions
 
@@ -449,3 +492,8 @@ Resolved 2026-10-28 (Kev): ENGINE, Q1-Q12, D15, D19, G0a, G0b in
   [ledgers Resolved decisions](2026-10-28-vr-flashcard-game-ledgers.md#resolved-decisions).
 - Open (Kev): should cloud Wit stay the default recognizer? SP2b on-device grammar ASR removes the freeze-unpatchable cloud
   dependency but snaps noise onto deck answers; G1 records freeze resilience in ADR 0002, the call is Kev's (old sheet in ledgers).
+
+## Adversarial cheat sheet
+- Primary technical risk: big decks and one-correct WINs; grades or WINs given for nothing (deck-switch budget, empty queue, paused window).
+- Fix: FSRS-6 daily queue (global 12/120 budget, local 04:00 day); WIN = coverage, then >=90 s unpaused with >=4 clean; knockback removes 0 cards.
+- Lingering doubt: hand-ported FSRS float drift (x86 vs ARM) and 21 untuned weights; S2 desktop and S6a device golden vectors are the first check.
