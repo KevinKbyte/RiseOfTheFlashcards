@@ -1,5 +1,6 @@
 # VR flashcard combat game: plan ledgers
-Moved verbatim from [2026-10-28-vr-flashcard-game.md](2026-10-28-vr-flashcard-game.md); the M/A/D/S/Q IDs cited below live there.
+Moved from [2026-10-28-vr-flashcard-game.md](2026-10-28-vr-flashcard-game.md); the M/A/D/S IDs cited below live there;
+resolved Q/ENGINE/D15/D19/G0a/G0b bullets in Resolved decisions below.
 
 ## Ledger (finisher)
 | ID | Sev | Finding | Change |
@@ -110,3 +111,181 @@ Moved verbatim from [2026-10-28-vr-flashcard-game.md](2026-10-28-vr-flashcard-ga
 | AA-5 | minor | Conception evidence; Q3 reads as concealment | ACCEPT | D11 + Q3 reworded. |
 | AA-x1 | minor | Nothing increments versionCode | ACCEPT | D10 build-script counter; SP1 v2 upload. |
 | AA-S | simplicity | Drop relay, optional static JSON URL | OVERRULE | M11 must-keep. |
+
+## Resolved decisions
+Moved from the plan's Open questions 2026-10-28 (verbatim); the plan's pointer line names each ID.
+- ENGINE Unreal 5.7 + Meta XR v207, spike-gated by Nov 2; Unity 6.3 LTS fallback (M9, M13, A2, A3, A14, D1, D2, D5, G1).
+- Q1 Video on a new YouTube channel for the game, public (A7).
+- Q6 Second SP2 speaker = Kev + TTS voices; residual logged (Slices header).
+- Q7 SP1 creates a backup Meta dashboard app; pipeline-red decision moves from Nov 12 to Nov 8; last-green invite URL goes into the
+  Devpost draft early.
+- Q10 SP3 (IWSDK) not retired: HELD as a last-resort fallback, run only if both the UE spike and the Unity fallback fail G1; not
+  scheduled (D1, SP3, G1).
+- Q2 Repo public when? Private GitHub remote now with CI gitleaks; public Nov 3 (G1) once a full-history scan is green and .gitignore
+  covers .claude/ (A6, D10, G1).
+- Q3 Title "Rise of the Flashcards" (Kev 2026-10-28, after "Cards: Uprising" and "Flashcards Fight Back"); nods to Rise of the Planet
+  of the Apes without copying the franchise title; the "Planet of the ..." riff is NOT used anywhere (Planet of the Apes is a
+  Disney/20th Century trademark; Jack Daniel's v. VIP 2023 weakens parody defense for source-identifying use; R11 originality rule
+  makes it a disqualification risk); web-checked 2026-10-28, no game by this name; nearest concept itch.io "Flashcard Hero" (flashcard
+  RPG combat), so Devpost differentiates on VR + voice answers; prior realm-of-recall still disclosed on Devpost.
+  Taglines (Kev 2026-10-28): "Humanity forgot them. They didn't forget." / "You skipped your reviews. They noticed." / "The cards
+  remember."
+- Q4 Starter decks: Opposites, World Capitals, Basic Science; no Spanish; locked by Oct 30; S2 deck-lint gate; cut Basic Science
+  first (A10, SP2, S2, ladder).
+- Q5 Gaze: the D8 +/-40 deg in-view gate is the head-gaze mechanic in ADR 0001 + Devpost; gaze-dwell select (1.2 s) is a D15
+  experimental toggle (D8, G1, S9).
+- Q8 Keep 0.5 m / 12 cards / 5 pips; max 1 hit per encounter; strike slot per-player 0.40-0.60 m; first run 6 cards, no-fail; S9 adds
+  early-end rate; pacing is the tuning knob, not counts (D13, D14, S2, S9). D19 leaves the graded counts unchanged; Overtime is ungraded.
+- Q9 Base build = 1 ultimate type fired repeatedly; second mastery-unlocked type is a D15 experimental toggle (S7, ladder).
+- D15 Experimental settings pane (new; S9 calibrates each toggle on/off; underperformers ship OFF, unmentioned).
+- Q11 99% win measure: every card in the selected deck(s) shown this run (not-due cards served ungraded, no Leitner write), then
+  accuracy over the last 90 s of answers >=99% -> WIN; window tuned 60-120 s in S9 (M24, D19, S2, S9).
+- Q12 Slash input: both controllers and hand tracking (M1, M6, D17, S3).
+- D19 Wave survival (new; M24): graded waves, ungraded Overtime, WIN unless Endless, daily grade lock.
+- G0a New Experience claim kept with D11 disclosure; division field set at S13 (guidelines.md:101). Pre-ruling email
+  (MetaHorizonStart@meta.com) dropped 2026-10-28 (Kev): repo first commit 37d0378 is 2026-10-28, inside the window starting
+  2026-09-24 (rules.md:91), with no pre-existing code, so the New Experience Division is not in question.
+- G0b Relay fail-soft automatic; judging-period ops only {RELAY_ENABLED off, byte-identical privacy redeploy}, logged + disclosed in
+  Devpost testing instructions; S10 Upstash idle-archive check (D6, S10, F, S13).
+
+## Adversarial cheat sheet (round 1; superseded by the plan's sheet)
+Moved from the plan 2026-10-28; long lines rewrapped, wording unchanged.
+- Primary technical risk: the headline voice mechanic could die silently for judges. Any brief speech-recognition fault (system menu, network blip,
+  429) latched silent mode for the rest of the session. All judges share one Wit app whose client token is effectively public, with unchecked
+  quotas. And the first release-config build with stripping plus mic/scene permissions didn't happen until Nov 15.
+- Fix: speech failures now fall back to orbs for that card only, with voice retried on the next card and the mic re-acquired on resume;
+  only mic-permission denial latches silent mode. The Wit client token is treated as public, the Wit limits go in ADR 0002, and SP2 runs a
+  5-concurrent burst test. The SP2 voice spike ships as versionCode 2 in release config, with final permissions and the restored keystore,
+  and must pass voice + MRUK checks after an invite-URL install before G1. Also: the matcher gets a 4-char prefix rule and a single
+  outcome/grading table, the dodge baseline freezes at telegraph onset, and the spawn arc is +/-35 deg. Finisher pass: enemies now advance
+  from the wall to a 0.5 m strike slot (they were out of hand reach). Core stays engine-free (JsonUtility moved to an adapter). A run loop +
+  shield pips give a <=10 min session. String normalization gets an on-device self-test on IL2CPP. G1 must record a freeze-resilience row.
+  Kev's licensing/hosting/privacy asks are listed as M18-M21, and the deck floor is 2.
+- Lingering doubt: should cloud Wit be the default recognizer at all? On-device grammar ASR (SP2b) would remove the cloud dependency that can't be
+  patched or re-keyed during the freeze, but it snaps noise onto deck answers. G1 now records freeze resilience in ADR 0002, but the default still
+  rests on SP2 accuracy, so the call is Kev's once the row is written.
+
+## Ledger (eval round 1: D7 controllers, D19 WIN, plan split; offload vr-plan-adversary-eval-20261028-193242)
+IDs carry an E- prefix (this eval) to avoid clashes with the ledgers above.
+| ID | Lens | Sev | Finding (short) | Verdict | Reason / change |
+|---|---|---|---|---|---|
+| E-COR-1 | correctness | critical | Fix (i) ramp-hold does not fix big selections; real cause is fixed 5 pips + coverage cost | ACCEPT | mc.txt L31/L39 + arbiter re-run: true no-ramp 90 cards WIN 66.0%, median 39.2 min; 0 hit risk still 39.2 min; 500 cards hits the 3 h cap. Binding break of M24 "all decks" -> Kev ask K-b1 |
+| E-FM-3 | failure-modes | major | Same as COR-1 | ACCEPT (dup) | Merged into K-b1 |
+| E-AA-1 | assumption | critical | Same as COR-1; adds single-run time bound (>=67 min at 8 s floor) | ACCEPT (dup) | Merged into K-b1; time, not only pips, is binding |
+| E-COR-2 | correctness | major | Fix (iii) full_window is a no-op (measures from first answer); WIN fires on the coverage answer | ACCEPT finding; OVERRULE its agent-fill fix | Verified d19_win_sim.py:180. Where the window starts is part of Kev's measure (Q11 "then"), so it goes to Kev as K-b2, not agent-filled |
+| E-SIM-4 | simplicity | minor | Drop (iii) | ACCEPT | (iii) dropped as worded; the real question is re-homed to K-b2 (not dropped) |
+| E-COR-3 | correctness | major | F1's 16.4% "false wins" are mostly players who know every card | ACCEPT | Arbiter split: 119/1000 runs know all 20 cards, all win; 45/1000 (4.5%) are real false wins. F1 restated |
+| E-AA-2 | assumption | major | Same as COR-3; false wins come from ultimate-only cards (F4) and order (F6) | ACCEPT (dup) | With fix (ii) + post-coverage window, B WIN 10.5% (below the 11.9% genuine rate) |
+| E-COR-4 | correctness | major | D7 harm misstated: controller players are paused forever (hands untracked), not hit unfairly; A1 has no resume rule | ACCEPT | Root problem (a) rewritten; pause = union rule with resume rule; controller-only S6 case |
+| E-SIM-5 | simplicity | major | A1 active-type state + either-controller clause is asymmetric; use "no tracked pose -> pause" | ACCEPT | Same rule as COR-4 fix; no active-input state |
+| E-AA-5 | assumption | major | A4's controller forward axis never filters; multimodal on Quest 2 unverified | ACCEPT | Controller arming gate = both triggers held (A1 chord); multimodal check = SIGNAL SIG-1; union pause works either way |
+| E-COR-x | correctness | major | A4 facing gate always passes on controllers -> slash-speed thrust fires ultimate | ACCEPT (dup AA-5) | Same fix; S7 two-controller-thrust 0-fire case |
+| E-FM-1 | failure-modes | major | Pause cancels the attack -> hide hands at telegraph = immunity; resume resets baseline | ACCEPT | Pause FREEZES the attack, keeps the frozen baseline, replays the full telegraph on resume; never cancels |
+| E-SEC-2 | security-data | major | Same exploit used to farm WIN/PB; also cap pauses per attack | ACCEPT freeze; REJECT cap | Freeze + replay removes all gain (the attack always resolves); a cap would land hits on genuine tracking loss |
+| E-FM-2 | failure-modes | major | Ultimate push passes through the strike-slot card -> also a slash; S7 not per input | ACCEPT | While the ultimate is armed (charged + gate held) slash registration is suppressed; S7 per-input cases |
+| E-SEC-1 | security-data | major | Pause leaves mic open / transcript in flight -> bystander audio to cloud Wit, Leitner write while paused | ACCEPT | Pause closes mic, discards in-flight transcript (0 grade, 0 Leitner write); fresh slash re-arms voice; S6 case |
+| E-FM-4 | failure-modes | major | Excluding Didn't catch opens silence + orb-recognition WIN route; sim cannot see it | ACCEPT | Answer def = D4 promote predicate (orb after silence is not clean); sim limitation named |
+| E-SIM-3 | simplicity | major | Three answer defs + new misses def collapse into the D4 L116 promote predicate | ACCEPT | One predicate for window, misses-first and Leitner. Arbiter sim: noisy room WIN 94.3% (plan def 88.2%) |
+| E-AA-3 | assumption | major | STT rejects are per-card correlated -> WIN impossible for that deck under every def; count orb first pick as clean | ACCEPT finding as residual; REJECT fix | The fix re-opens FM-4 (silent twice, recognise orb, counted clean). Mitigation: existing S2 deck-lint (3-char, homophone, alias) + author aliases; residual named |
+| E-SEC-3 | security-data | major | "All decks" undefined for hidden (deleted) imported decks | ACCEPT | All decks = starter decks + non-hidden imports, snapshotted at round start; S2 case |
+| E-SEC-x | security-data | minor | Fix (i) makes PB (single int) incomparable across selections | DEFER (conditional) | Moot now: fix (i) dropped. Re-homed: if Kev picks K-b1 option B, key PB per selection in the same edit |
+| E-SEC-4 | security-data | minor | No CRITERIA checks D18 debug commands are stripped from RC builds | ACCEPT | One S11 CRITERIA clause: RC build registers 0 debug commands 1/1 |
+| E-SIM-wl | simplicity | minor | Skip the pre-build Kev ask on gesture feel; use D18 check-in #2 | REJECT | User-relayed handoff L127 + item 5 DISPATCH mark D7 controller mapping ASK-GATED; ask stays, bundled in one batch; feel re-checked at D18 check-in #2 |
+| E-COR-5 | correctness | minor | C1 alone too small: rewrap of L147/L382 forced by hook :200-211 | ACCEPT | Measured +5 (L147) and +3 (L382) before new text; do C1 + C4 now |
+| E-SIM-1 | simplicity | major | Same budget gap | ACCEPT (dup) | Budget table below |
+| E-AA-4 | assumption | major | Same budget gap | ACCEPT (dup) | Budget table below |
+| E-FM-5 | failure-modes | major | L491/L500 prose >150 chars cannot be moved verbatim (only tables/URLs exempt, hook :42-47); order matters (:214) | ACCEPT | Move cheat sheet as table rows (exempt, verbatim kept); ledgers append, then plan removals, then plan growth |
+| E-SIM-2 | simplicity | minor | C1 pointer line redundant; L488 dead line not counted | ACCEPT | No C1 pointer (L486 links ledgers); L488 moves with the block. C4 still needs 1 pointer line (resolved Q IDs move) |
+| E-SEC-5 | security-data | minor | Wit "lingering doubt" is an open Kev decision; C4 would move Q11 and orphan L10 | ACCEPT | Append before delete; doubt kept as an Open-questions line; Q8, Q11, Q12 stay in plan; grep dangling pointers |
+
+## Ledger (eval round 2)
+| ID | Lens | Sev | Finding (short) | Verdict | Reason / change |
+|---|---|---|---|---|---|
+| E-COR2-1 | correctness | critical | Full telegraph replay on EVERY resume -> hide before each hit frame = 0 hits all run; SEC-2 rejection premise false | ACCEPT | Replay at most once per attack; a replayed attack ignores further tracking loss and resolves at its hit frame (dodge is head-based, no input needed). SEC-2 cap rejection re-justified on this rule. S6 "hide twice in one telegraph -> resolves 3/3" |
+| E-SIM2-2 | simplicity | major | Freeze + kept baseline + replay = 3 mechanisms; kept baseline goes stale; restart attack from onset instead | ACCEPT (stale baseline, drop stored state); REJECT (restart on every resume) | Restart-every-resume reopens COR2-1 (infinite stall). Merged rule: freeze; on first resume take a fresh D7 baseline (1.5 s) then replay once. No baseline carried through the pause |
+| E-FM2-4 | failure-modes | major | Kept baseline stale after re-seat; lap-rest tracking flicker restarts telegraph forever | ACCEPT | Same merged rule (fresh baseline; replay once, never restarted). Residual: hands-in-lap flicker can add one replay per attack (named) |
+| E-SIM2-c1 | simplicity | hyp | System/menu pause and recenter still CANCEL the attack -> same immunity exploit | ACCEPT | One rule for every interruption (tracking loss, system/menu pause, recenter): freeze, fresh baseline, replay once. "Cancels that attack" deleted from L147. S6 case |
+| E-AA2-3 | assumption | major | No minimum answers; Wi-Fi off empties the window (HE excluded) -> vacuous 99% WIN; hide 90 s then 1 answer -> WIN | ACCEPT (merged into the window-floor fix) | WIN needs >= window seconds of UNPAUSED play since the window opened AND >= 4 counted encounters (tuned with the window in S9), all passing the D4 predicate. HE encounters stay excluded but never count toward the 4, so Wi-Fi off = no WIN (honest: no evidence) |
+| E-COR2-4 | correctness | major | Same empty-window hole; sim hides it (requires non-empty window) | ACCEPT (dup AA2-3) | Same fix; S2 "0 or 3 counted encounters -> no WIN 2/2". Arbiter note: the sim cannot produce it because its Overtime re-queues every HE encounter as a miss first, so coverage never completes (out4 W rows 0.0%); the plan text, not the sim, has the hole |
+| E-FM2-1 | failure-modes | critical | One correct answer can win (K-b1 A save coverage, or free 90 s pause) | ACCEPT (dup AA2-3) | Same fix + S2 "1 answer after 90 s pause -> no WIN 1/1", "first answer of a run with save coverage -> no WIN 1/1" |
+| E-SEC2-1 | security-data | critical | Same: Wi-Fi off / Wit outage / 429 storm -> orbs-only WIN with zero evidence | ACCEPT (dup AA2-3) | Same fix + S2 "all-Hard-STT window -> no WIN 1/1". REJECT its simplicity alternative (grade HE encounters as not-clean): a single 429 inside the window would fail an expert for a system fault; the floor closes the hole without that cost |
+| E-SEC2-c1 | security-data | correctness | K-b2 "Yes" needs "elapsed since coverage" or 1 answer right after coverage wins | ACCEPT (dup AA2-3) | "Elapsed unpaused seconds" is now in the WIN text for both K-b2 options |
+| E-COR2-2 | correctness | major | K-b1 A + K-b2 Yes -> returning player WINs ~90 s into a run; box-0 cards count as covered | ACCEPT | K-b1 A coverage = per-card saved flag "latest scored encounter passed the D4 predicate" (any run, graded or Overtime), cleared by a later fail; window opens no earlier than the end of this run's graded waves |
+| E-SEC2-3 | security-data | major | Cross-run "seen" = exposure, not mastery; ask hides it | ACCEPT (dup COR2-2) | Same definition, stated in the K-b1 option text |
+| E-SIM2-4 | simplicity | minor | Derive cross-run "seen" from existing D5 Leitner records; drop "one saved fact per card" | REJECT | Leitner box diverges from "latest encounter clean": Overtime makes 0 Leitner writes (D19) and the daily grade lock blocks a same-day demote after a promote, so a card failed today keeps box >= 1. One saved yes/no per card stays, and stays in the Why not |
+| E-AA2-2 | assumption | major | Recommended package never simulated; K-b1 A unmodelled; window start under A undefined | ACCEPT | Simulated (out4): K-b1 A multi-run, expert 20 cards WIN in run 1 (median), 90%-learner 20 cards run 2 (p90 4), expert 90 cards run 3 (p90 4), 500 cards run 15 (p90 16), runs ~7-12.5 min, 0 WINs with an unknown card. Window start under A defined (COR2-2). Asks quote shipped-combo rows |
+| E-AA2-1 | assumption | critical | Fix (ii) "shown = answered" rewrites Kev's Q11 word "shown" but is agent-filled; its cost billed to K-b2 | ACCEPT (ask); PARTLY REJECT (cost claim) | (ii) becomes Kev ask K-b3. Re-run with the D4 predicate and D4 re-queue in both arms (out4): (ii) costs ~0.3 pts (expert 87.6% -> 87.3%); the out2 gap (92.7% -> 81.5%) came from the old answer def, not (ii). K-b3 matters only if K-b1 is not A (A already needs a clean answer per card) |
+| E-COR2-3 | correctness | major | K-b2 Why-not numbers (99 -> 84%, 8 -> 11 min) are a mixed row | ACCEPT finding; REJECT proposed figure (98.4 -> 92.7%) | 92.7% is the old plan def, not the shipped D4 predicate. Shipped-predicate K-b2 cost (out4): expert 98.2% -> 87.6%, 8.6 -> 10.5 min; noisy room 93.4% -> 67.1%; 60 s window recovers 91.7% / 86.0% (out5). Quoted in K-b2 |
+| E-COR2-5 | correctness | major | "while charge = 5" + no charge cap -> 6th correct locks the ultimate out | ACCEPT | Write "charge >= 5" (matches sim L151); S7 "6th correct while charged -> ultimate still fires 1/1" |
+| E-FM2-2 | failure-modes | major | Discarding in-flight transcript on pause erases a wrong answer | ACCEPT finding; REJECT its fix (grade speech ended before pause) | Grading needs the transcript, which conflicts with SEC2-5 (abort the upload). Merged fix below (SEC2-2) |
+| E-SEC2-2 | security-data | major | Pause = free undo of a regretted guess; corrupts Leitner + window | ACCEPT | Pause during an open answer window = D4 "Voice miss" row (no hit; encounter can no longer promote; counts toward the 2-attempt orb trigger; not clean for WIN). Reuses an existing outcome, no new state. S6 "pause mid-window then correct retry -> 0 promotes, encounter not clean 3/3" |
+| E-SEC2-5 | security-data | minor | Discard is client-side; audio already streamed to Wit stays in its log | ACCEPT | Pause aborts the in-flight Wit request. Residual named: audio sent during the 0.5 s debounce may already be in Wit's log until the Dec 11 purge (privacy page already discloses bystander speech). S6 case |
+| E-SIM2-1 | simplicity | major | K-a recommended = two detectors (palm gate + trigger chord); A+X simpler; D16 carve-out dead code | ACCEPT | Recommended flips: hands = two-palm push (D7 today), controllers = press A+X together (no controller motion detector). Handoff candidate (triggers + push) stays option 2 (must-keep). D16 carve-out deleted: the intro runs on first launch before combat, charge = 0 |
+| E-FM2-3 | failure-modes | major | Blanket armed-state slash suppression eats slashes (trigger rest, palms-forward slash) | ACCEPT | Replace with a 0.3 s hold: while armed, a slash event waits <= 0.3 s and is dropped only if a push fires. Hands only under the recommended K-a (A+X needs no hold); both inputs if Kev picks option 2. S7 cases |
+| E-AA2-5 | assumption | major | Trigger-chord gate assumes idle triggers; scripted S7 would not catch it | ACCEPT (dup FM2-3) | Same fix; option 2 adds S7 "charged slashing with both triggers held -> 20/20 slashes register" |
+| E-SIM2-c2 | simplicity | hyp | Two-handed palms-forward slash at charge 5 dropped | ACCEPT (dup FM2-3) | 0.3 s hold; S7 "charged, palms forward, one-hand slash -> registers 3/3" |
+| E-AA2-4 | assumption | major | C1 removes the plan's only cheat sheet; FLOW-065 needs one; budget uncounted | ACCEPT | Old sheet moves to ledgers; a new 3-bullet sheet (each <= 150 chars) replaces it in place; counted in the remeasured budget |
+| E-SIM2-3 | simplicity | major | Same as AA2-4 | ACCEPT (dup) | Same |
+| E-COR2-s1 | correctness | minor | Budget leaves out the new plan cheat sheet | ACCEPT (dup AA2-4) | Budget remeasured with block line counts; margin ~3, so a scratch-copy dry run gates the real edits |
+| E-SIM2-c3 | simplicity | hyp | Step 3 ">= 35" only adds up if the Open-questions heading moves | ACCEPT | Replaced by measured block ranges (C4 = L451-470, L473-474, L478-483 = 28 lines); heading L448 and L450 stay |
+| E-SIM2-5 | simplicity | minor | Table rows dodge the 150-char rule; rewrap L491/L500 instead | ACCEPT | Old sheet moves as prose, L491 and L500 rewrapped; CRITERIA = word-identical via `check_doc_content_covered.py` |
+| E-SEC2-4 | security-data | minor | Nothing checks moved text arrived in the ledgers | ACCEPT | Step 2 CRITERIA: removed plan lines (scratch file) vs ledgers, `check_doc_content_covered.py` exit 0 and shingle coverage 100% |
+| E-FM2-5 | failure-modes | minor | 33 lines cite moved Q IDs -> "0 dangling" uncountable; ledgers L2 false; solo_ff_merge missing branch | ACCEPT | Criterion: every Q/ENGINE/D15/D19/G0a/G0b ID cited in the plan resolves to one bullet in plan Open questions or ledgers "Resolved decisions" (cited-ID count = resolved count); ledgers L2 reworded; step 5 = `solo_ff_merge.py <branch> --repo <game primary>` |
+| E-COR2-s2 | correctness | minor | S7 L316 "two-palm push" and S6 L382 "hands hidden -> 0 hits" not in edit list | ACCEPT | Both in the step-4 edit list (L316 -> "two-palm push or A+X"; L382 clause replaced by the freeze cases) |
+| E-AA2-c2 | assumption | minor | Same L382 conflict | ACCEPT (dup) | Same |
+| E-COR2-s3 | correctness | minor | L147 "baseline resets on ... resume, pause" needs an explicit edit | ACCEPT | L147 rewritten in full (step 4 text below); old reset clause replaced by the fresh-baseline rule |
+| E-AA2-c1 | assumption | minor | K-b1 stem "can never win" contradicts 90 cards WIN 66.0% at 39.2 min | ACCEPT | Stem restated: 90 cards win ~2 in 3 single runs at ~39 min median; only 500 cards cannot finish in one run |
+| E-AA2-c3 | assumption | minor | v1 HE exclusion differs from today's D19 (per answer) and the sim | ACCEPT (named) | Whole-encounter exclusion kept (an HE encounter always ends in an assisted orb, which the D4 predicate scores not clean, so per-answer counting would fail the player for a system fault); difference stated in D19 text |
+| E-SEC2-c2 | security-data | minor | PB not moot: one int across Endless, all-decks, 12-card runs | ACCEPT (was DEFER SEC-x) | PB keyed per (mode, selection) in the D5 save; in-place D19 L258 edit |
+| E-COR2-simp | correctness | simplicity | One per-encounter predicate for "shown" and "counted" | ACCEPT | One per-encounter result: clean / not clean / excluded (HE) / ultimate. Shown = clean or not clean; window counts clean vs not clean; misses = not clean or ultimate |
+
+Round-1 verdicts changed by round 2: FM-1 fix (replay every resume -> once, fresh baseline, all interruptions); SEC-2 (cap still
+rejected, premise now true); SEC-1 (discard -> Voice miss + Wit abort); FM-2 (blanket suppression -> 0.3 s hold); AA-5/COR-x
+(trigger chord -> A+X recommended, chord kept as option 2); SEC-x (DEFER -> ACCEPT); FM-5 (table rows -> rewrap); SIM-2/C1 (no
+replacement sheet -> replace in place); (ii) agent-filled -> Kev ask K-b3; budget table remeasured. All other round-1 rows stand.
+
+## Ledger (eval finisher)
+| ID | Sev | Finding | Change in v2 |
+|---|---|---|---|
+| E-FIN-1 | critical | v1-r2 makes ANY pause mid-answer a Voice miss; hands drop out of view while speaking (lap), so honest answers become misses and WIN dies | Input-loss pause freezes attack timers only, never touches the mic or answer window; only a system/menu pause (app loses focus, D2 loses the mic) affects an answer |
+| E-FIN-2 | major | Voice-miss-on-pause still undoes a regretted wrong guess (box unchanged instead of box 0, no pip) | Menu pause after speech start = graded Voice wrong for Leitner and the orb trigger, no hit (D7 "no hit while paused"); before speech start = Didn't catch. Residual: a Meta-button press mid-sentence demotes that card |
+| E-FIN-3 | major | Replay-once silent on menu pause or recenter DURING the replay; recenter moves the tracking origin, so the old baseline auto-dodges or false-hits | Menu pause/recenter during a replay: freeze, re-take baseline, resume the remaining telegraph, no second replay. S6 case |
+| E-FIN-4 | minor | Overlapping attacks (D7 shared baseline) not covered by the replay rule | One fresh shared baseline; each frozen attack replays once. S6 case |
+| E-FIN-5 | major | "Clean" = L116 voice predicate excludes silent-mode first-pick orbs (D4 L122 promotes), so silent players (M10) can never WIN | Clean = first scored attempt would promote under D4 (voice or silent first pick), computed not written. S2 case |
+| E-FIN-6 | major | Mixed input (one controller + one hand) fires neither ultimate mapping, breaking M4 | Hold the held controller's A or X 0.5 s. S7 case gated on SIG-1, now load-bearing |
+| E-FIN-7 | major | No K-a option is the handoff candidate verbatim (pause on controller loss too + triggers/push); v1-r2 option 3 had no ultimate | K-a options: recommended; handoff candidate verbatim; union pause + triggers/push. Shared guards moved to the stem |
+| E-FIN-8 | major | Window start undefined under K-b2 No; "armed" undefined (every charged slash would lag 0.3 s) | Window start = latest of run start, coverage (K-b2 Yes), graded-waves end (K-b1 A). Armed = charged with both palms facing forward |
+| E-FIN-9 | major | Dry run in a scratch copy is vacuous: the hook exempts Temp/scratchpad paths | Dry-run step deleted; the live hook on the real worktree path is the gate, removals first; a denied growth edit -> overflow order, else STOP |
+| E-FIN-10 | major | "Shingle coverage 100%" cannot pass: rewrapped L491/L500 drop shingles and the tool treats shingles as advisory | CRITERIA = exit 0 (0 lost identifiers) + uncovered-shingle % recorded and spot-checked |
+| E-FIN-11 | major | L147 "rewritten in full (step 4 text below)" but no text existed; budget was estimates (margin ~3) | Draft text below; measured costs +39 vs freed 49, re-added 8 -> plan ~498. ALL resolved bullets move (simpler rule, +5 freed) |
+| E-FIN-12 | minor | `<branch>`, `<game primary>`, "game worktree" unresolved; eval ledgers live only in Temp | Concrete paths in steps; ledgers file gets this eval's ACCEPT/REJECT rows (table rows) |
+| E-FIN-13 | minor | K-b3 asked even when K-b1 A makes it moot; the unanswered rule then forces a pointless re-ask | K-b3 recorded "moot under K-b1 A", no re-ask. A free-text answer gets its own adversary pass before any write |
+| E-FIN-14 | minor | K-b1 option 2 (pips regrow) touches Kev's Q8 "5 pips fixed" unstated; moved Q11/Q12 bullets go stale after answers | Why not names Q8; moved Q11/Q12 bullets get "amended by K-b1..K-b3 / K-a 2026-10-28" |
+| E-FIN-15 | minor | Lingering doubt (sim params) has no decision rule; S9 "reachable 1/1" is one sample | S9: 3 starter-deck runs, time-to-WIN recorded 3/3; 0/3 WIN or median >15 min -> window 60 s and re-run |
+| E-FIN-16 | minor | Stale README input line + test command; plan L10 "(see Open questions)" after the move; D17 ghost demo hands-only | README commit (separate); L10 "(see Open questions + ledgers)"; D17 ghost demo shows the player's input |
+
+## Ledger (eval main thread + Kev answers 2026-10-28)
+| ID | Lens | Sev | Finding (short) | Verdict | Reason / change |
+|---|---|---|---|---|---|
+| E-N1 | main thread | major | Under K-b1 A, Overtime "not yet shown this run" must serve not-yet-covered cards first (90 cards: 6 runs vs 3) | ACCEPT, then superseded | **Superseded by** the FSRS pass (E-FS-6): D14 filler order makes uncovered-first intrinsic |
+| E-N2 | main thread | minor | S2 "1 answer after a 90 s pause -> no WIN" must put a not-clean encounter in the 90 s of play before the pause, else it is a correct WIN | ACCEPT | S2 CRITERIA wording |
+| E-N3 | main thread | stated | First run (D14: 6 cards, no Overtime) can never WIN | NO CHANGE | Stated only |
+| E-N4 | main thread | third option | Grade what was heard: on a menu pause close the mic, let the in-flight Wit request finish, grade its final transcript; Voice wrong only if none arrives in 3 s | DEFER (device check) | Adopt only if an S9 device check passes: "menu mid-speech: final transcript arrives 3/3". Open device question: does a Wit request finish while the Quest system menu is open? Not plan text |
+| E-N5 | main thread | third option | Score an orb pick right after a Hard STT error like a silent-mode first pick | REJECT | Wi-Fi-off 90%-knower WIN 0.0% -> 27.1%, 154/1000 wins while not knowing a card; exclusion stays; silent mode is the honest route |
+| E-K-a | Kev | answer | D7 controllers | ACCEPT | Kev: "Any input pauses (Recommended)" = plan-v2 D7 text |
+| E-K-b1 | Kev | answer | Big decks: count across runs | SUPERSEDED | Kev: "it should be following fsrs principles (so we can do something similar to anki where we set the number of cards for a day)". **Superseded by** E-FS-1/E-FS-5/E-FS-7 (FSRS daily queue + two-tier WIN) |
+| E-K-b2 | Kev | answer | Stretch only after coverage | ACCEPT (Yes) | Kev: "#1 - yeah otherwise user can cheese it and dodge for 1-2 minutes after doing one correct" |
+| E-K-b3 | Kev | answer | Ultimate-wiped cards count as shown? | SUPERSEDED | Kev: "ultimates can push cards further away, so yuo have more time to answer it". **Superseded by** E-FS-8 (knockback never removes cards) |
+
+## Ledger (FSRS pass: 3 Opus adversaries, correctness / simplicity-cost / assumption-audit, synthesized)
+| ID | Lens | Sev | Finding (short) | Verdict | Reason / change |
+|---|---|---|---|---|---|
+| E-FS-1 | synthesis | major | SR algorithm for big decks + daily limits (Kev: FSRS, Anki-style cards per day) | ACCEPT | D5: FSRS-6, 21 default weights, retention 0.90, no optimizer, fuzz OFF (D18 determinism), no learning steps, interval = clamp(round(S),1,365) whole study days; hand-ported engine-free C++ Core module from py-fsrs (MIT, CREDITS); golden vectors from a pinned py-fsrs script under tests/fixtures (own test + README entry). Leitner and study-ahead retired. REJECT rs-fsrs-c (Rust FFI PoC -> cargo + NDK in the UE build), xiety/fsrs (unvetted) |
+| E-FS-2 | synthesis | major | Map game outcomes to FSRS ratings | ACCEPT | Again / Hard / Good only (Kev); Easy never emitted (Wit latency confounds speed). One write per encounter; Hard-STT-only and Didn't-catch-only encounters write nothing; unresolved at run end = Again if orbs were shown, else no write |
+| E-FS-3 | synthesis | major | Daily grade lock under FSRS | ACCEPT (kept) | Max 1 FSRS write per card per study day, queue cards only; Overtime misses-first = ungraded relearn |
+| E-FS-4 | synthesis | minor | UTC-day rollover lands mid-evening PT | ACCEPT | Study day = local 04:00 rollover (Anki-style); run_day frozen at run start |
+| E-FS-5 | synthesis | major | Daily budget can be multiplied by switching decks | ACCEPT | Global counters {new_today, reviews_today} across selections; limits default 12 new / 120 reviews (Kev), S9 steppers, edits apply next study day; queue snapshot per {run_day, selection hash} |
+| E-FS-6 | synthesis | major | Run size vs today's queue; fillers must not spend budget | ACCEPT | D14 reserves min(12, uncovered queue); fillers ungraded (graded today, lapses first; then introduced not-due by lowest R; never New); same order in D19 Overtime; supersedes E-N1; study-ahead removed (would overrun budget) |
+| E-FS-7 | synthesis | major | WIN scope under a daily queue (Kev: two tiers) | ACCEPT | Tier 1 Day cleared, Tier 2 Deck conquered (M24 literal); both: coverage, then >=90 s unpaused, >=4 counted encounters, all clean, all after coverage (Kev #1); empty queue = practice run (no WIN); dissolves E-K-b1 and E-K-b3 |
+| E-FS-8 | synthesis | major | Ultimate-removed cards break coverage and grading (Kev: push cards away) | ACCEPT | D4 knockback: pushes the strike-slot enemy back toward its wall spawn, cancels its in-flight attack (only allowed cancel), resets its telegraph; never removes or grades cards |
+| E-FS-R | synthesis | residual | Residual cons named | ACCEPT (named) | FSRS float pow/exp x86 vs ARM drift (UNVERIFIED; tolerance + on-device vectors); no same-day relearn write (Anki calls empty steps experimental); orb 1-in-4 guess rated Hard/Good can overstate stability; no voice WIN while Wit is down (silent mode works); knockback never shortens a boss wave; 21 untuned weights; clock tampering accepted (single-player); local-04:00 boundary pair 03:59/04:01 |

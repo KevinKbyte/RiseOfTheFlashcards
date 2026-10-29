@@ -7,7 +7,7 @@ GOAL: judged Quest 3/3S build (dev + test on Quest 2 only, A4 waiver; residuals 
 Out of scope: multiplayer, LLM grading, MemriPal or realm-of-recall code/assets (recon R19), VR (non-passthrough) arena,
   post-Dec-11 MemriPal import (separate branch, never the judged channel).
 Facts: R1-R20 in [2026-10-28-vr-flashcard-recon.md](2026-10-28-vr-flashcard-recon.md).
-Kev decisions 2026-10-28: ENGINE (Unreal 5.7, spike-gated; D1), Q1, Q2, Q4-Q12, G0a, G0b, new D15, D19 (see Open questions).
+Kev decisions 2026-10-28: ENGINE (Unreal 5.7, spike-gated; D1), Q1, Q2, Q4-Q12, G0a, G0b, new D15, D19 (see Open questions + ledgers).
 Changes from v1: see Ledger (finisher), then Ledger (adversary round 2), then round 1, in
   [2026-10-28-vr-flashcard-game-ledgers.md](2026-10-28-vr-flashcard-game-ledgers.md). Sources re-checked in the primary checkout for
   this pass: rules.md:88-143,154-168,195-239,318-330; guidelines.md:44-62,102-112; hackathon.md:63-75.
@@ -447,54 +447,7 @@ FLAG for Kev: the D18 harness (runner, selector, bypass hook, debug input, event
 
 ## Open questions
 
-Resolved 2026-10-28 (Kev):
-- ENGINE Unreal 5.7 + Meta XR v207, spike-gated by Nov 2; Unity 6.3 LTS fallback (M9, M13, A2, A3, A14, D1, D2, D5, G1).
-- Q1 Video on a new YouTube channel for the game, public (A7).
-- Q6 Second SP2 speaker = Kev + TTS voices; residual logged (Slices header).
-- Q7 SP1 creates a backup Meta dashboard app; pipeline-red decision moves from Nov 12 to Nov 8; last-green invite URL goes into the
-  Devpost draft early.
-- Q10 SP3 (IWSDK) not retired: HELD as a last-resort fallback, run only if both the UE spike and the Unity fallback fail G1; not
-  scheduled (D1, SP3, G1).
-- Q2 Repo public when? Private GitHub remote now with CI gitleaks; public Nov 3 (G1) once a full-history scan is green and .gitignore
-  covers .claude/ (A6, D10, G1).
-- Q3 Title "Rise of the Flashcards" (Kev 2026-10-28, after "Cards: Uprising" and "Flashcards Fight Back"); nods to Rise of the Planet
-  of the Apes without copying the franchise title; the "Planet of the ..." riff is NOT used anywhere (Planet of the Apes is a
-  Disney/20th Century trademark; Jack Daniel's v. VIP 2023 weakens parody defense for source-identifying use; R11 originality rule
-  makes it a disqualification risk); web-checked 2026-10-28, no game by this name; nearest concept itch.io "Flashcard Hero" (flashcard
-  RPG combat), so Devpost differentiates on VR + voice answers; prior realm-of-recall still disclosed on Devpost.
-  Taglines (Kev 2026-10-28): "Humanity forgot them. They didn't forget." / "You skipped your reviews. They noticed." / "The cards
-  remember."
-- Q4 Starter decks: Opposites, World Capitals, Basic Science; no Spanish; locked by Oct 30; S2 deck-lint gate; cut Basic Science
-  first (A10, SP2, S2, ladder).
-- Q5 Gaze: the D8 +/-40 deg in-view gate is the head-gaze mechanic in ADR 0001 + Devpost; gaze-dwell select (1.2 s) is a D15
-  experimental toggle (D8, G1, S9).
-- Q8 Keep 0.5 m / 12 cards / 5 pips; max 1 hit per encounter; strike slot per-player 0.40-0.60 m; first run 6 cards, no-fail; S9 adds
-  early-end rate; pacing is the tuning knob, not counts (D13, D14, S2, S9). D19 leaves the graded counts unchanged; Overtime is ungraded.
-- Q9 Base build = 1 ultimate type fired repeatedly; second mastery-unlocked type is a D15 experimental toggle (S7, ladder).
-- D15 Experimental settings pane (new; S9 calibrates each toggle on/off; underperformers ship OFF, unmentioned).
-- Q11 99% win measure: every card in the selected deck(s) shown this run (not-due cards served ungraded, no Leitner write), then
-  accuracy over the last 90 s of answers >=99% -> WIN; window tuned 60-120 s in S9 (M24, D19, S2, S9).
-- Q12 Slash input: both controllers and hand tracking (M1, M6, D17, S3).
-- D19 Wave survival (new; M24): graded waves, ungraded Overtime, WIN unless Endless, daily grade lock.
-- G0a New Experience claim kept with D11 disclosure; division field set at S13 (guidelines.md:101). Pre-ruling email
-  (MetaHorizonStart@meta.com) dropped 2026-10-28 (Kev): repo first commit 37d0378 is 2026-10-28, inside the window starting
-  2026-09-24 (rules.md:91), with no pre-existing code, so the New Experience Division is not in question.
-- G0b Relay fail-soft automatic; judging-period ops only {RELAY_ENABLED off, byte-identical privacy redeploy}, logged + disclosed in
-  Devpost testing instructions; S10 Upstash idle-archive check (D6, S10, F, S13).
-
-## Ledgers
-Finisher, adversary round 2 and round 1 ledgers: [2026-10-28-vr-flashcard-game-ledgers.md](2026-10-28-vr-flashcard-game-ledgers.md).
-
-Round-1 cheat sheet superseded by the one below.
-
-## Adversarial cheat sheet
-- Primary technical risk: the headline voice mechanic could die silently for judges. Any brief speech-recognition fault (system menu, network blip, 429) latched silent mode for the rest of the session. All judges share one Wit app whose client token is effectively public, with unchecked quotas. And the first release-config build with stripping plus mic/scene permissions didn't happen until Nov 15.
-- Fix: speech failures now fall back to orbs for that card only, with voice retried on the next card and the mic re-acquired on resume;
-  only mic-permission denial latches silent mode. The Wit client token is treated as public, the Wit limits go in ADR 0002, and SP2 runs a
-  5-concurrent burst test. The SP2 voice spike ships as versionCode 2 in release config, with final permissions and the restored keystore,
-  and must pass voice + MRUK checks after an invite-URL install before G1. Also: the matcher gets a 4-char prefix rule and a single
-  outcome/grading table, the dodge baseline freezes at telegraph onset, and the spawn arc is +/-35 deg. Finisher pass: enemies now advance
-  from the wall to a 0.5 m strike slot (they were out of hand reach). Core stays engine-free (JsonUtility moved to an adapter). A run loop +
-  shield pips give a <=10 min session. String normalization gets an on-device self-test on IL2CPP. G1 must record a freeze-resilience row.
-  Kev's licensing/hosting/privacy asks are listed as M18-M21, and the deck floor is 2.
-- Lingering doubt: should cloud Wit be the default recognizer at all? On-device grammar ASR (SP2b) would remove the cloud dependency that can't be patched or re-keyed during the freeze, but it snaps noise onto deck answers. G1 now records freeze resilience in ADR 0002, but the default still rests on SP2 accuracy, so the call is Kev's once the row is written.
+Resolved 2026-10-28 (Kev): ENGINE, Q1-Q12, D15, D19, G0a, G0b in
+  [ledgers Resolved decisions](2026-10-28-vr-flashcard-game-ledgers.md#resolved-decisions).
+- Open (Kev): should cloud Wit stay the default recognizer? SP2b on-device grammar ASR removes the freeze-unpatchable cloud
+  dependency but snaps noise onto deck answers; G1 records freeze resilience in ADR 0002, the call is Kev's (old sheet in ledgers).
