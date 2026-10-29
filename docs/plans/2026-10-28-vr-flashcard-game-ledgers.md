@@ -276,6 +276,8 @@ replacement sheet -> replace in place); (ii) agent-filled -> Kev ask K-b3; budge
 | E-K-b1 | Kev | answer | Big decks: count across runs | SUPERSEDED | Kev: "it should be following fsrs principles (so we can do something similar to anki where we set the number of cards for a day)". **Superseded by** E-FS-1/E-FS-5/E-FS-7 (FSRS daily queue + two-tier WIN) |
 | E-K-b2 | Kev | answer | Stretch only after coverage | ACCEPT (Yes) | Kev: "#1 - yeah otherwise user can cheese it and dodge for 1-2 minutes after doing one correct" |
 | E-K-b3 | Kev | answer | Ultimate-wiped cards count as shown? | SUPERSEDED | Kev: "ultimates can push cards further away, so yuo have more time to answer it". **Superseded by** E-FS-8 (knockback never removes cards) |
+| E-K-c | Kev | answer | D1 engine: IWSDK for prototyping? (2026-10-28/29) | ACCEPT (dual-track) | Kev: "would immersive web sdk be better for prototyping the idea, and hten we port to unreal if needed? I saw in https://www.youtube.com/watch?v=D04z9PYUSao felix is able to generate a full trailer and game in 45 minutes with immersive web sdk"; "you know what, cant we just do both? if iwsdk is going to take 45 minutes to set up, we can learn how iwsdk works while also progressing on UE build in paralell"; "and then they can both exist in the project, and we can have in the readme which one we prefer judges to try"; "or we can have iwsdk buildi n a separate repo to help with parallelism"; "and the main repo that we currently have is unreal". -> D1: this repo = Unreal; IWSDK build in sibling repo game-iwsdk; a device spike picks the build the README tells judges to try; SP3/Q10 overtaken (MV-7) |
+| E-IW | research | premises | IWSDK (WebXR) premises, researched 2026-10-29 | ACCEPT (input to D1; UNVERIFIED items gate the README pick) | Eligibility: hackathon.md:73-74 and rules.md:137-140 accept IWSDK (WebXR) by hosted URL (GitHub Pages or Vercel etc.); guidelines.md:53 engine-neutral prizes; guidelines.md:111 "a URL for web experiences". SDK: MIT, ECS on a Three.js fork (super-three 0.185.0) https://github.com/facebook/immersive-web-sdk ; @iwsdk/core latest = 1.1.0-rc.2 (2026-10-23), 1.0.1 2026-10-01 https://registry.npmjs.org/@iwsdk/core . Agent tooling (IWER emulation, CLI, screenshots, ECS step/snapshot) https://iwsdk.dev/skill.md . Wit CORS from a github.io origin OK (OPTIONS https://api.wit.ai/speech -> 204, origin echoed, 2026-10-29); real audio POST UNVERIFIED. UNVERIFIED, needs the device spike: getUserMedia mic inside an immersive session (no Meta doc; mitigation: request before requestSession); Quest 2 hand tracking in Quest Browser (palm pinch system-reserved) https://developers.meta.com/horizon/documentation/web/webxr-hands/ ; offline persistence (navigator.storage.persist()) https://web.dev/articles/storage-for-the-web ; >=60 fps on Quest 2 https://developers.meta.com/horizon/documentation/web/webxr-perf-bp/ ; hands-first scoring parity for web (rules.md:223). ts-fsrs 6.0.0 MIT https://registry.npmjs.org/ts-fsrs : FSRS-6 21 weights + fuzz-off UNVERIFIED. Video https://www.youtube.com/watch?v=D04z9PYUSao : IWSDK tech lead builds an MR tower-defense game in ~42 min; no evidence for voice, FSRS, Quest 2 fps. Port-later: no code ports (decks, FSRS vectors, relay, matcher spec do) |
 
 ## Ledger (FSRS pass: 3 Opus adversaries, correctness / simplicity-cost / assumption-audit, synthesized)
 | ID | Lens | Sev | Finding (short) | Verdict | Reason / change |
@@ -289,3 +291,79 @@ replacement sheet -> replace in place); (ii) agent-filled -> Kev ask K-b3; budge
 | E-FS-7 | synthesis | major | WIN scope under a daily queue (Kev: two tiers) | ACCEPT | Tier 1 Day cleared, Tier 2 Deck conquered (M24 literal); both: coverage, then >=90 s unpaused, >=4 counted encounters, all clean, all after coverage (Kev #1); empty queue = practice run (no WIN); dissolves E-K-b1 and E-K-b3 |
 | E-FS-8 | synthesis | major | Ultimate-removed cards break coverage and grading (Kev: push cards away) | ACCEPT | D4 knockback: pushes the strike-slot enemy back toward its wall spawn, cancels its in-flight attack (only allowed cancel), resets its telegraph; never removes or grades cards |
 | E-FS-R | synthesis | residual | Residual cons named | ACCEPT (named) | FSRS float pow/exp x86 vs ARM drift (UNVERIFIED; tolerance + on-device vectors); no same-day relearn write (Anki calls empty steps experimental); orb 1-in-4 guess rated Hard/Good can overstate stability; no voice WIN while Wit is down (silent mode works); knockback never shortens a boss wave; 21 untuned weights; clock tampering accepted (single-player); local-04:00 boundary pair 03:59/04:01 |
+
+## Moved from the plan 2026-10-29 (B1)
+Verbatim except rewrapping and the MV-5 amendment; the plan keeps a pointer citing each MV ID.
+- MV-1 Plan header (after the Kev decisions line):
+  Changes from v1: see Ledger (finisher), then Ledger (adversary round 2), then round 1, in
+  [2026-10-28-vr-flashcard-game-ledgers.md](2026-10-28-vr-flashcard-game-ledgers.md). Sources re-checked in the primary checkout for
+  this pass: rules.md:88-143,154-168,195-239,318-330; guidelines.md:44-62,102-112; hackathon.md:63-75.
+- MV-2 D18 unverified premises (plan D18, before D19):
+  Unverified premises (docs-checked 2026-10-28; SP1/Nov 2 spike checks, each with a fallback): (1) UE 5.7 + Meta XR Simulator
+    compatibility not stated in Meta docs; check the Meta XR plugin release notes; fallback T1 without the simulator (flat-screen
+    pawn) + T2 on device. (2) Simulator replay has no CLI: a `session_capture` block in
+    %APPDATA%/MetaXR/MetaXrSimulator/persistent_data.json (exec_state=replay, quit_when_complete) drives it, removed after each run;
+    the app must exit on the OpenXR session-exit request; .vrs record/replay verified, hand-tracking recording undocumented;
+    fallback scenarios driven by the debug input layer only. (3) Synthetic environments supplying MRUK scene data is inferred, not
+    documented; fallback T1 covers the D8 ring fallback, wall spawns on T2/S8. (4) Simulator hand tracking exists only on some
+    device profiles; fallback debug slash/dodge/ultimate commands, hand feel at Kev's check-ins. (5) Proximity bypass unverified on
+    Quest 2, may reset on sleep/reboot; fallback Kev starts T2 runs in person. (6) OVR Metrics CSV pull worked on Quest 2 per a
+    forum report, package name needs re-checking; fallback fps from the event-log frame time. Sources:
+    developers.meta.com/horizon/documentation/unreal/xrsim-intro/,
+    developers.meta.com/horizon/documentation/unreal/xrsim-session-capture/, dev.epicgames.com Gauntlet docs,
+    communityforums.atmeta.com proximity thread.
+- MV-3 D18 premises SIGNALS (plan External signals):
+  D18 premises (SP1/Nov 2 spike): Meta XR plugin release notes state UE 5.7 + simulator support; a simulator session_capture replay
+  run exits cleanly; a synthetic room returns MRUK scene data; simulator hand tracking on the chosen device profile; Quest 2
+  proximity bypass holds for a full run; OVR Metrics CSV pulled over adb (package name re-checked).
+- MV-4 A4 residuals (plan A4; judges play Quest 3/3S, each gap logged residual risk, not a blocker):
+  A4-R1 perf: 3/3S (newer SoC) expected faster than Quest 2, so Quest 2 fps is the conservative bound, but 3/3S fps is unmeasured.
+  A4-R2 scene: Quest 2 greyscale passthrough + manual Space Setup vs 3/3S colour passthrough + their own Space Setup; judge-room MRUK
+    spawns are unverified (A5, S8).
+  A4-R3 FoV: Quest 2 FoV differs from both 3S (~96 deg) and 3 (~110 deg) (A12); D8 arc-edge readability on judge FoV is unverified (S11).
+  A4-R4 footage: no 3/3S colour-passthrough capture path; SP1 capture fallback is XR Simulator room footage only (D12).
+- MV-5 Rejected alternatives (plan section):
+  Web Speech API (R15,R20). LLM grading (nondeterministic, injectable). SM-2 (over-built). Leitner 5-box (superseded by FSRS-6 in D5, E-FS-1;
+  amended 2026-10-29: FSRS moved out of this list). Reusing realm-of-recall/MemriPal (R19). Multiplayer. Muse relay (needs live server+key).
+  Palm-shield assist (collides with two-palm ultimate). VR arena (unscheduled, rules.md:215). n-best matching + number-word conversion (false-accept
+  bias, aliases suffice). Page-issues-code relay (needs VR text entry). Hand-rolled per-IP KV counter + GET rate limit (quota drain, unneeded given
+  code space). Device kill-mid-write test (nondeterministic). One-way silent-mode latch on STT error. Server-side code patches during the freeze
+  (rules.md:168).
+- MV-6 D5 before the FSRS rewrite (Leitner superseded by E-FS-1; JsonUtility / Game.Json adapter = Unity fallback only):
+  D5 SR = Leitner 5 boxes (0,1,3,7,14 d), due dates as UTC calendar days; box = enemy armor tier (visual only: armor look per box, no mechanical
+  effect); grading per D4. Card ID = lowercase hex of the first 16 bytes of SHA-256 over UTF-8 of (NFC, trimmed, whitespace-collapsed front + U+001F
+  + back) (never string.GetHashCode; no punctuation strip, so "5-3" != "53"); parser keeps the first of any duplicate ID and reports the count;
+  editing a card's text makes it a new card by design. Empty due queue -> study-ahead: spawn lowest box, earliest next-due first. Save = JSON in
+  persistentDataPath: write temp + flush; if primary missing -> File.Move(temp, primary), else File.Replace(temp, primary, .bak); load order primary
+  -> .bak -> fresh state. Deck parser on device = JsonUtility (no polymorphic deserialization). JsonUtility is UnityEngine, so it lives in a thin
+  Game.Json adapter asmdef that maps to plain DTOs; all validation (caps, required non-empty fields, >=4 distinct answers, duplicate IDs) lives in
+  Core (noEngineReferences, S1). Deck schema root is an object {"version":1,"title":...,"cards":[{"front","back","aliases":[],"reject":[]}]} because
+  JsonUtility cannot parse a top-level array and silently defaults missing fields; Core rejects defaulted/empty required fields.
+  Under Unreal (2026-10-28): the JsonUtility / Game.Json adapter workaround is N/A (C++ parser in Core); kept for the Unity fallback.
+  Every Leitner write (D4 grading, study-ahead included) obeys the D19 daily grade lock.
+- MV-7 SP3 (IWSDK + vosk-browser, HELD, Q10): overtaken by D1 dual-track (Kev 2026-10-29; E-K-c, E-IW). Plan text:
+  D1: IWSDK + vosk-browser = SP3, HELD (Q10): last resort if both engines fail G1; if SP3 wins G1, S-slices are re-planned Nov 4 and hosting is
+    GitHub Pages from the PUBLIC repo (rules.md:140, guidelines.md:60 name a GitHub page; free because the repo is public, A6), which satisfies
+    M20's rationale; if the repo is still private at that point, hosting is Vercel free tier per M20 (rules.md:138 allows it).
+  Slices: SP3 HELD (Q10, 2026-10-28; not scheduled): IWSDK + vosk-browser, GitHub Pages hosting. Last-resort fallback, run only if both the UE spike
+    and the Unity 6.3 LTS fallback fail G1.
+  G1: SP3 only if both engines fail (Q10).
+  SIGNALS: SP3 GitHub Pages/Vercel URL loads on Quest Browser.
+
+MV-8 D4 table before the FSRS column and knockback ultimate (E-FS-2, E-FS-8):
+D4 Answer outcomes (single table; "encounter" = one card-enemy's card until it is removed; the FIRST scored attempt (correct or wrong) of an
+  encounter sets its Leitner grade):
+
+| Outcome | Classified when | Enemy | Player | Leitner |
+|---|---|---|---|---|
+| Voice correct | D3 correct | -1 card | none | promote +1 only if first scored attempt and no prior miss/orb this encounter; else unchanged |
+| Voice wrong | D3 wrong | none | hit | demote to box 0 if first scored attempt; else unchanged |
+| Voice miss | non-empty, not correct/wrong (ratio, margin, prefix, length fails) | none | none | encounter can no longer promote; counts toward 2-attempt orb trigger |
+| Didn't catch | empty transcript or 6 s cap | none | none | none; counts toward 2-attempt orb trigger |
+| Hard STT error | error callback, HTTP 429, or no final transcript 3 s after end of speech | none | none | none; orbs immediately for THIS card only; next card tries voice again |
+| Orb correct (voice mode, after misses/errors) | slash correct orb | -1 card | none | unchanged (assisted) |
+| Orb correct (silent mode, first pick) | slash correct orb | -1 card | none | promote +1 |
+| Orb wrong | slash distractor | none | hit | demote to box 0 if first scored attempt; picked orb removed |
+| Ultimate | ultimate hits enemy | removes cards from pool | none | none; removed cards stay due and re-queue |
+
+Ultimate charge: +1 per correct outcome (voice or orb, assisted or not); firing the ultimate resets charge to 0; ultimate kills do not add charge.
