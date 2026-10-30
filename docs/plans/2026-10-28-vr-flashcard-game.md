@@ -7,7 +7,7 @@ GOAL: judged Quest 3/3S build (dev + test on Quest 2 only, A4 waiver; residuals 
 Out of scope: multiplayer, LLM grading, MemriPal or realm-of-recall code/assets (recon R19), VR (non-passthrough) arena,
   post-Dec-11 MemriPal import (separate branch, never the judged channel).
 Facts: R1-R20 in [2026-10-28-vr-flashcard-recon.md](2026-10-28-vr-flashcard-recon.md).
-Kev decisions 2026-10-28: ENGINE (Unreal 5.7, spike-gated; D1), Q1, Q2, Q4-Q12, G0a, G0b, new D15, D19 (see Open questions + ledgers).
+Kev decisions 2026-10-28: ENGINE (Unreal, spike-gated; D1; 5.8 per Kev 10-30, A2), Q1, Q2, Q4-Q12, G0a, G0b, new D15, D19 (Open questions + ledgers).
 Changes from v1 (finisher -> round 2 -> round 1) + sources re-checked: [ledgers](2026-10-28-vr-flashcard-game-ledgers.md) MV-1.
 
 ## Must-keep (Kev verbatim asks; never defer/cut/descope without Kev's explicit ask)
@@ -58,13 +58,14 @@ Scope constraint ladder (fidelity, not features) if behind at the Nov 12 checkpo
 
 ## Assumptions
 A1 Before Nov 5 only spikes, no game code. Honest budget: ~14 h Kev time Oct 28-Nov 3 (SP1 ~7 h, SP2 ~5 h, G0/G1 + 3 ADRs ~2 h); MemriPal has priority. Overflow rule: G1 takes its default (see G1) and any unfinished SP1 step runs Nov 5 AM before S1.
-A2 Unreal Engine 5.7 + Meta XR plugins v207 (ISDK Unreal v207 lists UE 5.8/5.7; plugins built for 5.7; Meta has an open
-  investigation into them failing to load on 5.8:
-  developers.meta.com/horizon/feedback/vr/investigations/1053459897316880/), never vendored; MetaXRPlatform plugin OFF (crash report).
-  Setup gaps: install UE 5.7, Android NDK r27c (26.3/27.0 present; SDK platforms 34-36 + build-tools 35.0.1 present), JDK. Unity
-  fallback: Unity 6.3 LTS (6.2 out of support; AIO v207 min 6000.0.66f2) + Meta XR All-in-One at the version hackathon.md:63 names
-  ("v81+ (v207)"), via UPM registry, never vendored; Android module installable (R18: missing). Resolved plugin/SDK versions recorded in
-  ADR 0001 and checked in S1.
+A2 UE 5.8.0 (Kev 2026-10-30, verbatim: "we have UE5.8 installed, lets use that"; was 5.7) at C:/Program Files/Epic Games/UE_5.8
+  (CL53629095), no install needed: its Engine/Config/Android/Android_SDK.json pins NDK 27.2.12479018 (r27c); JDK 21 (Android Studio
+  JBR 21.0.5), SDK platforms 33-36, build-tools 34-36 present. Meta XR plugins v207 (ISDK v207 supports 5.7/5.8), never vendored;
+  MetaXRPlatform plugin OFF (crash report). Risk: prebuilt v207 OculusXR/OculusInteraction/MetaXRHaptics fail to load on 5.8 (open Meta investigation https://developers.meta.com/horizon/feedback/vr/investigations/1053459897316880/) -> UE-spike step 1 builds the MetaXR plugin from source in the project's Plugins/ against 5.8, not committed (VS 2022 present; 30-60 min compile check).
+  Source build fails -> UE 5.7.4 + core MetaXR v205.0 (tag oculus-5.7.4-release-1.205.0) + ISDK v207.0 (needs a 5.7 install; C: ~84 GB
+  free); 5.8 assets do not open in 5.7, so settle the fallback before authoring content. Spike fails outright -> Unity fallback: Unity
+  6.3 LTS (6.2 out of support; AIO v207 min 6000.0.66f2) + Meta XR All-in-One at the version hackathon.md:63 names ("v81+ (v207)"),
+  via UPM registry, never vendored; Android module installable (R18: missing). Resolved plugin/SDK versions: ADR 0001, checked in S1.
 A3 Wit.ai cloud (Unreal: direct HTTP, since voicesdk-unreal is archived, last push 2025-06-03, verified 2026-10-28; Unity fallback:
   Meta Voice SDK) p95 <=1.5 s end-of-speech -> transcript for 1-4 word answers on Quest (unverified; SP2 measures). Wit per-app rate
   limits unverified; SP2 records the published figures in ADR 0002.
@@ -93,7 +94,7 @@ A15 Seated hand reach: a slash within the 30 cm hand radius only reaches ~0.4-0.
 A16 Judge count and concurrency are unknown; Wit per-app limits are compared against a planning figure of 5 concurrent sessions (SP2 burst), not a measured judge load.
 
 ## Design decisions
-D1 ENGINE (Kev 2026-10-28; dual-track 2026-10-29, ledgers E-K-c, E-IW): THIS repo is the Unreal build: UE 5.7 + Meta XR plugins v207
+D1 ENGINE (Kev 2026-10-28; dual-track 2026-10-29, ledgers E-K-c, E-IW): THIS repo is the Unreal build: UE 5.8 + Meta XR plugins v207
   (A2), gated by the UE spike (SP1 + SP2 on UE) passing by Nov 2; spike fails -> Unity 6.3 LTS and the Unity plan (rubric names
   ISDK/MRUK, R5; Voice SDK Unity-native); ADR 0001 records Unreal (spike-gated) vs Unity fallback (M13). Unity-only slice terms
   (asmdef, EditMode, [TestFixture], TMP, JsonUtility, UPM, IL2CPP) apply to the Unity fallback; under Unreal they map to UE equivalents,
@@ -102,7 +103,7 @@ D1 ENGINE (Kev 2026-10-28; dual-track 2026-10-29, ledgers E-K-c, E-IW): THIS rep
   an agent-built IWSDK (WebXR) build. A ~1-day IWSDK device spike (UNVERIFIED: getUserMedia mic in an immersive session, Quest 2 hand
   tracking, offline persistence, fps) decides which build the README tells judges to try; IWSDK is accepted by hosted URL
   (hackathon.md:73-74); prize eligibility is engine-neutral (guidelines.md:53). Open (UNVERIFIED): does the Devpost form take both an
-  APK invite URL and a web URL? hackathon.md:64 suggests UE 5.8 (suggested, not required; plan stays on 5.7).
+  APK invite URL and a web URL? hackathon.md:64 suggests UE 5.8 (suggested, not required); plan uses 5.8 (Kev 2026-10-30, A2).
 D2 STT behind IAnswerRecognizer; default Wit.ai (Unreal: direct HTTP; Unity fallback: Voice SDK); on-device grammar ASR
   (sherpa-onnx offline fallback; Vosk, Apache-2.0) only if Wit misses SP2 thresholds; its grammar = all deck answers + aliases + [unk].
   Mic opens at slash contact; an earcon plays only once the mic is live; SP2 measures first-word clipping. Answer window = from earcon
@@ -253,7 +254,7 @@ D18 Agent validation loop + reusable E2E suite (Kev, 2026-10-28; M22, M23): the 
   Reusable suite (M23): each mechanic slice S3-S7 adds >=1 scenario built from shared step helpers (start run, spawn card, slash,
     answer, dodge, ultimate); scenario = scripted inputs + event-log asserts + baseline screenshots compared with tolerance. The
     suite never shrinks: a superseded scenario is replaced, not deleted.
-  Unverified premises (1)-(6) (UE 5.7 + XR Simulator, replay w/o CLI, synthetic-room MRUK, sim hands, proximity bypass,
+  Unverified premises (1)-(6) (UE 5.8 + XR Simulator, replay w/o CLI, synthetic-room MRUK, sim hands, proximity bypass,
     OVR CSV), each a SP1/Nov 2 spike check with a fallback: ledgers MV-2.
 D19 Wave survival + win (Kev, 2026-10-28; M24, Q11, Q12; FSRS pass E-FS-6, E-FS-7): per round the player picks deck(s), incl. "all decks" (starter
   decks + non-hidden imports, snapshotted at round start); Endless is an explicit opt-in (default off). Graded waves = the D14 run cards, 3 cards
@@ -289,13 +290,13 @@ D20 Quest 3S compatibility (Kev 2026-10-28 "yes add the 3S compat decision to th
   https://developers.meta.com/horizon/documentation/unreal/xrsim-intro/ ; OpenXR extension names UNVERIFIED; the game uses no 3S-only feature today.
   Display: query supported refresh rates/resolution at runtime, never assume Quest 2 values; 3S lists 72/90/120 Hz
   (https://www.meta.com/quest/quest-3s/); API route XR_FB_display_refresh_rate UNVERIFIED. Hand tracking parity Quest 2 vs 3S: UNVERIFIED. Testing:
-  Meta XR Simulator has a Quest 3S device profile (xrsim-intro); its UE 5.7 support UNVERIFIED = D18 premise check (7) in SP1; Devpost testing notes
+  Meta XR Simulator has a Quest 3S device profile (xrsim-intro); its UE 5.8 support UNVERIFIED = D18 premise check (7) in SP1; Devpost testing notes
   carry a 3S smoke checklist (S13); store review per declared device UNVERIFIED (only VRC.Quest.Packaging manifest checks found). Residual: real-3S
   frame time and comfort unprovable without a device (A4).
 
 ## Slices
-UE spike (Kev, 2026-10-28; D1): SP1 + SP2 run on UE 5.7 + Meta XR 207 (MetaXRPlatform OFF) with direct Wit.ai HTTP voice; pass = SP1
-  + SP2 CRITERIA by Nov 2; fail -> Unity 6.3 LTS. Setup: UE 5.7, Android NDK r27c, JDK. SP1 also creates a second (backup) Meta
+UE spike (Kev, 2026-10-28; D1): SP1 + SP2 run on UE 5.8 + Meta XR 207 source-built (A2; MetaXRPlatform OFF) with direct Wit.ai HTTP voice; pass = SP1
+  + SP2 CRITERIA by Nov 2; fail -> Unity 6.3 LTS. Setup present (A2); step 1 = MetaXR source build (A2). SP1 also creates a second (backup) Meta
   dashboard app (Q7). SP2 second speaker = Kev + several TTS voices/accents (Q6); residual (TTS cleaner than real speech) in ADR 0002.
 SP1 Oct 28-Nov 1 (~7 h): Android toolchain (UE: NDK r27c + JDK; Unity fallback: Android module); Quest 2 dev mode; release keystore
   + 2 backups; versionCode build script; hello-hands+passthrough APK release-signed; Meta dashboard app + Competition channel; upload
@@ -312,7 +313,7 @@ SP2 Oct 30-Nov 2 (~5 h), DEPENDS SP1 (Android toolchain + signed pipeline): star
 SP3 (IWSDK + vosk-browser, HELD Q10) overtaken by D1 dual-track 2026-10-29 (ledgers MV-7).
 G0 resolved 2026-10-28 (Kev). G0a: New Experience claim (M5) kept with the D11 disclosure, re-assignment risk (rules.md:90-92) seen;
   the division field is set at S13 (editable until Nov 18 12:00 PT, guidelines.md:101). G0b: freeze policy per D6.
-G1 Nov 3: default = Unreal 5.7 + direct Wit.ai HTTP if the UE spike passed by Nov 2, else Unity 6.3 LTS + Voice SDK (D1); SP2b
+G1 Nov 3: default = Unreal 5.8 (5.7.4 fallback, A2) + direct Wit.ai HTTP if the UE spike passed by Nov 2, else Unity 6.3 LTS + Voice SDK (D1); SP2b
   recognizer if SP2 measured a voice failure; Unmeasured numbers do not block: default holds,
   unfinished SP1/SP2 checks run Nov 5 AM before S1 and must pass before S3. Repo flips public
   (Q2) only once a full-history gitleaks scan is green and .gitignore covers .claude/; else it stays private. ADRs 0001 (engine + SDK
@@ -322,7 +323,7 @@ Post-G1 failure rule (Nov 5 AM overflow checks): no engine switch after Nov 4. T
   Nov 5 check -> SP2b recognizer is built inside S4 behind IAnswerRecognizer (slip charged to the Nov 16 buffer). Invite-URL pipeline
   fails on Nov 5 -> build continues in the G1 engine (Unreal if the spike passed, else Unity), Kev escalates to Meta support + forum
   the same day, and the pipeline check repeats daily until green; still red on Nov 8 -> Kev decides (Q7; backup dashboard app, SP1).
-S1 Nov 5 AM scaffold in the G1 engine. UE 5.7 (default): Meta XR plugins v207 (version check), MetaXRPlatform plugin OFF, Android
+S1 Nov 5 AM scaffold in the G1 engine. UE 5.8 (default): Meta XR v207 source-built (version check), MetaXRPlatform plugin OFF, Android
   NDK r27c + JDK, Core C++ module with no engine-module dependencies (D5). Unity 6.3 LTS (fallback): URP mobile, AIO SDK via UPM
   (version check), Core asmdef noEngineReferences + Game.Json adapter asmdef (D5). Both: git-lfs, .gitignore (Wit config, keystores,
   Builds/, *.apk, *.aab; UE Binaries/ Intermediate/ Saved/ DerivedDataCache/; Unity Library/ Temp/), gitleaks hook + Wit rule +
@@ -381,7 +382,7 @@ G0 Kev decisions recorded 2026-10-28 (G0a claim kept, G0b allowed-ops list) 2/2.
   ADRs 0001-0003 written; ADR 0002 freeze-resilience row present 1/1; ADR 0001 names the D8 in-view gate as the head-gaze mechanic 1/1;
   public flip only after full-history gitleaks exit 0 AND `git check-ignore .claude/` exit 0 (2/2), else repo stays private.
 S1 headless test runner exit 0 (UE Automation; Unity: EditMode); 0 vendored Meta SDK sources in the repo; resolved Meta XR version
-  recorded and matches hackathon.md:63 v207 (UE: Meta XR .uplugin VersionName; Unity: AIO/ISDK in Packages/packages-lock.json); UE
+  recorded and matches hackathon.md:63 v207 (UE: .uplugin VersionName, 5.7.4 fallback core v205.0; Unity: AIO/ISDK in Packages/packages-lock.json); UE
   only: MetaXRPlatform plugin disabled in the .uproject 1/1; gitleaks exit 0 on full history AND canary (fake Wit-format token in a
   scratch engine config file, never committed) -> exit 1; git check-ignore 6/6 (Wit config, x.keystore, x.jks, Builds/x, x.apk,
   x.aab); spec file exists; Core compiles with 0 engine references (UE: no engine-module dependencies; Unity: 0 UnityEngine
