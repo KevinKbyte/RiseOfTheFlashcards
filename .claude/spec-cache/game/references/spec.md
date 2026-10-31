@@ -55,7 +55,7 @@ in the deck, each mapped to the set of cards owning it. Top STT hypothesis only;
 - MATCH-003: Wrong: the MATCH-001/002 rules resolve to a candidate not owned by this card; or exact key hit on this
   card's `reject` list (near-miss, e.g. efferent for afferent); or hedge guard: transcript has an "or"/"and" token
   absent from every one of the card's answer + aliases ("X or Y", "X and Y"). No negation guard: "not X" fails the
-  prefix rule -> miss, not wrong. Precedence, first hit wins: (1) hedge -> wrong; (2) exact reject-list hit -> wrong;
+  ratio rule -> miss, not wrong. Precedence, first hit wins: (1) hedge -> wrong; (2) exact reject-list hit -> wrong;
   (3) exact own -> correct; (4) exact other -> wrong; (5) fuzzy own -> correct; (6) fuzzy other -> wrong; (7) else miss.
 - MATCH-004: Miss: any other non-empty transcript (length, ratio, prefix or margin fail). Empty transcript is
   Didn't catch (plan D4), not a matcher outcome.
