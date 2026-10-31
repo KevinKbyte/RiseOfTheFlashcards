@@ -66,3 +66,30 @@ below live in [2026-10-28-vr-flashcard-game.md](2026-10-28-vr-flashcard-game.md)
   sized for 0.5 m reading and checked again at the wall (S11).
   Also superseded (verbatim): D17 "loops a slash through the strike-slot card (D13)", "rim glow only on the strike-slot enemy",
   "pulsing mic glyph on the card"; S3 "advance to strike slot", "collider in the strike slot", "5/5 enemies travel wall -> strike slot".
+
+## Reveal-distance decision 2026-10-31 (EN-2)
+- EN-2 Kev 2026-10-31 after the first on-device test of the encounter, verbatim: "I think the user would want to be able to answer the
+  card once they see it rather than wait"; "so once the user clicks on the card no matter how far it is we can start to answer"; "or
+  slashes on the card, since we are using hands". Addendum: "cartoonise the cards (add faces to them), since they're rising against the
+  human".
+  After 3 Opus adversaries, options: (1) "Keep coming, slower" (PICKED): reveal at any distance, fixed creep 0.1875 m/s, knockback to
+  2 m only if revealed inside 2 m; (2) "Knock back to 2 m" (rejected: enemy jumps forward when revealed at 3 m); (3) "Card shows by
+  itself" (rejected: slash no longer opens the card). Adversary notes: smallest-fix alternative = shorter walk-in only; reframe
+  proposed "answer kills, slash parries". Cartoon face (eyes + mouth, angry/mischievous) on the player-facing side; prompt hidden
+  until reveal. Resolves the open point "re-slash point undefined after a miss": re-slash valid at any distance.
+  Plan A15, D4 (EN-2 note), D13, D13a, D14, S3 + S3 CRITERIA, Open questions; spec ENC-001, -002, -004, -006 amended, ENC-007 added.
+  Residuals: creep speed needs one tune on Quest 3/3S; card-face/panel readability unchanged (panel stays at 1 m); hand pinch did not
+  select on Kev's Quest 2 run (controllers worked): SDK path verified correct, suspected Quest-side hand tracking setting,
+  unconfirmed; real hand swing gesture still a later slice.
+  Superseded EN-1 D13 wording (verbatim): "advances along its spawn bearing to a reach line ~0.6 m in front of the play-forward head
+  (inside A15), inside the +/-35 deg arc; slash contact (M1) happens only there. Slash -> enemy knocked back to ~2 m (D4 Ultimate
+  knockback mechanics) + card pops out (D13a); it then creeps back toward the strike slot 0.5 m in front of the head; telegraphs and
+  attacks happen only in the strike slot. Creep time >= 6 s no-speech cap + 2 s grading timeout (D2, D3a); default 8 s; the pacing
+  knob (D14, Q8). Grading (D3a) freezes it. Arrived unanswered -> 2 s telegraph -> hit (D4 row). Correct answer (also during the
+  telegraph) shatters the panel and peels a card; a multi-card enemy (M2) is knocked back again per card." and "Max 1 engaged enemy
+  (reach line to strike slot) at a time".
+  Superseded EN-1 spec wording (verbatim): ENC-001 "advances to a reach line ~0.6 m in front of the play-forward head; a slash
+  registers only there. Max 1 engaged enemy (reach line to strike slot)"; ENC-002 "Slash -> enemy knocked back to ~2 m (ultimate
+  knockback mechanics) and its card face pops out as the ENC-003 panel; the enemy then creeps back toward the 0.5 m strike slot";
+  ENC-004 "Creep time >= 6 s no-speech cap + 2 s grading timeout, default 8 s; the pacing knob."; ENC-006 "Correct answer (also
+  during the telegraph)" and "a multi-card enemy is knocked back per card".

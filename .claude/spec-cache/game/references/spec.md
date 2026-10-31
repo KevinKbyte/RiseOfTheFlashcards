@@ -103,19 +103,27 @@ Deferred to relay integration:
   and error modes) serves every gating unit/E2E test (plan M23), which never hit the network. A live golden set (>=40 miss-bucket
   cases incl. injection) runs manually, non-gating, against the ship model (Sonnet) before RC.
 
-## Encounter flow + card panel (plan D13, D13a; Kev 2026-10-31, ledgers EN-1)
+## Encounter flow + card panel (plan D13, D13a; Kev 2026-10-31, ledgers EN-1, EN-2)
 
-- ENC-001: Enemy emerges at its wall spawn (D8), advances to a reach line ~0.6 m in front of the play-forward head; a slash
-  registers only there. Max 1 engaged enemy (reach line to strike slot); others queue at their walls.
-- ENC-002: Slash -> enemy knocked back to ~2 m (ultimate knockback mechanics) and its card face pops out as the ENC-003 panel;
-  the enemy then creeps back toward the 0.5 m strike slot (calibrated 0.40-0.60 m); telegraphs and attacks happen only there.
+- ENC-001: Enemy emerges at its wall spawn (D8), advances toward a reach line ~0.6 m in front of the play-forward head and halts
+  there if unrevealed. Reveal = select or slash the card-enemy at ANY distance. Max 1 engaged enemy (revealed, or halted at the
+  reach line); others queue at their walls. EN-1 slash-only-at-reach-line wording **Superseded by** EN-2 (verbatim in ledgers EN-2).
+- ENC-002: Reveal -> card face pops out as the ENC-003 panel and the enemy keeps coming, no reset: revealed inside 2 m -> knocked
+  back to 2 m (ultimate knockback mechanics), else continues from where it is, toward the 0.5 m strike slot (calibrated 0.40-0.60
+  m); telegraphs and attacks happen only there. Re-slash after a miss is valid at any distance. EN-1 always-knockback-to-~2 m
+  wording **Superseded by** EN-2.
 - ENC-003: Panel ~70% opaque with dark backing, world/body-locked, never head-locked; ~1.0 m away, ~15 deg below eye line, yaw-only
   lazy-follow with ~20 deg dead zone, anchored to the D7 dodge baseline; never occludes the engaged enemy. Text sized at ~1 m.
-- ENC-004: Creep time >= 6 s no-speech cap + 2 s grading timeout, default 8 s; the pacing knob. Grading (GRADE-004) freezes it.
+- ENC-004: Creep speed fixed = (2.0 - 0.5) m / 8 s = 0.1875 m/s, so reveal -> strike slot >= 8 s (>= 6 s no-speech cap + 2 s
+  grading timeout); earlier reveal = more time; the pacing knob. Grading (GRADE-004) freezes it. EN-1 "creep time, default 8 s"
+  **Superseded by** EN-2.
 - ENC-005: Arrived unanswered -> 2 s telegraph -> hit (dodgeable; 1 hit per encounter); no FSRS write and no orb-trigger attempt of
-  its own; then knockback + creep repeat.
-- ENC-006: Correct answer (also during the telegraph) shatters the panel and peels a card; a multi-card enemy is knocked back per
-  card. Ultimate on a creeping enemy pushes it back further, panel kept, creep resumes from there.
+  its own; then knockback to 2 m + creep repeat.
+- ENC-006: Correct answer in any revealed phase (creep, telegraph, after knockback) shatters the panel and peels a card; a
+  multi-card enemy is knocked back per card by the ENC-002 rule. Ultimate on a creeping enemy pushes it back further, panel kept,
+  creep resumes from there. EN-1 "also during the telegraph" scope **Superseded by** EN-2.
+- ENC-007: Card-enemies show a cartoon face (eyes + mouth, angry/mischievous) on the player-facing side; it is not the card face:
+  the prompt stays hidden until reveal. Theme: cards rising against the human.
 
 ## Credits audit (plan M18, S1)
 

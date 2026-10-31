@@ -92,6 +92,7 @@ A14 EditMode tests run on Mono in the Editor; the device runs IL2CPP with manage
   Under Unreal (2026-10-28): A14 is N/A (C++ on desktop and device); kept for the Unity fallback.
 A15 Seated hand reach: a slash within the 30 cm hand radius only reaches ~0.4-0.65 m in front of the head; enemies at the 1.2-3.5 m wall spawn are out of reach until they advance (D13).
   Resolved 2026-10-31 (Kev, EN-1): slash at the D13 reach line (~0.6 m), then knockback + creep to the 0.5 m strike slot.
+  **Superseded by** EN-2 (Kev 2026-10-31): reveal (select/slash) works at any distance; the reach line only halts an unrevealed enemy (D13).
 A16 **Superseded by** D2 (Wit per-app limits vs judge concurrency; on-device has no shared quota). Ledgers V-1.
 
 ## Design decisions
@@ -137,6 +138,8 @@ D4 Answer outcomes (single table; "encounter" = one card-enemy's card until it i
 | Orb wrong | slash distractor | none | hit | Again if first scored attempt; picked orb removed |
 | Ultimate (knockback) | ultimate fires (D7 input) | strike-slot enemy pushed back toward its wall spawn (max to wall/ring); its in-flight attack cancelled (the only allowed cancel), telegraph reset; 0 cards removed; a creeping (D13) enemy is pushed the same way, panel kept, creep resumes from there | none | none; encounter state kept (hit cap, attempt + orb counters, strike-slot reservation); an open mic window is left alone |
 
+D4 EN-2 (2026-10-31): Arrived unanswered applies only to a revealed enemy (D13); its knockback goes to 2 m. An unrevealed enemy halts at
+  the reach line and never telegraphs. Voice outcomes classify in any revealed phase (creep, telegraph, after knockback).
 Orbs = 1 correct + 3 distractors drawn from distinct normalized answers not owned by this card (deck validation guarantees >=4 distinct answers). Silent mode: user toggle any time; latches automatically ONLY on mic permission denial.
 Orb trigger: any 2 non-correct voice attempts in one encounter (wrong, miss, didn't catch, in any mix) -> orbs for this card; a player who keeps saying wrong answers is never stuck taking hits. Each voice attempt needs a fresh slash on the same card.
 Ultimate charge: +1 per correct outcome (voice or orb, assisted or not); firing the ultimate resets charge to 0.
@@ -211,20 +214,33 @@ D12 Video + screenshots: captured in a cleared room (no screens, photos, logos, 
 D13 Engagement distance = "slash, pop-out, creep" (Kev 2026-10-31, ledgers EN-1; resolves A15). Kev: "how about the cards come in, you
   slash one and the cards show up on the screen, with partial seethrough, so that user can see the cards better, but they can also see
   the card enemy coming towards them so they have to answer it quickly". An enemy emerges at its wall spawn (D8, 1.2-3.5 m, keeps M15),
-  advances along its spawn bearing to a reach line ~0.6 m in front of the play-forward head (inside A15), inside the +/-35 deg arc;
-  slash contact (M1) happens only there. Slash -> enemy knocked back to ~2 m (D4 Ultimate knockback mechanics) + card pops out (D13a);
-  it then creeps back toward the strike slot 0.5 m in front of the head; telegraphs and attacks happen only in the strike slot.
-  Creep time >= 6 s no-speech cap + 2 s grading timeout (D2, D3a); default 8 s; the pacing knob (D14, Q8). Grading (D3a) freezes it.
-  Arrived unanswered -> 2 s telegraph -> hit (D4 row). Correct answer (also during the telegraph) shatters the panel and peels a card;
-  a multi-card enemy (M2) is knocked back again per card. Q8 (2026-10-28): 0.5 m is the default; the slot is calibrated per player
-  within 0.40-0.60 m (S9). Max 1 engaged enemy (reach line to strike slot) at a time; others queue at their walls.
+  advances along its spawn bearing toward a reach line ~0.6 m in front of the play-forward head (inside A15), inside the +/-35 deg arc.
+  Reveal (EN-2, Kev 2026-10-31: "once the user clicks on the card no matter how far it is we can start to answer") = select or slash
+  (M1) the card-enemy at ANY distance -> card pops out (D13a) + mic opens (D2). An unrevealed enemy halts at the reach line.
+  After reveal it keeps coming, slower, no reset: revealed inside 2 m -> knocked back to 2 m (D4 Ultimate knockback mechanics);
+  otherwise it continues from where it is. Creep speed fixed = (2.0 - 0.5) m / 8 s = 0.1875 m/s toward the strike slot 0.5 m in front
+  of the head, so reveal -> strike slot >= 8 s (>= 6 s no-speech cap + 2 s grading timeout, D2, D3a); earlier reveal = more time.
+  Speed is the pacing knob (D14, Q8); needs one tune on Quest 3/3S. Grading (D3a) freezes the creep.
+  Telegraphs and attacks happen only in the strike slot: arrived unanswered -> 2 s telegraph -> hit (D4 row) -> knockback to 2 m, repeat.
+  A correct answer in any revealed phase (creep, telegraph, after knockback) shatters the panel and peels a card; a multi-card enemy
+  (M2) is knocked back per card by the reveal rule (to 2 m only if inside 2 m). Re-slash after a miss or Didn't catch (re-opens the
+  answer window) is valid at any distance. Optional later: speed bonus by kill distance.
+  Q8 (2026-10-28): 0.5 m is the default; the slot is calibrated per player within 0.40-0.60 m (S9). Max 1 engaged enemy (revealed, or
+  halted at the reach line) at a time; others queue at their walls.
   Old wording (finisher, slash + attack both in the strike slot, card text for 0.5 m) **Superseded** 2026-10-31; verbatim in ledgers EN-1.
-D13a Card panel (Kev 2026-10-31, EN-1; picked over "Stop + countdown ring" and head-locked "Stuck to screen"): on slash the card face
+  EN-1 wording (slash only at the reach line, always knocked back to ~2 m, creep time default 8 s) **Superseded by** EN-2 2026-10-31;
+  verbatim in ledgers EN-2.
+D13a Card panel (Kev 2026-10-31, EN-1; picked over "Stop + countdown ring" and head-locked "Stuck to screen"): on reveal (D13, EN-2;
+  "on slash" **Superseded by** EN-2) the card face
   pops out as a semi-transparent panel (~70% opaque, dark backing), world/body-locked, never head-locked (comfort; would hide the enemy);
   ~1.0 m away, ~15 deg below eye line, yaw-only lazy-follow with ~20 deg dead zone, anchored to the D7 baseline; offset so it never
   hides the engaged enemy's approach. Card text sized for the panel at ~1 m, not 0.5 m; S11 checks it at Quest 2 and Quest 3S FoV.
   Prototype: game-iwsdk proto/flashcards test page gets this loop now for an on-device try before G1 (Nov 3); S3 (Nov 6) builds it.
   Risks (EN-1): untested on device; per-card recoil may read as stalling; follow-panel comfort; plan churn before G1.
+  "untested on device" **Superseded by** EN-2: first on-device run (Quest 2) 2026-10-31; panel readability unchanged (stays at ~1 m).
+  Enemy look (Kev 2026-10-31, EN-2: "cartoonise the cards (add faces to them), since they're rising against the human"): each
+  card-enemy shows a cartoon face (eyes + mouth, angry/mischievous) on its player-facing side; the face is not the card face, so the
+  prompt text stays hidden until reveal. Theme: cards rising against the human.
 D14 Run loop (finisher-added; rules.md:126,128 "Satisfying in <=10 minutes", bus-stop test; FSRS pass E-FS-6): a run reserves min(12, uncovered
   queue) graded cards at start (uncovered = a today's-queue card with last_review_day < run_day, D5); reserved cards the run never reaches return to
   the queue unspent. Fillers top the run up to 12: cards graded today (lapses first), then introduced not-due cards by lowest retrievability;
@@ -235,6 +251,7 @@ D14 Run loop (finisher-added; rules.md:126,128 "Satisfying in <=10 minutes", bus
   FSRS ratings are saved per encounter (D5), so an early end loses no progress. Target graded-phase length 4-8 min; Overtime and Endless are
   open-ended. Q8 (2026-10-28): counts (12 cards, 5 pips) stay fixed; pacing (advance speed, attack cadence) is the tuning knob.
   Kev 2026-10-31 (EN-1): D13 creep time (default 8 s, floor 6 s cap + 2 s grading) is the primary pacing knob.
+  **Superseded by** EN-2 2026-10-31: the D13 fixed creep speed (0.1875 m/s; reveal -> strike slot >= 8 s) is the primary pacing knob.
 D15 Experimental settings pane (Kev, 2026-10-28): one on/off toggle per experimental feature; initially gaze-dwell select of answer
   orbs and menu buttons (1.2 s dwell, Q5) and a second, mastery-unlocked ultimate type (Q9; base build = 1 ultimate type fired
   repeatedly). S9 calibrates each with it on and off; anything that underperforms ships OFF in the submitted build and is not
@@ -303,8 +320,10 @@ S2 Nov 5 PM core logic (may spill to Nov 6 AM; slip charged to the Nov 16 buffer
   ~3-4 h over Leitner, plus S9 steppers ~1 h and S6a fields ~0.5 h: ~0.5 day against the Nov 16 buffer), run loop (D14), combat rules. Deck-lint
   gate (Q4): numeric answers rejected; answers <4 normalized chars flagged (exact-match only under D3) for SP2 measurement; homophone answers need
   an alias (e.g. sun/son).
-S3 Nov 6 slash + card enemy (wall emerge -> reach line -> slash knockback + D13a panel -> creep to strike slot, D13) + answer window +
-  damage + D17 cues + D18 scenario. Pre-G1 IWSDK prototype of the same loop: D13a.
+S3 Nov 6 slash + card enemy (wall emerge -> reveal at any distance, unrevealed halts at reach line -> D13a panel -> fixed-speed creep,
+  knockback to 2 m only if inside 2 m -> strike slot, D13) + cartoon enemy face (D13a) + answer window + damage + D17 cues + D18
+  scenario. Pre-G1 IWSDK prototype of the same loop: D13a. EN-1 "reach line -> slash knockback" **Superseded by** EN-2.
+  Real hand swing gesture at a distance: later slice (reveal by select works now).
 S4 Nov 7 voice via IAnswerRecognizer + D4 outcomes (per-card fallback, 3 s timeout) + earcon + mic re-acquire on resume + D17 cue + D18 scenario.
 S5 Nov 8 silent orbs + toggle + D17 cue + D18 scenario.
 S6a Nov 9 (half day, MemriPal finals) FSRS persistence (D5 save: card state, daily counters, queue snapshot, run_day) + on-device golden vectors +
@@ -381,9 +400,14 @@ S2 >=40 matcher golden cases, all run with EMPTY reject lists unless the case te
   rejected, 3-char answer flagged, homophone answer without alias flagged 3/3, 3 starter decks pass 3/3; `// Covers: FEAT-ID` above every
   [TestFixture].
 S3 20/20 slashes register with hands, 2/2 hands (slash = fingertip speed >=1.0 m/s through the card
-  collider at the D13 reach line); 0 false triggers in 60 s idle; 5/5 enemies travel wall -> reach line and no slash registers before arrival;
-  slash -> knockback to ~2 m + panel shown 5/5; creep to strike slot >= 8 s 5/5; arrived unanswered -> 2 s telegraph then hit 3/3;
+  collider at the D13 reach line); 0 false triggers in 60 s idle; 5/5 unrevealed enemies travel wall -> reach line and halt there;
+  EN-2: select reveals at 3 m, 1.5 m and the reach line 3/3 each, panel shown on reveal; reveal at 3 m -> 0 forward jump, creeps on
+  from 3 m 3/3; reveal inside 2 m -> knockback to 2 m 3/3; creep speed 0.1875 m/s (+/-5%) and reveal -> strike slot >= 8 s 5/5;
+  re-slash after a miss at > 2 m re-opens the window 3/3; correct while creeping at > 2 m clears 3/3; enemy face visible, prompt
+  hidden before reveal 5/5; arrived unanswered -> 2 s telegraph then hit then knockback to 2 m 3/3;
   correct during the telegraph -> panel shattered, 0 hits 3/3; 2-card enemy -> knockback per card 2/2; panel never occludes the enemy 5/5.
+  EN-1 "5/5 enemies travel wall -> reach line and no slash registers before arrival", "slash -> knockback to ~2 m + panel shown 5/5",
+  "creep to strike slot >= 8 s 5/5" **Superseded by** EN-2.
 S4 0 mic opens outside window; 3/3 forced hard STT errors -> orbs <1 s AND next card's voice answer works 3/3; empty transcript -> 0 damage 3/3; 2 non-correct attempts -> orbs 3/3; 6 s silence -> didn't catch 3/3; Wi-Fi off: voice answers still graded 3/3 and the run completes 1/1; silent mode not auto-latched by any error except mic denial 1/1.
 S5 full run with mic off 1/1.
 S6a EditMode: fresh dir first save then load 1/1; corrupt primary -> .bak 1/1; truncated primary + missing .bak -> fresh state 1/1; FSRS card state,
@@ -462,6 +486,9 @@ Resolved 2026-10-28 (Kev): ENGINE, Q1-Q12, D15, D19, G0a, G0b in
 - Resolved 2026-10-30 (Kev): cloud Wit default -> on-device only (D2, ledgers V-1).
 - Resolved 2026-10-31 (Kev): hands = sole required input, controllers = optional stretch SX; Q12 **Superseded by** H-1 (ledgers H-1).
 - Resolved 2026-10-31 (Kev): encounter = slash at reach line, pop-out panel, creep to strike slot (D13, D13a; ledgers EN-1).
+  "slash at reach line" **Superseded by** EN-2: reveal at any distance, fixed-speed creep, cartoon enemy faces (D13, D13a).
+- Resolved 2026-10-31 (Kev, EN-2): "after a miss the enemy is out of reach, so the re-slash point is undefined" -> re-slash valid at any
+  distance (D13).
 
 ## Adversarial cheat sheet
 - Primary technical risk: big decks and one-correct WINs; grades or WINs given for nothing (deck-switch budget, empty queue, paused window).

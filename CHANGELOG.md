@@ -12,6 +12,7 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 - Matcher round-2 fixes: MATCH-002 margin tolerance, MATCH-003 hedge guard checks aliases, MATCH-005 input limits.
 - Plan/spec (Kev 2026-10-31): Claude load-time aliases + toggleable upgrade-only live grading (D3a, GRADE-001..008, RELAY-013/014).
 - Plan/spec (Kev 2026-10-31): slash at reach line, semi-transparent pop-out card panel, enemy creeps back (D13, D13a, ENC-001..006).
+- Plan/spec (Kev 2026-10-31): reveal at any distance, fixed-speed creep, cartoon enemy faces (D13, D13a, ENC-001..007; ledgers EN-2).
 - BUILD-001..003: strictly increasing Android versionCode counter (`scripts/version-code.mjs next --state <file> [--ini
   <DefaultEngine.ini>]`); optionally sets Unreal StoreVersion; a failed run never advances the state. Tests included.
 
