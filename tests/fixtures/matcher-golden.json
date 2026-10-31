@@ -1554,6 +1554,33 @@
     "expected": "correct"
   },
   {
+    "name": "hedge: \"or\" absent from an alias containing \"and\" is still wrong: Bosnia or Croatia",
+    "deck": [
+      {
+        "id": "ba",
+        "answer": "Bosnia",
+        "aliases": [
+          "Bosnia and Herzegovina"
+        ]
+      },
+      {
+        "id": "hr",
+        "answer": "Croatia"
+      },
+      {
+        "id": "rs",
+        "answer": "Serbia"
+      },
+      {
+        "id": "si",
+        "answer": "Slovenia"
+      }
+    ],
+    "cardId": "ba",
+    "transcript": "Bosnia or Croatia",
+    "expected": "wrong"
+  },
+  {
     "name": "hedge guard skips an alias containing \"and\": salt and pepper said exactly",
     "deck": [
       {

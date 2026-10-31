@@ -9,7 +9,7 @@ import { match } from '../relay/lib/matcher.mjs';
 //   cardId: id of the card being answered; transcript: non-empty top STT hypothesis.
 // An empty transcript is "Didn't catch" (plan D4), outside the matcher, so no case covers it.
 //
-// The spec leaves precedence open when several rules apply; the matcher uses this fixed order:
+// Precedence per MATCH-003:
 //   1. hedge guard ("or"/"and" token absent from every one of this card's answer + aliases) -> wrong
 //   2. exact key hit on this card's reject list -> wrong
 //   3. exact key hit on a candidate owned by this card (shared ones too) -> correct
@@ -92,6 +92,14 @@ describe('answer matcher input limits', () => {
 
   test('reject given as a string instead of an array -> TypeError', () => {
     assertRejects({ deck: [{ id: 'aff', answer: 'afferent', reject: 'efferent' }, okDeck()[1]], cardId: 'aff', transcript: 'efferent' }, TypeError);
+  });
+
+  test('aliases: null (present but not an array) -> TypeError', () => {
+    assertRejects({ deck: [{ id: 'mm', answer: 'Myanmar', aliases: null }, okDeck()[1]], cardId: 'mm', transcript: 'Myanmar' }, TypeError);
+  });
+
+  test('reject: null (present but not an array) -> TypeError', () => {
+    assertRejects({ deck: [{ id: 'aff', answer: 'afferent', reject: null }, okDeck()[1]], cardId: 'aff', transcript: 'afferent' }, TypeError);
   });
 
   test('missing cardId -> TypeError', () => {
