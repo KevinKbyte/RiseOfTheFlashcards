@@ -99,9 +99,10 @@ D1 ENGINE (Kev 2026-10-28; dual-track 2026-10-29, ledgers E-K-c, E-IW): THIS rep
   slice scope and CRITERIA unchanged. No engine switch after Nov 4 (see G1 post-gate failure rule). In parallel, sibling repo
   meta-vr-start-dev-2026/game-iwsdk (scaffolded 2026-10-29, dbe2f34, @iwsdk/create 1.1.0-rc.2, VR/TS, no locomotion/grab/physics) holds
   an agent-built IWSDK (WebXR) build. A ~1-day IWSDK device spike (UNVERIFIED: getUserMedia mic in an immersive session, Quest 2 hand
-  tracking, offline persistence, fps) decides which build the README tells judges to try; IWSDK is accepted by hosted URL
-  (hackathon.md:73-74); prize eligibility is engine-neutral (guidelines.md:53). Open (UNVERIFIED): does the Devpost form take both an
-  APK invite URL and a web URL? hackathon.md:64 suggests UE 5.8 (suggested, not required); plan uses 5.8 (Kev 2026-10-30, A2).
+  tracking, offline persistence, fps), plus the UE spike (SP1/SP2), decides WHICH BUILD IS JUDGED at G1 (Nov 3): one Entry per
+  person (rules.md:56) and Devpost takes ONE link, the Competition channel (APK) OR the GitHub page (IWSDK) (rules.md:140), so
+  both cannot be judged (ledgers E-D1-1). IWSDK is accepted by hosted URL (hackathon.md:73-74); prize eligibility is engine-neutral
+  (guidelines.md:53). The IWSDK build ships voice OFF by default (D2), so it ships without M9 (ledgers E-D1-2). hackathon.md:64 suggests UE 5.8 (suggested, not required); plan uses 5.8 (Kev 2026-10-30, A2).
 D2 STT ON-DEVICE ONLY (Kev 2026-10-30 "sherpa-onnx default (Recommended)", after a 3-adversary round; ledgers V-1), behind
   IAnswerRecognizer. Default = sherpa-onnx grammar/keyword recognizer constrained to the card's expected answers (deck answers + aliases
   + [unk]). The Nov 2 spike (SP2) also measures Whisper tiny.en q8_0 (Runtime Speech Recognizer, Fab, paid), promoted only if it meets
