@@ -34,14 +34,20 @@ export function rms(samples: ArrayLike<number>): number {
   return Math.sqrt(sum / n);
 }
 
-/** Per-frame fps percentiles; non-positive or non-finite deltas are dropped. */
-export function fpsFromFrameDeltas(deltasMs: readonly number[]): {
+/**
+ * Per-frame fps percentiles; the first `skipFirst` raw entries (warm-up after a reset) are skipped
+ * by position, then non-positive or non-finite deltas are dropped.
+ */
+export function fpsFromFrameDeltas(
+  deltasMs: readonly number[],
+  skipFirst = 0,
+): {
   p50: number;
   p5: number;
   frames: number;
 } {
   const fps: number[] = [];
-  for (const d of deltasMs) {
+  for (const d of deltasMs.slice(skipFirst)) {
     if (Number.isFinite(d) && d > 0) {
       fps.push(1000 / d);
     }
