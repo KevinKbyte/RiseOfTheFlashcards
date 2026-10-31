@@ -1,10 +1,15 @@
-// MATCH-001..004: deterministic answer grading. Precedence when several rules apply is fixed
-// in tests/matcher.test.mjs (hedge, reject, exact own, exact other, fuzzy own, fuzzy other, miss).
+// MATCH-001..005: deterministic answer grading. Precedence when several rules apply is fixed
+// by MATCH-003 (hedge, reject, exact own, exact other, fuzzy own, fuzzy other, miss).
 import { normalize } from './normalize.mjs';
 
 const FUZZY_MIN_CHARS = 4;
 const FUZZY_MIN_RATIO = 0.85;
 const FUZZY_MIN_MARGIN = 0.1;
+// Float subtraction (0.95 - 0.85 = 0.0999...) must not fail an exact 0.1 margin (MATCH-002).
+const MARGIN_EPSILON = 1e-9;
+// Below this length ratio a candidate cannot reach FUZZY_MIN_RATIO, so lev() is skipped (MATCH-005).
+const MIN_LENGTH_RATIO = 0.75;
+const MAX_KEY_CHARS = 200;
 const HEDGE_TOKENS = new Set(['or', 'and']);
 
 // NORM-001 plus one leading article, kept when nothing would remain ("the A" -> "a").
@@ -35,23 +40,32 @@ function fuzzyHit(t, candidate, score, rivalScore) {
     candidate.length >= FUZZY_MIN_CHARS &&
     score >= FUZZY_MIN_RATIO &&
     t.slice(0, FUZZY_MIN_CHARS) === candidate.slice(0, FUZZY_MIN_CHARS) &&
-    score - rivalScore >= FUZZY_MIN_MARGIN
+    score - rivalScore >= FUZZY_MIN_MARGIN - MARGIN_EPSILON
   );
 }
 
+const isStringArray = (v) => Array.isArray(v) && v.every((s) => typeof s === 'string');
+
 function validate(deck, cardId, transcript) {
   if (!Array.isArray(deck)) throw new TypeError('deck must be an array');
-  const card = deck.find((c) => c && c.id === cardId);
-  if (!card) throw new TypeError('cardId not found in deck');
-  if (typeof transcript !== 'string' || transcript.trim() === '') {
-    throw new TypeError('transcript must be a non-empty string');
+  for (const c of deck) {
+    if (c === null || typeof c !== 'object' || typeof c.id !== 'string' || typeof c.answer !== 'string') {
+      throw new TypeError('each card needs a string id and string answer');
+    }
+    if (c.aliases !== undefined && !isStringArray(c.aliases)) throw new TypeError('aliases must be an array of strings');
+    if (c.reject !== undefined && !isStringArray(c.reject)) throw new TypeError('reject must be an array of strings');
   }
-  return card;
+  const card = deck.find((c) => c.id === cardId);
+  if (!card) throw new TypeError('cardId not found in deck');
+  if (typeof transcript !== 'string') throw new TypeError('transcript must be a string');
+  const t = key(transcript);
+  if (t === '') throw new TypeError('transcript has no matchable characters');
+  if (t.length > MAX_KEY_CHARS) throw new RangeError(`transcript key exceeds ${MAX_KEY_CHARS} chars`);
+  return { card, t };
 }
 
 export function match({ deck, cardId, transcript }) {
-  const card = validate(deck, cardId, transcript);
-  const t = key(transcript);
+  const { card, t } = validate(deck, cardId, transcript);
 
   // Candidate key -> ids of every card owning it as answer or alias.
   const owners = new Map();
@@ -63,8 +77,8 @@ export function match({ deck, cardId, transcript }) {
     }
   }
 
-  const answerTokens = new Set(key(card.answer).split(' '));
-  if (t.split(' ').some((w) => HEDGE_TOKENS.has(w) && !answerTokens.has(w))) return 'wrong';
+  const cardTokens = new Set([card.answer, ...(card.aliases ?? [])].flatMap((s) => key(s).split(' ')));
+  if (t.split(' ').some((w) => HEDGE_TOKENS.has(w) && !cardTokens.has(w))) return 'wrong';
   if ((card.reject ?? []).some((r) => key(r) === t)) return 'wrong';
   if (owners.has(t)) return owners.get(t).has(cardId) ? 'correct' : 'wrong';
 
@@ -73,6 +87,7 @@ export function match({ deck, cardId, transcript }) {
   let other = null;
   let otherScore = -1;
   for (const [k, ids] of owners) {
+    if (Math.min(t.length, k.length) / Math.max(t.length, k.length) < MIN_LENGTH_RATIO) continue;
     const r = ratio(t, k);
     if (ids.has(cardId)) {
       if (r > ownScore) [own, ownScore] = [k, r];
