@@ -22,20 +22,23 @@ use Quest 3/3S).
 
 | Row | Premise | PASS when |
 | --- | --- | --- |
-| a | Mic inside the immersive session | permission granted in-session and 3 s capture peak RMS > 0.001 |
-| b | Whisper `onnx-community/whisper-tiny.en` on WebGPU | p50 of 5 timed runs on the row-a clip <= 1500 ms |
-| c | Input sources (controller -> hand) | hand input seen; controllers alone stay PENDING until you show both hands |
+| a | Mic inside the immersive session | permission granted in-session and 3 s capture peak RMS > 0.001; PENDING while the AudioContext is not running (suspended: tap Re-run audio) |
+| b | Whisper `onnx-community/whisper-tiny.en` on WebGPU | speech in the row-a clip (peak RMS >= 0.01 and a transcript with a 2+ letter word after stripping `[..]`/`(..)` tokens), then p50 of 5 timed runs (after 1 warm-up) <= 1500 ms |
+| c | Input sources (controller -> hand) | any hand input seen; controllers alone stay PENDING ("show your hands") |
 | d | Persistence | after a reload, localStorage boot count and IndexedDB round-trip both survive |
-| e | Frame rate (FPS knee) | p5 >= 60 fps over >= 300 frames at load level 0; load +/- buttons step 50 meshes (max 1000) to find the knee as evidence |
-| f | `immersive-ar` + planes/mesh | AR session starts and detects > 0 planes or meshes in a 10 s window (`Run AR probe`) |
+| e | Frame rate (FPS knee) | p5 >= 60 fps over >= 300 frames at load level 0 (evidence `L0 verdict: ...`, then per-level `L<n> p50/p5 (n=frames)`); load +/- buttons step 50 meshes (max 1000) to find the knee as evidence; metering pauses during the audio probe, the AR probe, and any passthrough session |
+| f | `immersive-ar` + planes/mesh | AR session starts and detects > 0 planes or meshes in a 10 s window (`Run AR probe`); PENDING (never FAIL) if the session ends early |
 | g | Offline reload under the service worker | the page boots with no network while SW-controlled |
 
 | Verdict | Meaning |
 | --- | --- |
 | PASS | premise measured and meets the bar |
 | FAIL | measured and misses the bar, or errored |
-| UNAVAILABLE | capability absent (no getUserMedia / WebGPU / immersive-ar / serviceWorker), or b ran on a silent clip or produced an empty transcript |
+| UNAVAILABLE | capability absent (no getUserMedia / WebGPU / immersive-ar / serviceWorker); for b also: no mic clip from row a, no speech (silent clip, empty or non-speech transcript), or model fetch failed offline (`model not cached/offline`) |
 | PENDING | not measured yet; the evidence text is the next operator step |
+
+The in-VR `Re-run audio` button re-runs rows a and b; it works only inside an
+XR session (outside it, a still-PENDING row a shows `enter XR to re-run audio`).
 
 ### Run on a Quest
 
