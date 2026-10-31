@@ -91,6 +91,7 @@ A13 **Superseded by** D2 (public Wit client token; no STT secret ships on-device
 A14 EditMode tests run on Mono in the Editor; the device runs IL2CPP with managed stripping. String.Normalize(FormKD) and char.GetUnicodeCategory on IL2CPP/Android are unverified (normalization tables may be stripped or unsupported), so EditMode green does not prove device matcher behaviour (S4 on-device self-test).
   Under Unreal (2026-10-28): A14 is N/A (C++ on desktop and device); kept for the Unity fallback.
 A15 Seated hand reach: a slash within the 30 cm hand radius only reaches ~0.4-0.65 m in front of the head; enemies at the 1.2-3.5 m wall spawn are out of reach until they advance (D13).
+  Resolved 2026-10-31 (Kev, EN-1): slash at the D13 reach line (~0.6 m), then knockback + creep to the 0.5 m strike slot.
 A16 **Superseded by** D2 (Wit per-app limits vs judge concurrency; on-device has no shared quota). Ledgers V-1.
 
 ## Design decisions
@@ -113,7 +114,8 @@ D2 STT ON-DEVICE ONLY (Kev 2026-10-30 "sherpa-onnx default (Recommended)", after
   only if its WebGPU path hits p50 <= 1500 ms. Risks (V-1): Whisper hallucination on silence/1 s clips; inference vs frame pacing (no
   Quest 2 benchmark); open-source UE whisper plugin archived.
   Mic opens at slash contact; an earcon plays only once the mic is live; SP2 measures first-word clipping. Answer window = from earcon
-  until the recognizer's end-of-speech, capped at 6 s with no speech start (cap -> "didn't catch"); the mic is closed outside it. Mic is
+  until the recognizer's end-of-speech, capped at 6 s with no speech start (cap -> "didn't catch"); the mic is closed outside it.
+  The window runs while the enemy creeps (D13); creep time >= 6 s cap + 2 s grading timeout, so a silent window closes before arrival. Mic is
   re-acquired on app focus/resume (Unity: OnApplicationPause/Focus; Unreal: the engine's app-lifecycle events), never assumed live.
 D3 Matcher (deterministic, no LLM). Normalize: NFKD, drop combining marks (Unicode Mn), lowercase, strip punctuation, collapse whitespace, strip a leading article (a/an/the) only if the remainder is non-empty. Candidates = distinct normalized answer+alias strings across the deck, each mapped to the set of cards that own it. Correct: exact match to a candidate owned by this card; or fuzzy: both strings >=4 normalized chars, ratio = 1 - lev(a,b)/max(len a, len b) >= 0.85, first 4 normalized chars identical, nearest candidate owned by this card, margin >= 0.1 over the best candidate not owned by this card. Wrong: same rules resolve to a candidate not owned by this card; or exact hit on the card's `reject` list; or hedge guard (transcript contains "or"/"and" token absent from the answer). Everything else non-empty = miss. Negation guard dropped (prefix rule blocks leading "not/no/never"; ratio blocks the rest). No number-word conversion; top hypothesis only.
 D3a Claude (Kev 2026-10-31, M12, ledgers C-1; contract spec GRADE-001..008, RELAY-013/014). Load-time: deck POST adds Claude aliases + rejects
@@ -126,13 +128,14 @@ D4 Answer outcomes (single table; "encounter" = one card-enemy's card until it i
 | Voice correct | D3 correct | -1 card | none | Good if first scored attempt with only Didn't catch before it; Hard after a miss; none if Again was already written |
 | Voice wrong | D3 wrong | none | hit | Again (written at once) if first scored attempt; else none |
 | Voice miss | non-empty, not correct/wrong (ratio, margin, prefix, length fails) | none | none | none; caps a later correct at Hard; counts toward 2-attempt orb trigger |
-| Grading (D3a toggle ON) | D3 miss on a free-form transcript, never empty/[unk] | advance + attack timer frozen | none | Claude correct -> Voice correct row; wrong/error/2 s timeout/offline -> Voice miss row (orb trigger unchanged) |
+| Grading (D3a toggle ON) | D3 miss on a free-form transcript, never empty/[unk] | advance/creep (D13) + attack timer frozen | none | Claude correct -> Voice correct row; wrong/error/2 s timeout/offline -> Voice miss row (orb trigger unchanged) |
 | Didn't catch | empty transcript or 6 s cap | none | none | none; counts toward 2-attempt orb trigger |
+| Arrived unanswered (D13) | creeping enemy reaches the strike slot with no correct answer yet | 2 s telegraph, then knockback + creep repeat | hit (dodgeable, D7; 1-hit cap, D14) | none; the window's own row rates it; arrival adds no orb-trigger attempt |
 | Hard STT error | error callback or no final transcript 3 s after end of speech | none | none | none (a Hard-STT-only encounter writes nothing; card stays due/uncovered); orbs immediately for THIS card only; next card tries voice again |
 | Orb correct (voice mode, after misses/errors) | slash correct orb | -1 card | none | Hard if a miss or Didn't catch preceded and no Again was written; else none |
 | Orb correct (silent mode, first pick) | slash correct orb | -1 card | none | Good (Q3) |
 | Orb wrong | slash distractor | none | hit | Again if first scored attempt; picked orb removed |
-| Ultimate (knockback) | ultimate fires (D7 input) | strike-slot enemy pushed back toward its wall spawn (max to wall/ring); its in-flight attack cancelled (the only allowed cancel), telegraph reset; 0 cards removed | none | none; encounter state kept (hit cap, attempt + orb counters, strike-slot reservation); an open mic window is left alone |
+| Ultimate (knockback) | ultimate fires (D7 input) | strike-slot enemy pushed back toward its wall spawn (max to wall/ring); its in-flight attack cancelled (the only allowed cancel), telegraph reset; 0 cards removed; a creeping (D13) enemy is pushed the same way, panel kept, creep resumes from there | none | none; encounter state kept (hit cap, attempt + orb counters, strike-slot reservation); an open mic window is left alone |
 
 Orbs = 1 correct + 3 distractors drawn from distinct normalized answers not owned by this card (deck validation guarantees >=4 distinct answers). Silent mode: user toggle any time; latches automatically ONLY on mic permission denial.
 Orb trigger: any 2 non-correct voice attempts in one encounter (wrong, miss, didn't catch, in any mix) -> orbs for this card; a player who keeps saying wrong answers is never stuck taking hits. Each voice attempt needs a fresh slash on the same card.
@@ -170,7 +173,8 @@ D6 Pairing relay (M11), headset-shows-code direction: headset POST /pair -> func
   manual step). Nov 18-Dec 11 allowed ops are ONLY {RELAY_ENABLED flip off, GRADER_ENABLED flip off (D3a), byte-identical privacy-page
   redeploy}; no code changes. Each op is logged with timestamp + reason, and the policy is disclosed in the Devpost testing instructions.
 D7 Dodge + interruptions (Kev 2026-10-28 "Any input pauses (Recommended)", ledgers E-K-a): baseline = mean head position over the 1.5 s before
-  telegraph onset, FROZEN from onset until the attack resolves (overlapping attacks share the earliest frozen baseline until all resolve); the
+  telegraph onset, FROZEN from onset until the attack resolves (overlapping attacks share the earliest frozen baseline until all resolve);
+  the D13a panel anchors to this baseline, so a dodge never moves the panel; the
   baseline rolls only outside attack windows. Dodge = lateral or downward displacement >=20 cm from the frozen baseline at the hit frame; forward
   lean ignored; all motion within 30 cm radius. "Lateral or downward displacement" = Euclidean distance in the head-local lateral/vertical plane
   (forward axis dropped). Interruptions (input-loss pause, system/menu pause, recenter) never cancel an attack: attack timers freeze and no hit
@@ -204,11 +208,23 @@ D12 Video + screenshots: captured in a cleared room (no screens, photos, logos, 
   with a 2-3 s flash-forward of the slash-then-speak moment in the real room (hackathon.md:75 "lead with your best material"), then the
   skit (tension + backstory), then full gameplay; no AI-generated footage (rules.md:237).
   Trailer beat sheet: see docs/devpost-draft.md; flash-forward + skit <=33 s, rest gameplay; D12 rules apply to the skit; breakout = D16.
-D13 Engagement distance (finisher-added; resolves A15): an enemy emerges at its wall spawn (D8, 1.2-3.5 m, keeps M15), then advances
-  along its spawn bearing to a strike slot 0.5 m in front of the play-forward head position, inside the +/-35 deg arc; slash contact,
-  telegraphs and attacks happen only in the strike slot. Q8 (2026-10-28): 0.5 m is the default; the slot is calibrated per player
-  within 0.40-0.60 m (S9). Max 1 enemy in the strike slot at a time; others queue at their walls. Card text sized for 0.5 m reading and
-  checked again at the wall (S11).
+D13 Engagement distance = "slash, pop-out, creep" (Kev 2026-10-31, ledgers EN-1; resolves A15). Kev: "how about the cards come in, you
+  slash one and the cards show up on the screen, with partial seethrough, so that user can see the cards better, but they can also see
+  the card enemy coming towards them so they have to answer it quickly". An enemy emerges at its wall spawn (D8, 1.2-3.5 m, keeps M15),
+  advances along its spawn bearing to a reach line ~0.6 m in front of the play-forward head (inside A15), inside the +/-35 deg arc;
+  slash contact (M1) happens only there. Slash -> enemy knocked back to ~2 m (D4 Ultimate knockback mechanics) + card pops out (D13a);
+  it then creeps back toward the strike slot 0.5 m in front of the head; telegraphs and attacks happen only in the strike slot.
+  Creep time >= 6 s no-speech cap + 2 s grading timeout (D2, D3a); default 8 s; the pacing knob (D14, Q8). Grading (D3a) freezes it.
+  Arrived unanswered -> 2 s telegraph -> hit (D4 row). Correct answer (also during the telegraph) shatters the panel and peels a card;
+  a multi-card enemy (M2) is knocked back again per card. Q8 (2026-10-28): 0.5 m is the default; the slot is calibrated per player
+  within 0.40-0.60 m (S9). Max 1 engaged enemy (reach line to strike slot) at a time; others queue at their walls.
+  Old wording (finisher, slash + attack both in the strike slot, card text for 0.5 m) **Superseded** 2026-10-31; verbatim in ledgers EN-1.
+D13a Card panel (Kev 2026-10-31, EN-1; picked over "Stop + countdown ring" and head-locked "Stuck to screen"): on slash the card face
+  pops out as a semi-transparent panel (~70% opaque, dark backing), world/body-locked, never head-locked (comfort; would hide the enemy);
+  ~1.0 m away, ~15 deg below eye line, yaw-only lazy-follow with ~20 deg dead zone, anchored to the D7 baseline; offset so it never
+  hides the engaged enemy's approach. Card text sized for the panel at ~1 m, not 0.5 m; S11 checks it at Quest 2 and Quest 3S FoV.
+  Prototype: game-iwsdk proto/flashcards test page gets this loop now for an on-device try before G1 (Nov 3); S3 (Nov 6) builds it.
+  Risks (EN-1): untested on device; per-card recoil may read as stalling; follow-panel comfort; plan churn before G1.
 D14 Run loop (finisher-added; rules.md:126,128 "Satisfying in <=10 minutes", bus-stop test; FSRS pass E-FS-6): a run reserves min(12, uncovered
   queue) graded cards at start (uncovered = a today's-queue card with last_review_day < run_day, D5); reserved cards the run never reaches return to
   the queue unspent. Fillers top the run up to 12: cards graded today (lapses first), then introduced not-due cards by lowest retrievability;
@@ -218,6 +234,7 @@ D14 Run loop (finisher-added; rules.md:126,128 "Satisfying in <=10 minutes", bus
   0 pips). First run = 6 cards, no-fail (0 pips does not end it), no Overtime: it ends after its graded waves. Every run ends in the mastery screen;
   FSRS ratings are saved per encounter (D5), so an early end loses no progress. Target graded-phase length 4-8 min; Overtime and Endless are
   open-ended. Q8 (2026-10-28): counts (12 cards, 5 pips) stay fixed; pacing (advance speed, attack cadence) is the tuning knob.
+  Kev 2026-10-31 (EN-1): D13 creep time (default 8 s, floor 6 s cap + 2 s grading) is the primary pacing knob.
 D15 Experimental settings pane (Kev, 2026-10-28): one on/off toggle per experimental feature; initially gaze-dwell select of answer
   orbs and menu buttons (1.2 s dwell, Q5) and a second, mastery-unlocked ultimate type (Q9; base build = 1 ultimate type fired
   repeatedly). S9 calibrates each with it on and off; anything that underperforms ships OFF in the submitted build and is not
@@ -231,70 +248,17 @@ D17 Onboarding cues, show don't tell (Kev, 2026-10-28; workshop notes show-dont-
   that answers the player's current question: How? -> ghost hand; What? -> glow + motion; Where? -> signage in the world; names/
   numbers? -> text + a visual. Max 1 active cue at a time; step up with idle time (rim glow -> pulse/bob -> ghost hand); retire each
   cue on success; a hint toggle replays cues. Slash (M1): ghost hand (hand model + handedness; controller ghost = SX, H-1)
-  loops a slash through the strike-slot card (D13); first run (D14) only; retired at first contact.
-  Which enemy: rim glow only on the strike-slot enemy; wall-queued enemies unlit. Multi-layer enemies (M2; Kev: "higher level cards
+  loops a slash through the reach-line card (D13); first run (D14) only; retired at first contact.
+  Which enemy: rim glow only on the engaged enemy (D13); wall-queued enemies unlit. Multi-layer enemies (M2; Kev: "higher level cards
   have multiple layers"): visible card stack, only the top card highlighted/answerable, each correct answer peels one. Answer: D2
-  mic-live earcon + pulsing mic glyph on the card. Silent-mode orbs (M10): all pulse equally on idle, never singling out the correct
+  mic-live earcon + pulsing mic glyph on the D13a panel. Silent-mode orbs (M10): all pulse equally on idle, never singling out the correct
   one. Where: wall-crack light at each spawn (M15, D13). Dodge (M3, D7): floor lean-direction marker on the first telegraph of the
   first run; retired after the first dodge. Ultimate (M4, D7 input): palms glow when charged; ghost two-palm-push demo on first charge
   only (controller glow/ghost = SX). Text only for card prompt/answer/numbers, always paired with a glow. Built per slice:
   S3 slash/glow/stack, S4 mic glyph, S5 orbs, S6 dodge marker, S7 ultimate. Cuttable: falls back to the constraint ladder's "tutorial as 3
   prompts" (Must-keep). Open: diegetic wrist-turn UI (pop-up in the hand on a wrist turn) for hints/mastery (Kev's note).
-D18 Agent validation loop + reusable E2E suite (Kev, 2026-10-28; M22, M23): the agent plays, sees and fixes the game unattended; Kev
-  checks in VR at 3 points only (after the Nov 2 spike, once the core loop works, before submission) for what tooling cannot judge:
-  comfort/sickness, slash feel, real hand-tracking accuracy, mic in a noisy room, video sign-off. Debug input layer: console commands
-  for slash, dodge, ultimate (input-agnostic event) and "answer <text>" (injects text past the recognizer, so logic is tested without a mic);
-  stripped from shipping builds. Structured event log (spawn, hit, layer peel, answer, grade, dodge, pip lost, frame time) is the assertion surface.
-  T0 headless logic: UE Automation, `-nullrhi`, seconds, on every change.
-  T1 rendered E2E on PC with the Meta XR Simulator (OpenXR runtime, synthetic rooms), before each commit:
-    `UnrealEditor-Cmd <proj> -ExecCmds="Automation RunTests <filter>; Quit" -unattended`, real RHI (screenshots need it, never -nullrhi).
-    Functional tests save screenshots + the event log; the agent reads the screenshots for visual bugs (missing glow, >1 active D17
-    cue, clipping, layout).
-  T2 on-device Quest 2, at milestones: Gauntlet `RunUnreal -platform=Android -device=<serial>` (fallback BuildCookRun -deploy -run);
-    headset unworn via the proximity bypass `adb shell am broadcast -a com.oculus.vrpowermanager.prox_close` (re-send each run);
-    capture with `adb shell screenrecord`/`screencap`; fps via OVR Metrics Tool CSV over adb; asserts M6 fps.
-  Selection (M23: affected-only in every tier, no full-run opt-in, path-to-tag map + reference scan, never a
-    full-suite fallback) + Enforcement (sole runner script, runner-bypass hook, logged reasons, selector tests; S1 CRITERIA): ledgers MV-9.
-  Reusable suite (M23): each mechanic slice S3-S7 adds >=1 scenario built from shared step helpers (start run, spawn card, slash,
-    answer, dodge, ultimate); scenario = scripted inputs + event-log asserts + baseline screenshots compared with tolerance. The
-    suite never shrinks: a superseded scenario is replaced, not deleted.
-  Unverified premises (1)-(6) (UE 5.8 + XR Simulator, replay w/o CLI, synthetic-room MRUK, sim hands, proximity bypass,
-    OVR CSV), each a SP1/Nov 2 spike check with a fallback: ledgers MV-2.
-D19 Wave survival + win (Kev, 2026-10-28; M24, Q11, Q12; FSRS pass E-FS-6, E-FS-7): per round the player picks deck(s), incl. "all decks" (starter
-  decks + non-hidden imports, snapshotted at round start); Endless is an explicit opt-in (default off). Graded waves = the D14 run cards, 3 cards
-  per wave (12 -> 4 waves, 6 -> 2); pool size ramps 1 -> 2 -> 3 (M2), attack cadence ramps, last graded wave = one 3-card boss. Overtime waves
-  follow until 0 pips: tonight's misses (not-clean encounters) first, then the D14 filler order, then recycled seen cards; zero FSRS writes
-  (ungraded relearn, D5); each wave faster. Encounter result (computed, never written): clean = its first scored attempt would rate Good under D4
-  (voice correct with only Didn't catch before it, or a silent-mode first-pick orb); not clean = any other scored end; excluded = any Hard STT error
-  in it (never counted). WIN (checked after every answer; never in Endless) has two tiers (Kev "Two tiers (Recommended)"); each needs coverage
-  first, then a stretch after coverage (Kev #1, E-K-b2): >=90 s unpaused (window tuned 60-120 s in S9) holding >=4 counted (clean or not-clean)
-  encounters, all clean (99% under 100 encounters = 0 not clean).
-  - Tier 1 "Day cleared": today's queue for the selection is non-empty and every queue card has last_review_day == run_day (counted across today's
-    runs); the mastery screen shows "today: k/n faced" and any over-limit backlog.
-  - Tier 2 "Deck conquered" (M24 literal): the selection has 0 New and 0 due cards; that run serves the lowest-retrievability cards (min 6,
-    ungraded), coverage = each of them faced this run.
-  Any other empty queue = practice run, no WIN (blocks a free WIN at limits 0). Endless: neither tier; ends only at 0 pips. Retreat any time ->
-  mastery screen. Mastery screen: waves survived, tier won, personal best per (mode, selection) in the D5 save, next-due count worded "next
-  uprising: N cards" (rolls at the local 04:00 study-day boundary, D5). Grade lock: D5. First run (D14) stays 6 cards, no-fail, no Overtime. Horde =
-  the D13 wall queue. Wreckage = the D17 wall-crack persists and grows one tier per wave on MRUK wall planes; ring fallback (D8) = a barricade
-  taking the same tiers; decal count capped, checked at S11 >=60 fps. Built: S2 packing + budget + queue + grade lock + Overtime + win check, S6 run
-  end, S6a mastery fields + PB save, S8 wreckage + barricade, S9 deck select + limit steppers + Endless + Retreat + window tuning, S11 decal cap.
-D20 Quest 3S compatibility (Kev 2026-10-28 "yes add the 3S compat decision to the plan", ledgers E-K-d): Quest 2 baseline, Quest 3S compatible, one
-  APK; each rule cites a source or says UNVERIFIED. Hardware: 3S = XR2 Gen 2 / 8 GB vs Quest 2 XR2 Gen 1 / 6 GB, same 1832x1920 per eye (UNVERIFIED,
-  third-party: https://roadtovr.com/quest-3s-quest-3-quest-2-specs-compared/). Manifest: com.oculus.supportedDevices = quest2|quest3|quest3s
-  (https://developers.meta.com/horizon/resources/publish-mobile-manifest/), set in UE Project Settings > Platforms > Meta XR > Mobile > "Supported
-  Meta Quest devices" (https://developers.meta.com/horizon/documentation/unreal/os-compatibility-mode/); S1 checks the generated manifest lists
-  quest3s (older plugins may omit it; an unlisted device runs in OS compatibility mode as an older model). Input: hands only (H-1);
-  controller rules (Touch / Touch Plus profiles, GetControllerType) moved verbatim to ledgers H-1, applied only in SX. Capabilities:
-  3S-only features (colour passthrough, Environment Depth, scene) gated by runtime capability checks with Quest 2 fallbacks, never by model string;
-  UOculusXRFunctionLibrary::GetDeviceType() for diagnostics only, never android.os.Build.MODEL
-  (https://developers.meta.com/horizon/documentation/unreal/unreal-set-get-device-type/); Environment Depth on 3S profiles per
-  https://developers.meta.com/horizon/documentation/unreal/xrsim-intro/ ; OpenXR extension names UNVERIFIED; the game uses no 3S-only feature today.
-  Display: query supported refresh rates/resolution at runtime, never assume Quest 2 values; 3S lists 72/90/120 Hz
-  (https://www.meta.com/quest/quest-3s/); API route XR_FB_display_refresh_rate UNVERIFIED. Hand tracking parity Quest 2 vs 3S: UNVERIFIED. Testing:
-  Meta XR Simulator has a Quest 3S device profile (xrsim-intro); its UE 5.8 support UNVERIFIED = D18 premise check (7) in SP1; Devpost testing notes
-  carry a 3S smoke checklist (S13); store review per declared device UNVERIFIED (only VRC.Quest.Packaging manifest checks found). Residual: real-3S
-  frame time and comfort unprovable without a device (A4).
+D18-D20 (agent validation loop + E2E, wave survival + win, Quest 3S compatibility): moved verbatim 2026-10-31 to
+  [2026-10-28-vr-flashcard-game-decisions-2.md](2026-10-28-vr-flashcard-game-decisions-2.md) (500-line cap); IDs unchanged.
 
 ## Slices
 UE spike (Kev, 2026-10-28; D1): SP1 + SP2 run on UE 5.8 + Meta XR 207 source-built (A2; MetaXRPlatform OFF) with on-device voice (D2); pass = SP1
@@ -339,7 +303,8 @@ S2 Nov 5 PM core logic (may spill to Nov 6 AM; slip charged to the Nov 16 buffer
   ~3-4 h over Leitner, plus S9 steppers ~1 h and S6a fields ~0.5 h: ~0.5 day against the Nov 16 buffer), run loop (D14), combat rules. Deck-lint
   gate (Q4): numeric answers rejected; answers <4 normalized chars flagged (exact-match only under D3) for SP2 measurement; homophone answers need
   an alias (e.g. sun/son).
-S3 Nov 6 slash + card enemy (wall emerge -> advance to strike slot, D13) + answer window + damage + D17 cues + D18 scenario.
+S3 Nov 6 slash + card enemy (wall emerge -> reach line -> slash knockback + D13a panel -> creep to strike slot, D13) + answer window +
+  damage + D17 cues + D18 scenario. Pre-G1 IWSDK prototype of the same loop: D13a.
 S4 Nov 7 voice via IAnswerRecognizer + D4 outcomes (per-card fallback, 3 s timeout) + earcon + mic re-acquire on resume + D17 cue + D18 scenario.
 S5 Nov 8 silent orbs + toggle + D17 cue + D18 scenario.
 S6a Nov 9 (half day, MemriPal finals) FSRS persistence (D5 save: card state, daily counters, queue snapshot, run_day) + on-device golden vectors +
@@ -357,7 +322,7 @@ S9 Nov 13 first-five-minutes tutorial (incl. per-player strike-slot calibration,
   (cuttable).
 S10 Nov 14 relay (D6) + automated function tests + headset pairing + imported-deck list + privacy policy final; relay circuit
   breaker (G0b); Upstash idle-archive check (free database must not be archived while idle through Dec 11).
-S11 Nov 15 perf + polish + CREDITS audit (script) + device test on Quest 2 (incl. FoV at the arc edge; re-scoped from Quest 3/3S
+S11 Nov 15 perf + polish + CREDITS audit (script) + device test on Quest 2 (incl. FoV at the arc edge and the D13a panel; re-scoped from Quest 3/3S
   by the A4 waiver, so the Nov 1 / Nov 15 3/3S device dates are void and S8 walls run on Quest 2; residuals A4-R1..R3) + D18 T2 run + RC upload.
 S12 Nov 16 buffer + RC invite install verify + fresh-install save check + video capture (D12).
 S13 Nov 17 video review + Devpost (rules.md:139-144,155; hackathon.md:80: tagline (140 chars), track Gaming, division (New Experience
@@ -396,7 +361,7 @@ S1 headless test runner exit 0 (UE Automation; Unity: EditMode); 0 vendored Meta
   single-mechanic change -> only that mechanic's scenarios; full suite only when dependency resolution selects every test.
 S2 >=40 matcher golden cases, all run with EMPTY reject lists unless the case tests the reject list: >=10 generic near-miss rejects
   (afferent/efferent, hypertonic/hypotonic, exothermic/endothermic, Prussia/Russia, hypo/hyperthyroidism, "not X", "X or Y", answer "A", accented vs
-  unaccented, shared-answer cards) + topic cases added after SP2; D4 table: 1 test per row (9/9) incl. wrong-then-orb-correct -> 1 write (Again)
+  unaccented, shared-answer cards) + topic cases added after SP2; D4 table: 1 test per row (11/11) incl. wrong-then-orb-correct -> 1 write (Again)
   1/1, knockback -> 0 cards removed and no rating 1/1; FSRS golden vectors from the pinned py-fsrs script N/N (S and D within tolerance, interval
   days exact; same vectors on device in S6a); rating map: Good, Hard, Again, Hard-STT-only -> no write, Didn't-catch-only -> no write, unresolved
   with orbs shown -> Again 6/6; rollover: 03:59 and 04:01 local -> different study days 1/1, run_day frozen across a mid-run rollover 1/1; budget:
@@ -416,7 +381,9 @@ S2 >=40 matcher golden cases, all run with EMPTY reject lists unless the case te
   rejected, 3-char answer flagged, homophone answer without alias flagged 3/3, 3 starter decks pass 3/3; `// Covers: FEAT-ID` above every
   [TestFixture].
 S3 20/20 slashes register with hands, 2/2 hands (slash = fingertip speed >=1.0 m/s through the card
-  collider in the strike slot); 0 false triggers in 60 s idle; 5/5 enemies travel wall -> strike slot and no slash registers before arrival.
+  collider at the D13 reach line); 0 false triggers in 60 s idle; 5/5 enemies travel wall -> reach line and no slash registers before arrival;
+  slash -> knockback to ~2 m + panel shown 5/5; creep to strike slot >= 8 s 5/5; arrived unanswered -> 2 s telegraph then hit 3/3;
+  correct during the telegraph -> panel shattered, 0 hits 3/3; 2-card enemy -> knockback per card 2/2; panel never occludes the enemy 5/5.
 S4 0 mic opens outside window; 3/3 forced hard STT errors -> orbs <1 s AND next card's voice answer works 3/3; empty transcript -> 0 damage 3/3; 2 non-correct attempts -> orbs 3/3; 6 s silence -> didn't catch 3/3; Wi-Fi off: voice answers still graded 3/3 and the run completes 1/1; silent mode not auto-latched by any error except mic denial 1/1.
 S5 full run with mic off 1/1.
 S6a EditMode: fresh dir first save then load 1/1; corrupt primary -> .bak 1/1; truncated primary + missing .bak -> fresh state 1/1; FSRS card state,
@@ -456,7 +423,8 @@ S10 round-trip 3/3 (headset shows code, page posts, deck in headset <=5 s after 
   deck 15-min storage + deck text to Anthropic at import, scene data stays on device, deletion contact); D3a: GRADER_ENABLED=false -> /grade
   503 + deck stored unaugmented 2/2; stub Claude wrong/error/timeout -> miss 3/3; 0 ANTHROPIC_API_KEY hits in page bundle 1/1.
 S11 median >=72 fps, 1% low >=60 over 5 min Quest 2; Quest 3/3S run waived 2026-10-28 (A4), residual A4-R1 logged 1/1; on Quest 2:
-  card text + telegraph readable at arc edge 1/1 (judge-FoV residual A4-R3); credits audit script exit 0 (0 uncredited assets);
+  card text + telegraph readable at arc edge 1/1 (judge-FoV residual A4-R3); D13a panel text readable at ~1 m and enemy approach
+  unoccluded at Quest 2 FoV and Quest 3S FoV (~96 deg, A12; simulated, A4-R3) 2/2; credits audit script exit 0 (0 uncredited assets);
   on-device normalization self-test 10/10 on the RC build; RC build registers 0 debug commands 1/1 (E-SEC-4); RC upload accepted.
 S12 RC invite install non-org account 1/1; cold launch 3/3; fresh install -> answer 3 cards -> relaunch -> FSRS card state persists 1/1; voice
   answer after fresh install 1/1.
@@ -493,6 +461,7 @@ Resolved 2026-10-28 (Kev): ENGINE, Q1-Q12, D15, D19, G0a, G0b in
   [ledgers Resolved decisions](2026-10-28-vr-flashcard-game-ledgers.md#resolved-decisions).
 - Resolved 2026-10-30 (Kev): cloud Wit default -> on-device only (D2, ledgers V-1).
 - Resolved 2026-10-31 (Kev): hands = sole required input, controllers = optional stretch SX; Q12 **Superseded by** H-1 (ledgers H-1).
+- Resolved 2026-10-31 (Kev): encounter = slash at reach line, pop-out panel, creep to strike slot (D13, D13a; ledgers EN-1).
 
 ## Adversarial cheat sheet
 - Primary technical risk: big decks and one-correct WINs; grades or WINs given for nothing (deck-switch budget, empty queue, paused window).

@@ -90,6 +90,7 @@ Deferred to relay integration:
   timeout, offline -> Voice miss (no hit; counts toward the 2-attempt orb trigger). Never overrides a matcher correct/wrong.
 - GRADE-004: During grading the encounter is in a 'grading' state: enemy advance + attack timer frozen; the 3 s Hard-STT clock stops
   at final transcript. Client timeout 2000 ms -> miss. Circuit breaker: 2 consecutive failures -> matcher-only for the session.
+  Advance includes the ENC-004 creep.
 - GRADE-005: In-game Settings toggle "Live AI grading", persisted. Default OFF unless SP2/G1 picks a free-form recognizer
   (Whisper); with the grammar recognizer it sends nothing.
 - GRADE-006: Claude call: forced tool `grade`, input_schema {verdict: enum["correct","wrong"]}, temperature 0, small max_tokens;
@@ -101,6 +102,20 @@ Deferred to relay integration:
 - GRADE-008: Grading sits behind an injectable grader interface; a stub (fixture map transcript -> verdict, unknown -> miss, timeout
   and error modes) serves every gating unit/E2E test (plan M23), which never hit the network. A live golden set (>=40 miss-bucket
   cases incl. injection) runs manually, non-gating, against the ship model (Sonnet) before RC.
+
+## Encounter flow + card panel (plan D13, D13a; Kev 2026-10-31, ledgers EN-1)
+
+- ENC-001: Enemy emerges at its wall spawn (D8), advances to a reach line ~0.6 m in front of the play-forward head; a slash
+  registers only there. Max 1 engaged enemy (reach line to strike slot); others queue at their walls.
+- ENC-002: Slash -> enemy knocked back to ~2 m (ultimate knockback mechanics) and its card face pops out as the ENC-003 panel;
+  the enemy then creeps back toward the 0.5 m strike slot (calibrated 0.40-0.60 m); telegraphs and attacks happen only there.
+- ENC-003: Panel ~70% opaque with dark backing, world/body-locked, never head-locked; ~1.0 m away, ~15 deg below eye line, yaw-only
+  lazy-follow with ~20 deg dead zone, anchored to the D7 dodge baseline; never occludes the engaged enemy. Text sized at ~1 m.
+- ENC-004: Creep time >= 6 s no-speech cap + 2 s grading timeout, default 8 s; the pacing knob. Grading (GRADE-004) freezes it.
+- ENC-005: Arrived unanswered -> 2 s telegraph -> hit (dodgeable; 1 hit per encounter); no FSRS write and no orb-trigger attempt of
+  its own; then knockback + creep repeat.
+- ENC-006: Correct answer (also during the telegraph) shatters the panel and peels a card; a multi-card enemy is knocked back per
+  card. Ultimate on a creeping enemy pushes it back further, panel kept, creep resumes from there.
 
 ## Credits audit (plan M18, S1)
 
