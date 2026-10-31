@@ -1,9 +1,11 @@
-// Requirement: each flashcard is guarded by an enemy that walks in from 3 m. When it is within
-// reach (0.6 m) the player can slash it; the slash knocks it back to 2 m and its card pops out as a
-// see-through panel ~1 m away, slightly below eye level, fixed in the room and turning to face the
-// player only when they look more than 20 degrees away. While the player answers, the enemy creeps
-// back over at least 8 s (6 s no-speech cap + 2 s grading timeout); reaching 0.5 m starts a 2 s
-// telegraph, then the hit lands (at most 1 hit per encounter) and the enemy is knocked back to 2 m.
+// Requirement: each flashcard is guarded by an enemy that walks in from 3 m. The player can slash
+// (reveal) it at ANY distance while it walks in; if it is never revealed it stops at reach (0.6 m)
+// and waits to be slashed. A slash closer than 2 m knocks it back to 2 m (farther away it stays put)
+// and its card pops out as a see-through panel ~1 m away, slightly below eye level, fixed in the room
+// and turning to face the player only when they look more than 20 degrees away. While the player
+// answers, the enemy keeps coming at a fixed creep speed (2 m -> 0.5 m takes at least 8 s: 6 s
+// no-speech cap + 2 s grading timeout); reaching 0.5 m starts a 2 s telegraph, then the hit lands
+// (at most 1 hit per encounter) and the enemy is knocked back to 2 m.
 // A correct answer (also during the telegraph, cancelling the hit) clears the encounter.
 // All functions are pure and time advances only through explicit dt ticks.
 // CARDS-* IDs are prototype-local (no spec-cache home yet).
@@ -226,6 +228,7 @@ describe('tick: dt validation and purity', () => {
 });
 
 // Covers: CARDS-004
+// CARDS-004 amended Kev 2026-10-31: reveal at any distance
 describe('slash', () => {
   it('from slashable: knocks back to knockbackDistance and starts answering', () => {
     const enc = slashable();
@@ -237,14 +240,126 @@ describe('slash', () => {
     expect(enc).toEqual(before);
   });
 
+  it('from advancing at spawn (3 m): reveals in place without resetting distance', () => {
+    const enc = createEncounter();
+    const before = snapshot(enc);
+    const next = slash(enc);
+    expect(next).not.toBe(enc);
+    expect(next.phase).toBe('answering');
+    expect(next.distance).toBe(D.spawnDistance);
+    expect(next.hits).toBe(0);
+    expect(next.telegraphLeft).toBe(0);
+    expect(enc).toEqual(before);
+  });
+
+  it('from advancing beyond knockback (2.5 m): stays at 2.5 m', () => {
+    const enc = tick(createEncounter(), 0.5);
+    expect(enc.phase).toBe('advancing');
+    const before = snapshot(enc);
+    const next = slash(enc);
+    expect(next.phase).toBe('answering');
+    expect(next.distance).toBeCloseTo(2.5, 10);
+    expect(enc).toEqual(before);
+  });
+
+  it('from advancing exactly at knockback (2 m): stays at 2 m', () => {
+    const enc = tick(createEncounter(), 1);
+    expect(enc.phase).toBe('advancing');
+    const next = slash(enc);
+    expect(next.phase).toBe('answering');
+    expect(next.distance).toBe(D.knockbackDistance);
+  });
+
+  it('from advancing inside knockback (1.5 m): knocks back to 2 m', () => {
+    const enc = tick(createEncounter(), 1.5);
+    expect(enc.phase).toBe('advancing');
+    const before = snapshot(enc);
+    const next = slash(enc);
+    expect(next.phase).toBe('answering');
+    expect(next.distance).toBe(D.knockbackDistance);
+    expect(enc).toEqual(before);
+  });
+
+  it('an unrevealed enemy still stops in slashable at reach', () => {
+    const enc = tick(createEncounter(), 1000);
+    expect(enc.phase).toBe('slashable');
+    expect(enc.distance).toBe(D.reachDistance);
+  });
+
   it.each([
-    ['advancing', () => createEncounter()],
     ['answering', answering],
     ['telegraph', telegraph],
     ['cleared', cleared],
   ] as const)('from %s returns the same object', (_name, make) => {
     const enc = make();
     expect(slash(enc)).toBe(enc);
+  });
+});
+
+// Covers: CARDS-004
+// CARDS-004 amended Kev 2026-10-31: reveal at any distance
+describe('creep after an early reveal', () => {
+  const CREEP = (D.knockbackDistance - D.strikeDistance) / D.creepSeconds;
+
+  it('creep speed is fixed at 0.1875 m/s with defaults', () => {
+    expect(CREEP).toBeCloseTo(0.1875, 12);
+  });
+
+  it('reveal at 3 m creeps at the fixed speed (no faster to fit creepSeconds)', () => {
+    const enc = tick(slash(createEncounter()), 4);
+    expect(enc.phase).toBe('answering');
+    expect(enc.distance).toBeCloseTo(3.0 - CREEP * 4, 10);
+  });
+
+  it('reveal at 3 m reaches strike after (3.0 - 0.5) / 0.1875 s, not creepSeconds', () => {
+    const revealed = slash(createEncounter());
+    const tStrike = (D.spawnDistance - D.strikeDistance) / CREEP;
+    expect(tick(revealed, D.creepSeconds).phase).toBe('answering');
+    expect(tick(revealed, tStrike - 0.01).phase).toBe('answering');
+    const struck = tick(revealed, tStrike + 0.01);
+    expect(struck.phase).toBe('telegraph');
+    expect(struck.distance).toBe(D.strikeDistance);
+    expect(struck.telegraphLeft).toBe(D.telegraphSeconds);
+  });
+
+  it('reveal at 1.5 m (knocked to 2 m) reaches strike after exactly creepSeconds', () => {
+    const revealed = slash(tick(createEncounter(), 1.5));
+    expect(tick(revealed, D.creepSeconds - 0.01).phase).toBe('answering');
+    expect(tick(revealed, D.creepSeconds).phase).toBe('telegraph');
+  });
+
+  it('time to strike is (max(d, knockback) - strike) / fixed creep for any reveal distance', () => {
+    for (let adv = 0; adv < 2.4; adv += 0.1) {
+      const pre = tick(createEncounter(), adv);
+      expect(pre.phase).toBe('advancing');
+      const revealed = slash(pre);
+      const start = Math.max(pre.distance, D.knockbackDistance);
+      expect(revealed.distance).toBeCloseTo(start, 10);
+      const tStrike = (start - D.strikeDistance) / CREEP;
+      expect(tick(revealed, tStrike - 0.01).phase).toBe('answering');
+      expect(tick(revealed, tStrike + 0.01).phase).toBe('telegraph');
+    }
+  });
+
+  it('after an early reveal: telegraph -> hit knocks back to 2 m -> creeps again in creepSeconds', () => {
+    let enc = slash(createEncounter());
+    enc = tick(enc, (D.spawnDistance - D.strikeDistance) / CREEP + 0.01);
+    expect(enc.phase).toBe('telegraph');
+    enc = tick(enc, D.telegraphSeconds);
+    expect(enc.phase).toBe('answering');
+    expect(enc.hits).toBe(1);
+    expect(enc.distance).toBe(D.knockbackDistance);
+    expect(tick(enc, D.creepSeconds - 0.01).phase).toBe('answering');
+    expect(tick(enc, D.creepSeconds).phase).toBe('telegraph');
+  });
+
+  it('a correct answer clears an early-revealed encounter while creeping and during telegraph', () => {
+    const creeping = tick(slash(createEncounter()), 1);
+    expect(resolveCorrect(creeping).phase).toBe('cleared');
+    const tel = tick(slash(createEncounter()), (D.spawnDistance - D.strikeDistance) / CREEP + 0.01);
+    const next = resolveCorrect(tel);
+    expect(next.phase).toBe('cleared');
+    expect(next.hits).toBe(0);
   });
 });
 
