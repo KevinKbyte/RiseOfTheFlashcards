@@ -48,6 +48,7 @@ export class CardsSystem extends createSystem({
   private readonly orbIds = new Map<Entity, string>();
   // Press is recorded in the query callback and applied in update(), so entities are never
   // disposed while the input system is still dispatching to them.
+  // One slot per frame: of two same-frame presses (both hands) only the last is kept; acceptable.
   private pendingOrbId: string | null = null;
 
   init(): void {
@@ -66,13 +67,34 @@ export class CardsSystem extends createSystem({
     this.pendingOrbId = null;
     const { state, outcome } = chooseAnswer(this.state, orbId, Math.random);
     this.state = state;
-    if (outcome !== 'ignored') this.render();
+    if (outcome === 'correct') this.render();
+    else if (outcome === 'wrong') this.removeOrb(orbId);
+  }
+
+  destroy(): void {
+    this.clearEntities();
+    super.destroy();
+  }
+
+  // Disposing the sphere entity also removes its child label mesh.
+  private removeOrb(orbId: string): void {
+    for (const [entity, id] of this.orbIds) {
+      if (id !== orbId) continue;
+      entity.dispose();
+      this.orbIds.delete(entity);
+      return;
+    }
+  }
+
+  private clearEntities(): void {
+    this.prompt?.dispose();
+    this.prompt = undefined;
+    for (const entity of this.orbIds.keys()) entity.dispose();
+    this.orbIds.clear();
   }
 
   private render(): void {
-    this.prompt?.dispose();
-    for (const entity of this.orbIds.keys()) entity.dispose();
-    this.orbIds.clear();
+    this.clearEntities();
 
     const text = this.state.current?.prompt ?? 'Deck cleared';
     const promptMesh = textPlane(text, 1.2, 0.25, '#1e293b');
@@ -96,10 +118,11 @@ export class CardsSystem extends createSystem({
   }
 }
 
-// level: undefined drops the probe scene so this page starts from an empty level.
+// level/assets: undefined drop the probe scene and its preload manifest so this page starts empty.
 World.create(document.getElementById('scene-container') as HTMLDivElement, {
   ...projectOptions,
   level: undefined,
+  assets: undefined,
 }).then((world) => {
   world.registerSystem(CardsSystem);
 });
