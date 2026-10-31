@@ -13,8 +13,8 @@ The game has no accounts. This page lists everything it sends off your headset, 
 
 ## What leaves the headset
 
-1. Voice audio of each spoken answer, and its text transcript, go to Wit.ai (Meta's speech service). They stay in the game's Wit.ai app
-   log until the purge below; Meta's own handling follows Meta's privacy policy.
+1. Voice audio of each spoken answer, and its text transcript, are processed on the headset only
+   (on-device recognizer, ADR 0002) and never uploaded or stored.
 2. Bystander speech: anyone talking near you while the mic is open is captured too, and handled the same as item 1.
 3. Your IP address is used as a rate-limit key when you start pairing or post a deck (relay on Vercel + Upstash). The key expires after
    the 60 s rate-limit window.
@@ -23,7 +23,7 @@ The game has no accounts. This page lists everything it sends off your headset, 
 5. A deck you paste on the companion page is held in the relay store (Upstash Redis). It is deleted the moment the headset collects it,
    and in any case after 15 minutes.
 
-If the build uses on-device speech recognition instead of Wit.ai (ADR 0002), items 1 and 2 do not apply: audio never leaves the headset.
+Items 1 and 2 are listed for clarity: audio never leaves the headset.
 
 ## What stays on the headset
 
@@ -32,7 +32,7 @@ If the build uses on-device speech recognition instead of Wit.ai (ADR 0002), ite
 
 ## After judging
 
-After the competition results (about 2026-12-11), the Wit.ai utterance log and all relay (Upstash) keys are purged.
+After the competition results (about 2026-12-11), all relay (Upstash) keys are purged.
 
 ## Deletion and contact
 

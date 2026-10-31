@@ -114,7 +114,7 @@ resolved Q/ENGINE/D15/D19/G0a/G0b bullets in Resolved decisions below.
 
 ## Resolved decisions
 Moved from the plan's Open questions 2026-10-28 (verbatim); the plan's pointer line names each ID.
-- ENGINE Unreal 5.7 + Meta XR v207, spike-gated by Nov 2; Unity 6.3 LTS fallback (M9, M13, A2, A3, A14, D1, D2, D5, G1).
+- ENGINE Unreal 5.8 (Kev 2026-10-30, A2; 5.7.4 fallback only) + Meta XR v207, spike-gated by Nov 2; Unity 6.3 LTS fallback (M9, M13, A2, A3, A14, D1, D2, D5, G1).
 - Q1 Video on a new YouTube channel for the game, public (A7).
 - Q6 Second SP2 speaker = Kev + TTS voices; residual logged (Slices header).
 - Q7 SP1 creates a backup Meta dashboard app; pipeline-red decision moves from Nov 12 to Nov 8; last-green invite URL goes into the
@@ -278,7 +278,7 @@ replacement sheet -> replace in place); (ii) agent-filled -> Kev ask K-b3; budge
 | E-K-b2 | Kev | answer | Stretch only after coverage | ACCEPT (Yes) | Kev: "#1 - yeah otherwise user can cheese it and dodge for 1-2 minutes after doing one correct" |
 | E-K-b3 | Kev | answer | Ultimate-wiped cards count as shown? | SUPERSEDED | Kev: "ultimates can push cards further away, so yuo have more time to answer it". **Superseded by** E-FS-8 (knockback never removes cards) |
 | E-K-c | Kev | answer | D1 engine: IWSDK for prototyping? (2026-10-28/29) | ACCEPT (dual-track) | Kev: "would immersive web sdk be better for prototyping the idea, and hten we port to unreal if needed? I saw in https://www.youtube.com/watch?v=D04z9PYUSao felix is able to generate a full trailer and game in 45 minutes with immersive web sdk"; "you know what, cant we just do both? if iwsdk is going to take 45 minutes to set up, we can learn how iwsdk works while also progressing on UE build in paralell"; "and then they can both exist in the project, and we can have in the readme which one we prefer judges to try"; "or we can have iwsdk buildi n a separate repo to help with parallelism"; "and the main repo that we currently have is unreal". -> D1: this repo = Unreal; IWSDK build in sibling repo game-iwsdk; a device spike picks the build the README tells judges to try; SP3/Q10 overtaken (MV-7) |
-| E-IW | research | premises | IWSDK (WebXR) premises, researched 2026-10-29 | ACCEPT (input to D1; UNVERIFIED items gate the README pick) | Eligibility: hackathon.md:73-74 and rules.md:137-140 accept IWSDK (WebXR) by hosted URL (GitHub Pages or Vercel etc.); guidelines.md:53 engine-neutral prizes; guidelines.md:111 "a URL for web experiences". SDK: MIT, ECS on a Three.js fork (super-three 0.185.0) https://github.com/facebook/immersive-web-sdk ; @iwsdk/core latest = 1.1.0-rc.2 (2026-10-23), 1.0.1 2026-10-01 https://registry.npmjs.org/@iwsdk/core . Agent tooling (IWER emulation, CLI, screenshots, ECS step/snapshot) https://iwsdk.dev/skill.md . Wit CORS from a github.io origin OK (OPTIONS https://api.wit.ai/speech -> 204, origin echoed, 2026-10-29); real audio POST UNVERIFIED. UNVERIFIED, needs the device spike: getUserMedia mic inside an immersive session (no Meta doc; mitigation: request before requestSession); Quest 2 hand tracking in Quest Browser (palm pinch system-reserved) https://developers.meta.com/horizon/documentation/web/webxr-hands/ ; offline persistence (navigator.storage.persist()) https://web.dev/articles/storage-for-the-web ; >=60 fps on Quest 2 https://developers.meta.com/horizon/documentation/web/webxr-perf-bp/ ; hands-first scoring parity for web (rules.md:223). ts-fsrs 6.0.0 MIT https://registry.npmjs.org/ts-fsrs : FSRS-6 21 weights + fuzz-off UNVERIFIED. Video https://www.youtube.com/watch?v=D04z9PYUSao : IWSDK tech lead builds an MR tower-defense game in ~42 min; no evidence for voice, FSRS, Quest 2 fps. Port-later: no code ports (decks, FSRS vectors, relay, matcher spec do) |
+| E-IW | research | premises | IWSDK (WebXR) premises, researched 2026-10-29 | ACCEPT (input to D1; UNVERIFIED items gate the README pick) | Eligibility: hackathon.md:73-74 and rules.md:137-140 accept IWSDK (WebXR) by hosted URL (GitHub Pages or Vercel etc.); guidelines.md:53 engine-neutral prizes; guidelines.md:111 "a URL for web experiences". SDK: MIT, ECS on a Three.js fork (super-three 0.185.0) https://github.com/facebook/immersive-web-sdk ; @iwsdk/core latest = 1.1.0-rc.2 (2026-10-23), 1.0.1 2026-10-01 https://registry.npmjs.org/@iwsdk/core . Agent tooling (IWER emulation, CLI, screenshots, ECS step/snapshot) https://iwsdk.dev/skill.md . Cloud-STT CORS check (2026-10-29) moot: Wit dropped (V-1). UNVERIFIED, needs the device spike: getUserMedia mic inside an immersive session (no Meta doc; mitigation: request before requestSession); Quest 2 hand tracking in Quest Browser (palm pinch system-reserved) https://developers.meta.com/horizon/documentation/web/webxr-hands/ ; offline persistence (navigator.storage.persist()) https://web.dev/articles/storage-for-the-web ; >=60 fps on Quest 2 https://developers.meta.com/horizon/documentation/web/webxr-perf-bp/ ; hands-first scoring parity for web (rules.md:223). ts-fsrs 6.0.0 MIT https://registry.npmjs.org/ts-fsrs : FSRS-6 21 weights + fuzz-off UNVERIFIED. Video https://www.youtube.com/watch?v=D04z9PYUSao : IWSDK tech lead builds an MR tower-defense game in ~42 min; no evidence for voice, FSRS, Quest 2 fps. Port-later: no code ports (decks, FSRS vectors, relay, matcher spec do) |
 | E-K-d | Kev | answer | Quest 3S compatibility (2026-10-28) | ACCEPT | Kev: "yes add the 3S compat decision to the plan" -> D20: Quest 2 baseline, Quest 3S compatible, one APK; each 3S rule cites a URL or says UNVERIFIED |
 | E-K-e | Kev | answer | FSRS pass asks: WIN scope, daily limits, ratings (2026-10-28) | ACCEPT | Kev: "Two tiers (Recommended)"; "12 new / 120 reviews (Recommended)"; "Again / Hard / Good (Recommended)" -> D19 two-tier WIN (E-FS-7), D5 budget (E-FS-5), D4/D5 rating map (E-FS-2) |
 
@@ -303,7 +303,7 @@ Verbatim except rewrapping and the MV-5 amendment; the plan keeps a pointer citi
   [2026-10-28-vr-flashcard-game-ledgers.md](2026-10-28-vr-flashcard-game-ledgers.md). Sources re-checked in the primary checkout for
   this pass: rules.md:88-143,154-168,195-239,318-330; guidelines.md:44-62,102-112; hackathon.md:63-75.
 - MV-2 D18 unverified premises (plan D18, before D19):
-  Unverified premises (docs-checked 2026-10-28; SP1/Nov 2 spike checks, each with a fallback): (1) UE 5.7 + Meta XR Simulator
+  Unverified premises (docs-checked 2026-10-28; SP1/Nov 2 spike checks, each with a fallback): (1) UE 5.8 + Meta XR Simulator
     compatibility not stated in Meta docs; check the Meta XR plugin release notes; fallback T1 without the simulator (flat-screen
     pawn) + T2 on device. (2) Simulator replay has no CLI: a `session_capture` block in
     %APPDATA%/MetaXR/MetaXrSimulator/persistent_data.json (exec_state=replay, quit_when_complete) drives it, removed after each run;
@@ -317,7 +317,7 @@ Verbatim except rewrapping and the MV-5 amendment; the plan keeps a pointer citi
     developers.meta.com/horizon/documentation/unreal/xrsim-session-capture/, dev.epicgames.com Gauntlet docs,
     communityforums.atmeta.com proximity thread.
 - MV-3 D18 premises SIGNALS (plan External signals):
-  D18 premises (SP1/Nov 2 spike): Meta XR plugin release notes state UE 5.7 + simulator support; a simulator session_capture replay
+  D18 premises (SP1/Nov 2 spike): Meta XR plugin release notes state UE 5.8 + simulator support; a simulator session_capture replay
   run exits cleanly; a synthetic room returns MRUK scene data; simulator hand tracking on the chosen device profile; Quest 2
   proximity bypass holds for a full run; OVR Metrics CSV pulled over adb (package name re-checked).
 - MV-4 A4 residuals (plan A4; judges play Quest 3/3S, each gap logged residual risk, not a blocker):
@@ -392,13 +392,13 @@ Ultimate charge: +1 per correct outcome (voice or orb, assisted or not); firing 
 - MV-10 Kev-only manual actions (plan section):
   Devpost Join Hackathon (+ check for a judges-only invite-URL field); forum Start Member flair; workshop/office-hour dates; Meta
   dashboard org/app/Competition channel/privacy URL (SP1-SP2); release keystore + 2 backups (SP1); non-org Meta account for invite test
-  (SP1); private GitHub remote + CI gitleaks (now), public flip at G1 (Q2); dedicated Wit.ai app + client token (SP2); second speaker
-  for SP2 (Q6: TTS voices); UE 5.7 + Android NDK r27c + JDK (Unity 6.3 LTS + Android module only on fallback); backup Meta dashboard
+  (SP1); private GitHub remote + CI gitleaks (now), public flip at G1 (Q2); second speaker
+  for SP2 (Q6: TTS voices); UE 5.8 (5.7.4 only on fallback, A2) + Android NDK r27c + JDK (Unity 6.3 LTS + Android module only on fallback); backup Meta dashboard
   app (Q7); Vercel account + Upstash integration; new YouTube channel for the game (Q1); cleared room for capture (D12); privacy
   deletion contact address; Quest 3/3S access dropped (A4 waiver 2026-10-28: Quest 2 only); 2 fresh S9 testers (Nov 13); content
   rating choice (S13, target 10+); Devpost tagline + division field + description + testing instructions sign-off (S13); pre-ruling
   email dropped (G0a); log every judging-period op with timestamp + reason (G0b); after Dec 11
-  purge Wit utterance log + Upstash keys; 3 VR check-ins (D18): after the Nov 2 spike, once the core loop works, before submission.
+  purge Upstash keys; 3 VR check-ins (D18): after the Nov 2 spike, once the core loop works, before submission.
 - MV-11 FLAG for Kev (plan, after Kev-only manual actions; still open):
   FLAG for Kev: the D18 harness (runner, selector, bypass hook, debug input, event log) is folded into S1, making the Nov 5 AM slice
   heavy; D18 premises (2)-(6) carry agent-chosen fallbacks, not Kev-approved ones. Confirm or re-scope both.
@@ -448,3 +448,21 @@ Ultimate charge: +1 per correct outcome (voice or orb, assisted or not); firing 
   then dodge correct 3/3; enemy outside +/-40 deg never starts a telegraph 3/3; hands hidden mid-telegraph -> 0 hits and prompt shown 3/3; telemetry
   over 1 full run: max head displacement from run start <=30 cm 1/1 and 100% of slash contacts <=0.65 m from the head.
   S7 ultimate at exactly 5; 0 ultimate triggers in 60 s of slashing; D15 toggle OFF -> second ultimate type never offered 1/1.
+
+## Voice decision 2026-10-30 (V-1)
+- V-1 Kev 2026-10-30 after a 3-adversary round, verbatim: "sherpa-onnx default (Recommended)". Plan D2, A3.
+  On-device STT only; default sherpa-onnx grammar/keyword recognizer constrained to the card's expected answers, behind
+  IAnswerRecognizer. Nov 2 spike also measures Whisper tiny.en q8_0 (Runtime Speech Recognizer, Fab, paid; 43.6 MB), promoted only if
+  p50 end-of-speech-to-text <= 1000 ms AND p95 <= 1500 ms AND >= 90% match on Quest (brief: Quest 3; only Quest 2 in hand, A4).
+  Neither passes -> silent orbs (no-mic path). IWSDK: voice OFF by default until getUserMedia inside an immersive session is proven;
+  transformers.js Whisper only if WebGPU p50 <= 1500 ms.
+  Wit.ai DROPPED entirely: wit.ai/terms 3.3.1 (effective 2023-12-22) grants Meta an irrevocable, sublicensable licence to use Your
+  Content (incl. utterances) "for any business purpose in connection with operating, providing or improving the Services"; no
+  retention period, deletion process or training opt-out. Also removes the public client token (A13), unknown per-app limits (A16),
+  the 429 path, cloud outage during the freeze and the Dec 11 log purge. Meta Voice SDK (Unity fallback) is Wit cloud (recon R20).
+  Risks: Whisper hallucinates on non-speech, 52.1% on 1 s clips, top output "thank you" (arXiv 2501.11378); a hallucinated word ->
+  Voice miss/wrong, a hit + FSRS Again (D4). Concurrent speech inference on Quest 3S raised long frames 1.09% -> 26.94% at 72 fps avg,
+  3-thread ceiling (neurips.cc/virtual/2026/162449); no Quest 2 benchmark. Open-source UE whisper plugin
+  (gtreshchev/RuntimeSpeechRecognizer) archived 2025-02-23; Fab build unverified on source-built 5.8 + Android.
+  Superseded: A11 premise, A13, A16, SP2 burst + Wit-app steps, SP2b, D10 Wit token, ADR 0002 freeze-resilience row, F Wit checks,
+  S4 forced-429, Wit SIGNALS.

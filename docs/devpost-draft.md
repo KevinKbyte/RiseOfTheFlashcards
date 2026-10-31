@@ -45,7 +45,7 @@ room, so recall becomes something you do with your hands and voice. The story: h
 boring and procrastinating on them all the time, so now the flashcards are on a rampage. It builds on a theme from my earlier 2D
 prototype (see below).
 
-**How we built it.** Engine: `<ENGINE: Unreal Engine 5.7 (spike-gated; Unity 6.3 LTS fallback), final per ADR 0001>` with Meta's hand
+**How we built it.** Engine: `<ENGINE: Unreal Engine 5.8 (spike-gated; 5.7.4 fallback; Unity 6.3 LTS fallback), final per ADR 0001>` with Meta's hand
 tracking, passthrough and scene understanding. Enemies emerge from detected walls; a small play area keeps every move within a seated
 reach. Head gaze drives the fight: an enemy reveals its card and starts its attack only while you are looking toward it. Spoken answers
 go through `<RECOGNIZER per ADR 0002>` and a deterministic fuzzy matcher with per-card aliases (no AI grading). A Leitner
