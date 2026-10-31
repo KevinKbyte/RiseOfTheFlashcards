@@ -11,13 +11,13 @@ Kev decisions 2026-10-28: ENGINE (Unreal, spike-gated; D1; 5.8 per Kev 10-30, A2
 Changes from v1 (finisher -> round 2 -> round 1) + sources re-checked: [ledgers](2026-10-28-vr-flashcard-game-ledgers.md) MV-1.
 
 ## Must-keep (Kev verbatim asks; never defer/cut/descope without Kev's explicit ask)
-M1 Enemies are flash cards; slash with hand or controller (Q12), then say the answer aloud; correct = damage.
+M1 Enemies are flash cards; slash by hand (H-1; controller slash = optional stretch SX), then say the answer aloud; correct = damage.
 M2 Bigger enemies = multi-card health pools.
 M3 Enemies attack; player dodges (lean/duck).
 M4 Ultimates unlocked after N correct answers.
 M5 Gaming track, New Experience division (G0a 2026-10-28: claim kept with D11 disclosure; Devpost division field final at S13).
-M6 Hands-first, controllers also supported (Q12); seated, 2 ft (design limit <=30 cm head/hand radius satisfies both rules.md:122 radius
-  and guidelines.md:47 diameter readings); judged on Quest 3/3S; >=60 fps.
+M6 Hands = sole required input, controllers optional stretch SX (H-1, supersedes Q12; rules.md:88,112,114); seated, 2 ft (design
+  limit <=30 cm head/hand radius satisfies both rules.md:122 radius and guidelines.md:47 diameter readings); judged on Quest 3/3S; >=60 fps.
 M7 Deadline Nov 18 12:00 PT; build live + unchanged to ~Dec 11.
 M8 Full-time VR from Nov 5; before Nov 4 only spikes.
 M9 Speech recognition in headset (on-device only, D2; Web Speech API rejected per MemriPal ADR 0008).
@@ -172,12 +172,13 @@ D7 Dodge + interruptions (Kev 2026-10-28 "Any input pauses (Recommended)", ledge
   (forward axis dropped). Interruptions (input-loss pause, system/menu pause, recenter) never cancel an attack: attack timers freeze and no hit
   lands; on the first resume all frozen attacks take one fresh shared baseline (1.5 s) and each replays its full telegraph once. A replay runs on
   through input loss and lands at its hit frame; a menu pause or recenter during a replay freezes it, re-takes the baseline, then resumes the
-  remaining telegraph (no second replay). Input-loss pause: no hand and no controller pose tracked for >0.5 s -> "show your hands" prompt; resumes
-  when any pose is tracked; never touches the mic or an open answer window. A system/menu pause during an open answer window closes the mic and
-  discards the in-flight recognition: speech already started -> Voice wrong (D4 rating and orb trigger), no hit; no speech yet -> Didn't catch.
-  Ultimate (charge >=5): hands = two-palm push (both palms face forward and move forward >=X cm in <0.3 s; X tuned in S7); controllers = press A+X
-  together; one controller + one hand = hold that controller's A or X for 0.5 s (SIG-1). Armed = charged with both palms facing forward; while
-  armed, a slash event waits <=0.3 s and is dropped only if the push fires. Accessibility toggle: slower telegraphs + auto-dodge option.
+  remaining telegraph (no second replay). Input-loss pause: no hand tracked for >0.5 s -> "show your hands" prompt; resumes when a hand is
+  tracked (controller poses count only with SX enabled, H-1); never touches the mic or an open answer window. A system/menu pause during
+  an open answer window closes the mic and discards the in-flight recognition: speech already started -> Voice wrong (D4 rating and orb
+  trigger), no hit; no speech yet -> Didn't catch. Ultimate (charge >=5): two-palm push (both palms face forward and move forward >=X cm
+  in <0.3 s; X tuned in S7); controller mappings (A+X, one-controller A/X hold) **Superseded by** H-1, moved to SX. Armed = charged with
+  both palms facing forward; while armed, a slash event waits <=0.3 s and is dropped only if the push fires. Accessibility toggle: slower
+  telegraphs + auto-dodge option.
 D8 MR only. Play-forward yaw = tracking-space forward, recomputed on every recenter. Enemies emerge from MRUK walls 1.2-3.5 m away
   within +/-35 deg of play-forward (70 deg arc). An enemy's card text shows and its telegraph starts only while it is within +/-40 deg of
   current head yaw; otherwise its attack timer waits. Q5 (2026-10-28): this in-view gate is the head-gaze mechanic (rules.md:223), named
@@ -220,21 +221,21 @@ D15 Experimental settings pane (Kev, 2026-10-28): one on/off toggle per experime
 D16 In-game intro scene (Kev, 2026-10-28): on first launch a virtual phone placed on a detected table surface (MRUK) cracks and sad
   flashcards band together and swarm out, then combat starts; doubles as the trailer breakout shot (rules.md:237, no AI footage). Scope
   ~1 day UE, built in S9. Cuttable: if behind at S12, the skit falls back to paper cards + drawer and the intro is skipped. First
-  launch only, <=10 s, skippable by any trigger or pinch. No-table fallback (D8 ring-fallback triggers, or no qualifying table): the
+  launch only, <=10 s, skippable by pinch (or any trigger with SX). No-table fallback (D8 ring-fallback triggers, or no qualifying table): the
   phone spawns at waist height ~0.8 m in front of the player, facing them, and the same intro plays.
 D17 Onboarding cues, show don't tell (Kev, 2026-10-28; workshop notes show-dont-tell.md + which-cue-when.png, Jelitza): pick the cue
   that answers the player's current question: How? -> ghost hand; What? -> glow + motion; Where? -> signage in the world; names/
   numbers? -> text + a visual. Max 1 active cue at a time; step up with idle time (rim glow -> pulse/bob -> ghost hand); retire each
-  cue on success; a hint toggle replays cues. Slash (M1): ghost of the player's input (controller model on controllers; hand model +
-  handedness when hand-tracked) loops a slash through the strike-slot card (D13); first run (D14) only; retired at first contact.
+  cue on success; a hint toggle replays cues. Slash (M1): ghost hand (hand model + handedness; controller ghost = SX, H-1)
+  loops a slash through the strike-slot card (D13); first run (D14) only; retired at first contact.
   Which enemy: rim glow only on the strike-slot enemy; wall-queued enemies unlit. Multi-layer enemies (M2; Kev: "higher level cards
   have multiple layers"): visible card stack, only the top card highlighted/answerable, each correct answer peels one. Answer: D2
   mic-live earcon + pulsing mic glyph on the card. Silent-mode orbs (M10): all pulse equally on idle, never singling out the correct
   one. Where: wall-crack light at each spawn (M15, D13). Dodge (M3, D7): floor lean-direction marker on the first telegraph of the
-  first run; retired after the first dodge. Ultimate (M4, D7 input): palms or controllers glow when charged; ghost demo of the player's input on
-  first charge only. Text only for card prompt/answer/numbers, always paired with a glow. Built per slice: S3 slash/glow/stack, S4 mic glyph, S5
-  orbs, S6 dodge marker, S7 ultimate. Cuttable: falls back to the constraint ladder's "tutorial as 3 prompts" (Must-keep). Open:
-  diegetic wrist-turn UI (pop-up in the hand on a wrist turn) for hints/mastery (Kev's note).
+  first run; retired after the first dodge. Ultimate (M4, D7 input): palms glow when charged; ghost two-palm-push demo on first charge
+  only (controller glow/ghost = SX). Text only for card prompt/answer/numbers, always paired with a glow. Built per slice:
+  S3 slash/glow/stack, S4 mic glyph, S5 orbs, S6 dodge marker, S7 ultimate. Cuttable: falls back to the constraint ladder's "tutorial as 3
+  prompts" (Must-keep). Open: diegetic wrist-turn UI (pop-up in the hand on a wrist turn) for hints/mastery (Kev's note).
 D18 Agent validation loop + reusable E2E suite (Kev, 2026-10-28; M22, M23): the agent plays, sees and fixes the game unattended; Kev
   checks in VR at 3 points only (after the Nov 2 spike, once the core loop works, before submission) for what tooling cannot judge:
   comfort/sickness, slash feel, real hand-tracking accuracy, mic in a noisy room, video sign-off. Debug input layer: console commands
@@ -281,10 +282,8 @@ D20 Quest 3S compatibility (Kev 2026-10-28 "yes add the 3S compat decision to th
   third-party: https://roadtovr.com/quest-3s-quest-3-quest-2-specs-compared/). Manifest: com.oculus.supportedDevices = quest2|quest3|quest3s
   (https://developers.meta.com/horizon/resources/publish-mobile-manifest/), set in UE Project Settings > Platforms > Meta XR > Mobile > "Supported
   Meta Quest devices" (https://developers.meta.com/horizon/documentation/unreal/os-compatibility-mode/); S1 checks the generated manifest lists
-  quest3s (older plugins may omit it; an unlisted device runs in OS compatibility mode as an older model). Input: OpenXR actions on the classic
-  Touch profile /interaction_profiles/oculus/touch_controller, never device-specific; runtime type via UOculusXRFunctionLibrary::GetControllerType()
-  (https://developers.meta.com/horizon/documentation/unreal/unreal-touch-controller/); Touch Plus profile
-  /interaction_profiles/meta/touch_controller_plus (XR_META_touch_controller_plus) and classic-binding fallback on 3S UNVERIFIED. Capabilities:
+  quest3s (older plugins may omit it; an unlisted device runs in OS compatibility mode as an older model). Input: hands only (H-1);
+  controller rules (Touch / Touch Plus profiles, GetControllerType) moved verbatim to ledgers H-1, applied only in SX. Capabilities:
   3S-only features (colour passthrough, Environment Depth, scene) gated by runtime capability checks with Quest 2 fallbacks, never by model string;
   UOculusXRFunctionLibrary::GetDeviceType() for diagnostics only, never android.os.Build.MODEL
   (https://developers.meta.com/horizon/documentation/unreal/unreal-set-get-device-type/); Environment Depth on 3S profiles per
@@ -346,8 +345,11 @@ S6a Nov 9 (half day, MemriPal finals) FSRS persistence (D5 save: card state, dai
   EditMode save tests + mastery screen.
 S6 Nov 10 health pools, telegraphed attacks (in-view gate), dodge (frozen baseline), input-loss pause + interruption replay (D7), shield pips + run
   end (D14), accessibility toggle + D17 cue + D18 scenario.
-S7 Nov 11 ultimates (charge >=5; two-palm push, A+X, or one-controller A/X hold, D7; knockback, D4; 1 type, Q9) + experimental second,
+S7 Nov 11 ultimates (charge >=5; two-palm push, D7; knockback, D4; 1 type, Q9) + experimental second,
   mastery-unlocked ultimate type behind its D15 toggle + D17 cue + D18 scenario.
+SX OPTIONAL STRETCH, controllers (H-1; no date): only after hands-only S1-S7 pass their CRITERIA; never blocks S8-S13; cut first.
+  Controller slash (controller-tip), A+X ultimate, one-controller A/X hold (SIG-1), controller pose in the input-loss pause, controller
+  ghost + glow cues (D17), Touch / Touch Plus profiles (D20); detail + criteria verbatim in ledgers H-1.
 S8 Nov 12 MR walls + arc + fallback + test matrix. CHECKPOINT Nov 12 evening: D18 T2 run; apply constraint ladder if any of S1-S8 open.
 S9 Nov 13 first-five-minutes tutorial (incl. per-player strike-slot calibration, D13), pause/resume (voice re-arm), accessibility pass, D5
   daily-limit steppers on deck select, D15 Experimental pane + gaze-dwell select, on/off calibration of each D15 toggle, D16 phone-breakout intro
@@ -414,7 +416,7 @@ S2 >=40 matcher golden cases, all run with EMPTY reject lists unless the case te
   -> not clean 1/1, hidden deck -> 0 of its cards in an all-decks round 1/1, PB kept per (mode, selection) 2/2; deck-lint (Q4): numeric answer
   rejected, 3-char answer flagged, homophone answer without alias flagged 3/3, 3 starter decks pass 3/3; `// Covers: FEAT-ID` above every
   [TestFixture].
-S3 20/20 slashes register per input, hands and controllers 2/2 (slash = fingertip or controller-tip speed >=1.0 m/s through the card
+S3 20/20 slashes register with hands, 2/2 hands (slash = fingertip speed >=1.0 m/s through the card
   collider in the strike slot); 0 false triggers in 60 s idle; 5/5 enemies travel wall -> strike slot and no slash registers before arrival.
 S4 0 mic opens outside window; 3/3 forced hard STT errors -> orbs <1 s AND next card's voice answer works 3/3; empty transcript -> 0 damage 3/3; 2 non-correct attempts -> orbs 3/3; 6 s silence -> didn't catch 3/3; Wi-Fi off: voice answers still graded 3/3 and the run completes 1/1; silent mode not auto-latched by any error except mic denial 1/1.
 S5 full run with mic off 1/1.
@@ -422,17 +424,17 @@ S6a EditMode: fresh dir first save then load 1/1; corrupt primary -> .bak 1/1; t
   daily counters and queue snapshot persist across app restart on device 3/3; FSRS golden vectors on device N/N.
 S6 3-card pool with no ultimate needs exactly 3 correct; dodge at >=20 cm lateral/down; lean at telegraph start held through a 2 s telegraph ->
   dodged 3/3; same with accessibility slow telegraph 3/3; slow 1 s lean -> dodged 3/3; 0 false dodges in 20 forward-lean slashes; recenter + resume
-  then dodge correct 3/3; enemy outside +/-40 deg never starts a telegraph 3/3; no pose tracked mid-telegraph -> prompt, freeze, fresh baseline, one
-  replay, lands at its hit frame 3/3 per input (hands, controllers); hide again during the replay -> still lands 3/3; menu pause and recenter
-  mid-telegraph -> same rule 2/2; recenter or 20 cm re-seat during a pause or replay -> 0 auto-dodges 3/3; 2 overlapping frozen attacks -> each
-  replays once 2/2; controller-only run -> attacks land 3/3; hands hidden during an answer window -> answer graded normally 3/3; menu pause
-  mid-speech -> mic closed, recognition discarded, rated as Voice wrong (D4), 0 pips lost 3/3, before speech -> Didn't catch 3/3; telemetry over 1
-  full run: max head displacement from run start <=30 cm 1/1 and 100% of slash contacts <=0.65 m from the head.
+  then dodge correct 3/3; enemy outside +/-40 deg never starts a telegraph 3/3; no hand tracked mid-telegraph -> prompt, freeze, fresh baseline, one
+  replay, lands at its hit frame 3/3; hide again during the replay -> still lands 3/3; menu pause and recenter mid-telegraph -> same rule
+  2/2; recenter or 20 cm re-seat during a pause or replay -> 0 auto-dodges 3/3; 2 overlapping frozen attacks -> each replays once 2/2; hands
+  hidden during an answer window -> answer graded normally 3/3; menu pause mid-speech -> mic closed, recognition discarded, rated as Voice
+  wrong (D4), 0 pips lost 3/3, before speech -> Didn't catch 3/3; telemetry over 1 full run: max head displacement from run start <=30 cm
+  1/1 and 100% of slash contacts <=0.65 m from the head.
 S7 ultimate at exactly 5; 6th correct while charged -> ultimate still fires 1/1; two-palm push -> ultimate 3/3 and 0 slash events; charged, palms
-  forward, one-hand slash -> registers 3/3; A+X charged -> ultimate 3/3, uncharged -> 0 3/3; one controller + one hand, 0.5 s A/X hold -> ultimate
-  3/3 (only if SIG-1 shows mixed input); 0 ultimate triggers in 60 s of charged slashing, hands and controllers 2/2; knockback: strike-slot enemy
-  pushed back toward its wall spawn, its in-flight attack cancelled, 0 cards removed, hit cap + attempt/orb counters held, open mic window untouched
-  3/3; charge 0 after firing 1/1; D15 toggle OFF -> second ultimate type never offered 1/1.
+  forward, one-hand slash -> registers 3/3; uncharged two-palm push -> 0 3/3; 0 ultimate triggers in 60 s of charged slashing (hands) 1/1;
+  knockback: strike-slot enemy pushed back toward its wall spawn, its in-flight attack cancelled, 0 cards removed, hit cap + attempt/orb
+  counters held, open mic window untouched 3/3; charge 0 after firing 1/1; D15 toggle OFF -> second ultimate type never offered 1/1; judge
+  test (rules.md:114): full run, intro to mastery screen, with no controller ever paired 1/1. SX CRITERIA: ledgers H-1.
 D18 per slice S3-S7: >=1 new tagged scenario 5/5; T1 >=1 screenshot per scenario; affected set for the slice's whole diff (base =
   slice start commit) green at slice close 5/5; per-commit runs affected-only; scenario count never decreases.
 D18 T2 (S8 checkpoint, S11): scenarios affected since the last T2 sha green + OVR Metrics fps >= M6 target (60) 1/1 each.
@@ -470,7 +472,7 @@ D18 premises (SP1/Nov 2 spike): ledgers MV-3.
 Per slice (FLOW-016): SP1 Meta dashboard versionCode 1 + invite install on non-org account + OVR Metrics. SP2 OVR Metrics (inference frame times) + dashboard
   versionCode 2 + invite install + privacy URL HTTP 200. SP2b superseded (D2). G0 none. G1 CI gitleaks
   full-history run green before the public flip. S1 gitleaks local hook. S2 none. S3 none. S4 none. S5
-  none. S6a none. S6 SIG-1 (Meta docs: do Quest 2/3 report hands and controllers at once? check before S6). S7 none. S8 OVR Metrics CSV (D18 T2). S9
+  none. S6a none. S6 none. S7 none. SX SIG-1 (hands + controllers reported at once? Meta docs; ledgers H-1). S8 OVR Metrics CSV (D18 T2). S9
   none. S10 Vercel deploy + Firewall/ratelimit log + Upstash usage dashboard (incl. idle-archive setting). S11 OVR Metrics (Quest 2; 3/3S waived,
   A4) + dashboard RC versionCode. S12 invite install on non-org account. S13 logged-out video playback + Devpost "submitted" page. F
   Upstash dashboard, privacy URL, channel install.
@@ -490,6 +492,7 @@ Moved to ledgers MV-10 2026-10-29. FLAG for Kev (still open): S1 carries the who
 Resolved 2026-10-28 (Kev): ENGINE, Q1-Q12, D15, D19, G0a, G0b in
   [ledgers Resolved decisions](2026-10-28-vr-flashcard-game-ledgers.md#resolved-decisions).
 - Resolved 2026-10-30 (Kev): cloud Wit default -> on-device only (D2, ledgers V-1).
+- Resolved 2026-10-31 (Kev): hands = sole required input, controllers = optional stretch SX; Q12 **Superseded by** H-1 (ledgers H-1).
 
 ## Adversarial cheat sheet
 - Primary technical risk: big decks and one-correct WINs; grades or WINs given for nothing (deck-switch budget, empty queue, paused window).

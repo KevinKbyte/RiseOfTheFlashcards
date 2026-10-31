@@ -8,7 +8,7 @@ decides which cards come back.
 
 - Status: pre-alpha. Entry for Meta VR Start Developer Competition 2026 (Gaming track).
 - Engine: Unreal Engine 5.8 (this repo; 5.7.4 fallback only). A parallel IWSDK (WebXR) build lives in the sibling repo `../game-iwsdk` (plan D1).
-- Input: hands or controllers. Seated, small play space.
+- Input: hands only, no controller needed; controllers are an optional stretch (plan SX). Seated, small play space.
 - Decks: bundled starter decks, or paste your own on a companion web page and pair it to the headset with a short code.
 - Build plan: `docs/plans/2026-10-28-vr-flashcard-game.md`.
 

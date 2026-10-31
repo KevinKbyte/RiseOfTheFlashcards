@@ -141,7 +141,7 @@ Moved from the plan's Open questions 2026-10-28 (verbatim); the plan's pointer l
 - Q11 99% win measure: every card in the selected deck(s) shown this run (not-due cards served ungraded, no Leitner write), then
   accuracy over the last 90 s of answers >=99% -> WIN; window tuned 60-120 s in S9 (M24, D19, S2, S9). Amended 2026-10-28 by K-b2 and the two-tier
   WIN (E-FS-7).
-- Q12 Slash input: both controllers and hand tracking (M1, M6, D17, S3).
+- Q12 Slash input: both controllers and hand tracking (M1, M6, D17, S3). **Superseded by** H-1 (2026-10-31): hands only; controllers = SX.
 - D19 Wave survival (new; M24): graded waves, ungraded Overtime, WIN unless Endless, daily grade lock.
 - G0a New Experience claim kept with D11 disclosure; division field set at S13 (guidelines.md:101). Pre-ruling email
   (MetaHorizonStart@meta.com) dropped 2026-10-28 (Kev): repo first commit 37d0378 is 2026-10-28, inside the window starting
@@ -468,3 +468,29 @@ Ultimate charge: +1 per correct outcome (voice or orb, assisted or not); firing 
   (gtreshchev/RuntimeSpeechRecognizer) archived 2025-02-23; Fab build unverified on source-built 5.8 + Android.
   Superseded: A11 premise, A13, A16, SP2 burst + Wit-app steps, SP2b, D10 Wit token, ADR 0002 freeze-resilience row, F Wit checks,
   S4 forced-429, Wit SIGNALS.
+
+## Hands-only decision 2026-10-31 (H-1)
+- H-1 Kev 2026-10-31, verbatim: "hackathon says controllers should be optional so let's focus on no controller and then optionally based on
+  user discretion they can use controller". Rules: rules.md:88 Gaming "hands-first (required) ... without controllers"; rules.md:112
+  "Fully usable with hands end-to-end. Controller support optional."; rules.md:114 judge test (complete without ever pairing a
+  controller); rules.md:325 Best First Five Minutes "teaches controller-free interaction". Hands = sole required input in every
+  mechanic, criterion and tutorial cue; plan S7 adds the no-controller judge test.
+  Superseded: Q12; D7 controller mappings and controller pose in the input-loss pause; E-K-a / E-FIN-6 / E-FIN-7 controller parts;
+  D17 controller ghost + glow; D20 controller profiles; S3/S6/S7 controller CRITERIA; S6 SIG-1. All re-homed below as plan slice SX.
+- SX OPTIONAL STRETCH (post-S7; only after hands-only S1-S7 pass their CRITERIA; never blocks S8-S13; cut first). Moved verbatim:
+
+| From | Re-homed controller text (verbatim) |
+|---|---|
+| M1 | slash with hand or controller (Q12) |
+| D7 pause | Input-loss pause: no hand and no controller pose tracked for >0.5 s -> "show your hands" prompt; resumes when any pose is tracked (SX enabled only) |
+| D7 ultimate | controllers = press A+X together; one controller + one hand = hold that controller's A or X for 0.5 s (SIG-1) |
+| D16 | skippable by any trigger or pinch |
+| D17 slash | ghost of the player's input (controller model on controllers; hand model + handedness when hand-tracked) |
+| D17 ultimate | palms or controllers glow when charged; ghost demo of the player's input on first charge only |
+| D20 input | Input: OpenXR actions on the classic Touch profile /interaction_profiles/oculus/touch_controller, never device-specific; runtime type via UOculusXRFunctionLibrary::GetControllerType() (https://developers.meta.com/horizon/documentation/unreal/unreal-touch-controller/); Touch Plus profile /interaction_profiles/meta/touch_controller_plus (XR_META_touch_controller_plus) and classic-binding fallback on 3S UNVERIFIED. |
+| S7 slice | ultimates (charge >=5; two-palm push, A+X, or one-controller A/X hold, D7) |
+| S3 CRITERIA | 20/20 slashes register per input, hands and controllers 2/2 (slash = fingertip or controller-tip speed >=1.0 m/s through the card collider in the strike slot) |
+| S6 CRITERIA | no pose tracked mid-telegraph -> prompt, freeze, fresh baseline, one replay, lands at its hit frame 3/3 per input (hands, controllers); controller-only run -> attacks land 3/3 |
+| S7 CRITERIA | A+X charged -> ultimate 3/3, uncharged -> 0 3/3; one controller + one hand, 0.5 s A/X hold -> ultimate 3/3 (only if SIG-1 shows mixed input); 0 ultimate triggers in 60 s of charged slashing, hands and controllers 2/2 |
+| SX CRITERIA | S1-S7 hands-only CRITERIA still pass with SX on 1/1; full run with no controller paired still passes 1/1 |
+| SIGNALS | S6 SIG-1 (Meta docs: do Quest 2/3 report hands and controllers at once? check before S6) -> now before SX |
