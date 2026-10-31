@@ -1,13 +1,21 @@
 /**
  * Premises a (mic inside the immersive session) and b (Whisper tiny.en on WebGPU).
  */
-import { rms } from './stats.js';
-import { makeResult, micVerdict, whisperVerdict, type PremiseResult } from './verdict.js';
+// Same-origin ORT runtime: transformers.js defaults wasmPaths to cdn.jsdelivr.net, which breaks
+// offline reload (premise g) and adds a third-party fetch. Vite emits these as hashed dist assets.
+import ortMjsUrl from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.mjs?url';
+import ortWasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?url';
+import { percentile, rms } from './stats.js';
+import { MIC_SILENCE_RMS, makeResult, micVerdict, whisperVerdict, type PremiseResult } from './verdict.js';
 
 const CLIP_MS = 3000;
 const WHISPER_RATE = 16000;
 const CLIP_SAMPLES = (WHISPER_RATE * CLIP_MS) / 1000;
 const TIMED_RUNS = 5;
+// ctx.resume() can hang without user activation; record anyway and report the context state.
+const RESUME_TIMEOUT_MS = 2000;
+
+export type StatusFn = (text: string) => void;
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const msg = (e: unknown) => (e instanceof Error ? `${e.name}: ${e.message}` : String(e));
@@ -37,48 +45,54 @@ function resampleTo16k(input: Float32Array, rate: number): Float32Array {
 
 async function capture(stream: MediaStream): Promise<{ peakRms: number; clip: Float32Array; ctxState: string }> {
   const ctx = new AudioContext();
-  await ctx.resume();
-  const ctxState = ctx.state;
-  const source = ctx.createMediaStreamSource(stream);
-  const analyser = ctx.createAnalyser();
-  analyser.fftSize = 2048;
-  const frame = new Float32Array(analyser.fftSize);
-  const raw = new Float32Array(Math.ceil((ctx.sampleRate * CLIP_MS) / 1000));
-  let written = 0;
-  // ScriptProcessor is deprecated but needs no worklet module file; it only copies samples.
-  const recorder = ctx.createScriptProcessor(4096, 1, 1);
-  recorder.onaudioprocess = (ev) => {
-    const ch = ev.inputBuffer.getChannelData(0);
-    const n = Math.min(ch.length, raw.length - written);
-    if (n > 0) raw.set(ch.subarray(0, n), written);
-    written += n;
-  };
-  source.connect(analyser);
-  source.connect(recorder);
-  recorder.connect(ctx.destination);
-  let peakRms = 0;
-  const timer = setInterval(() => {
-    analyser.getFloatTimeDomainData(frame);
-    const level = rms(frame);
-    if (level > peakRms) peakRms = level;
-  }, 50);
-  await sleep(CLIP_MS);
-  clearInterval(timer);
-  recorder.onaudioprocess = null;
-  source.disconnect();
-  recorder.disconnect();
-  await ctx.close();
-  return { peakRms, clip: resampleTo16k(raw.subarray(0, written), ctx.sampleRate), ctxState };
+  try {
+    await Promise.race([ctx.resume(), sleep(RESUME_TIMEOUT_MS)]);
+    const ctxState = ctx.state;
+    const source = ctx.createMediaStreamSource(stream);
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 2048;
+    const frame = new Float32Array(analyser.fftSize);
+    const raw = new Float32Array(Math.ceil((ctx.sampleRate * CLIP_MS) / 1000));
+    let written = 0;
+    // ScriptProcessor is deprecated but needs no worklet module file; it only copies samples.
+    const recorder = ctx.createScriptProcessor(4096, 1, 1);
+    recorder.onaudioprocess = (ev) => {
+      const ch = ev.inputBuffer.getChannelData(0);
+      const n = Math.min(ch.length, raw.length - written);
+      if (n > 0) raw.set(ch.subarray(0, n), written);
+      written += n;
+    };
+    source.connect(analyser);
+    source.connect(recorder);
+    recorder.connect(ctx.destination);
+    let peakRms = 0;
+    const timer = setInterval(() => {
+      analyser.getFloatTimeDomainData(frame);
+      const level = rms(frame);
+      if (level > peakRms) peakRms = level;
+    }, 50);
+    await sleep(CLIP_MS);
+    clearInterval(timer);
+    recorder.onaudioprocess = null;
+    source.disconnect();
+    recorder.disconnect();
+    return { peakRms, clip: resampleTo16k(raw.subarray(0, written), ctx.sampleRate), ctxState };
+  } finally {
+    await ctx.close().catch(() => undefined);
+  }
 }
 
 export async function runMicProbe(
   inSession: () => boolean,
-): Promise<{ result: PremiseResult; clip: Float32Array | null }> {
+  onStatus: StatusFn,
+): Promise<{ result: PremiseResult; clip: Float32Array | null; peakRms: number }> {
   const supported = typeof navigator.mediaDevices?.getUserMedia === 'function';
   if (!supported) {
-    return { result: micVerdict({ supported, inSession: inSession(), outcome: null, peakRms: 0 }), clip: null };
+    const result = micVerdict({ supported, inSession: inSession(), outcome: null, peakRms: 0 });
+    return { result, clip: null, peakRms: 0 };
   }
   const permBefore = await micPermissionState();
+  onStatus('waiting for mic permission (tap Allow)');
   const t0 = performance.now();
   let stream: MediaStream;
   try {
@@ -89,32 +103,42 @@ export async function runMicProbe(
     const outcome = e instanceof DOMException && e.name === 'NotAllowedError' ? 'denied' : 'error';
     const v = micVerdict({ supported, inSession: inSession(), outcome, peakRms: 0 });
     const ev = `${v.evidence}; ${msg(e)}; perm before=${permBefore}; ${Math.round(performance.now() - t0)} ms`;
-    return { result: makeResult('a', v.status, ev), clip: null };
+    return { result: makeResult('a', v.status, ev), clip: null, peakRms: 0 };
   }
   const grantMs = Math.round(performance.now() - t0);
   const grantedInSession = inSession();
   try {
+    onStatus('RECORDING 3 s - SPEAK NOW');
     const { peakRms, clip, ctxState } = await capture(stream);
     const v = micVerdict({ supported, inSession: grantedInSession, outcome: 'granted', peakRms });
     const ev =
       `${v.evidence}; perm before=${permBefore} after=${await micPermissionState()}; ` +
       `grant ${grantMs} ms (long = prompt shown); audioCtx=${ctxState}`;
-    return { result: makeResult('a', v.status, ev), clip };
+    return { result: makeResult('a', v.status, ev), clip, peakRms };
   } finally {
     for (const track of stream.getTracks()) track.stop();
   }
 }
 
-export async function runWhisperProbe(clip: Float32Array | null): Promise<PremiseResult> {
+export async function runWhisperProbe(
+  clip: Float32Array | null,
+  peakRms: number,
+  onStatus: StatusFn,
+): Promise<PremiseResult> {
+  const clipSilent = clip === null || peakRms <= MIC_SILENCE_RMS;
   const gpu = (navigator as Navigator & { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
   const adapter = gpu ? await gpu.requestAdapter().catch(() => null) : null;
-  if (!adapter) return whisperVerdict({ webgpu: false, latenciesMs: [] });
+  if (!adapter) return whisperVerdict({ webgpu: false, latenciesMs: [], clipSilent, transcript: '' });
   const input = clip ?? new Float32Array(CLIP_SAMPLES);
   try {
     const t0 = performance.now();
-    const { pipeline } = await import('@huggingface/transformers');
+    const { pipeline, env } = await import('@huggingface/transformers');
+    if (env.backends.onnx.wasm) env.backends.onnx.wasm.wasmPaths = { mjs: ortMjsUrl, wasm: ortWasmUrl };
     const asr = await pipeline('automatic-speech-recognition', 'onnx-community/whisper-tiny.en', {
       device: 'webgpu',
+      progress_callback: (p) => {
+        if (p.status === 'progress_total') onStatus(`downloading model ${Math.floor(p.progress)}%`);
+      },
     });
     const loadMs = Math.round(performance.now() - t0);
     await asr(input);
@@ -126,8 +150,12 @@ export async function runWhisperProbe(clip: Float32Array | null): Promise<Premis
       latenciesMs.push(performance.now() - start);
       text = (Array.isArray(out) ? out[0] : out)?.text ?? '';
     }
-    const v = whisperVerdict({ webgpu: true, latenciesMs });
-    const ev = `${v.evidence}; load ${loadMs} ms; clip=${clip ? 'mic' : 'silence'}; text="${text.trim().slice(0, 40)}"`;
+    const v = whisperVerdict({ webgpu: true, latenciesMs, clipSilent, transcript: text });
+    // An UNAVAILABLE verdict omits latency; keep the raw p50 as context, not as the verdict.
+    const raw = v.status === 'UNAVAILABLE' ? `; raw p50=${Math.round(percentile(latenciesMs, 50))} ms` : '';
+    const ev =
+      `${v.evidence}${raw}; load ${loadMs} ms; clip=${clip ? 'mic' : 'silence'} peakRms=${peakRms.toFixed(4)}; ` +
+      `text="${text.trim().slice(0, 40)}"`;
     return makeResult('b', v.status, ev);
   } catch (e) {
     return makeResult('b', 'FAIL', `whisper error: ${msg(e)}`);

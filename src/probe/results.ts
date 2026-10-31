@@ -7,6 +7,17 @@ import { makeResult, type PremiseId, type PremiseResult } from './verdict.js';
 export const PREMISE_IDS: readonly PremiseId[] = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
 export const LAST_RESULTS_KEY = 'probe.lastResults';
 
+// Initial evidence doubles as the operator instruction for each row.
+const HINTS: Record<PremiseId, string> = {
+  a: 'enter XR, tap Allow, then speak for 3 s',
+  b: 'starts after a',
+  c: 'enter XR; show hands',
+  d: 'reload once',
+  e: 'enter XR; measured after b finishes',
+  f: 'tap Run AR probe',
+  g: 'prod build: load once, then airplane mode + reload',
+};
+
 type Listener = (results: readonly PremiseResult[]) => void;
 
 export class ResultBoard {
@@ -14,7 +25,7 @@ export class ResultBoard {
   private readonly listeners = new Set<Listener>();
 
   constructor() {
-    for (const id of PREMISE_IDS) this.byId.set(id, makeResult(id, 'PENDING', 'not run yet'));
+    for (const id of PREMISE_IDS) this.byId.set(id, makeResult(id, 'PENDING', HINTS[id]));
   }
 
   all(): PremiseResult[] {

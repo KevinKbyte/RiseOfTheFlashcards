@@ -11,7 +11,14 @@ import { watchOffline } from './offline.js';
 import { runPersistenceProbe } from './persistence.js';
 import { ResultBoard } from './results.js';
 import { fpsFromFrameDeltas } from './stats.js';
-import { fpsVerdict, inputVerdict, makeResult, type PremiseResult, type Status } from './verdict.js';
+import {
+  fpsBoardVerdict,
+  inputVerdict,
+  makeResult,
+  type PremiseId,
+  type PremiseResult,
+  type Status,
+} from './verdict.js';
 
 const STATUS_COLORS: Record<Status, string> = {
   PASS: '#4ade80',
@@ -19,7 +26,10 @@ const STATUS_COLORS: Record<Status, string> = {
   UNAVAILABLE: '#fbbf24',
   PENDING: '#9ca3af',
 };
-const EVIDENCE_MAX = 120;
+const EVIDENCE_MAX = 220;
+// Frames right after a meter reset carry shader-compile / load hitches, not steady state.
+const FPS_WARMUP_FRAMES = 10;
+const msg = (e: unknown) => (e instanceof Error ? `${e.name}: ${e.message}` : String(e));
 
 type FpsStats = ReturnType<typeof fpsFromFrameDeltas>;
 
@@ -33,6 +43,8 @@ export class ProbeSystem extends createSystem({}) {
   private session: XRSession | undefined;
   private recording = false;
   private audioStarted = false;
+  // Mic capture and Whisper inference load the device; frames measured meanwhile are not the baseline.
+  private audioBusy = false;
   private handsSeen = false;
   private controllersSeen = false;
 
@@ -64,7 +76,7 @@ export class ProbeSystem extends createSystem({}) {
 
   update(delta: number): void {
     // Allocation-free: a typed-array write only.
-    if (this.recording) this.meter.push(delta * 1000);
+    if (this.recording && !this.audioBusy) this.meter.push(delta * 1000);
   }
 
   private wirePanel(): Array<() => void> {
@@ -79,6 +91,7 @@ export class ProbeSystem extends createSystem({}) {
       bind('load-minus', () => this.setLoad(this.load.level - LOAD_STEP)),
       bind('load-plus', () => this.setLoad(this.load.level + LOAD_STEP)),
       bind('ar-button', () => void this.ar.run()),
+      bind('audio-button', () => void this.runAudio()),
     ];
   }
 
@@ -101,8 +114,10 @@ export class ProbeSystem extends createSystem({}) {
 
   private onVisibility(state: VisibilityState): void {
     const inXR = state !== VisibilityState.NonImmersive && this.world.session !== undefined;
-    if (inXR !== this.recording) this.meter.reset();
-    this.recording = inXR;
+    // Hidden/blurred (system menu, permission prompt) frames are throttled by the OS, not the app.
+    const record = inXR && state === VisibilityState.Visible;
+    if (record !== this.recording) this.meter.reset();
+    this.recording = record;
     if (inXR && this.world.session !== this.session) this.attachSession(this.world.session as XRSession);
     if (!inXR) this.detachSession();
   }
@@ -134,23 +149,33 @@ export class ProbeSystem extends createSystem({}) {
   };
 
   private async runAudio(): Promise<void> {
-    // Mic is requested only once the immersive session is live: that is the premise under test.
-    const { result, clip } = await runMicProbe(() => this.world.session !== undefined);
-    this.board.set(result);
-    this.board.set(makeResult('b', 'PENDING', 'loading whisper-tiny.en (webgpu)...'));
-    this.board.set(await runWhisperProbe(clip));
+    if (this.audioBusy) return;
+    this.audioBusy = true;
+    const status = (id: PremiseId) => (text: string) => this.board.set(makeResult(id, 'PENDING', text));
+    let micDone = false;
+    try {
+      // Mic is requested only once the immersive session is live: that is the premise under test.
+      const { result, clip, peakRms } = await runMicProbe(() => this.world.session !== undefined, status('a'));
+      this.board.set(result);
+      micDone = true;
+      this.board.set(makeResult('b', 'PENDING', 'loading whisper-tiny.en (webgpu)...'));
+      this.board.set(await runWhisperProbe(clip, peakRms, status('b')));
+    } catch (e) {
+      const ev = `audio probe error: ${msg(e)}`;
+      if (!micDone) this.board.set(makeResult('a', 'FAIL', ev));
+      this.board.set(makeResult('b', 'FAIL', ev));
+    } finally {
+      this.audioBusy = false;
+      this.meter.reset();
+    }
   }
 
   private summarizeFps(): void {
-    if (!this.recording) return;
-    const stats = fpsFromFrameDeltas(this.meter.snapshot());
+    if (!this.recording || this.audioBusy) return;
+    const stats = fpsFromFrameDeltas(this.meter.snapshot(), FPS_WARMUP_FRAMES);
     if (stats.frames === 0) return;
     this.fpsByLevel.set(this.load.level, stats);
-    const v = fpsVerdict(stats);
-    const levels = [...this.fpsByLevel]
-      .sort((x, y) => x[0] - y[0])
-      .map(([level, s]) => `L${level} ${s.p50.toFixed(0)}/${s.p5.toFixed(0)}`)
-      .join(' ');
-    this.board.set(makeResult('e', v.status, `load=${this.load.level} ${v.evidence}; p50/p5 by load: ${levels}`));
+    const v = fpsBoardVerdict(this.fpsByLevel);
+    this.board.set(makeResult('e', v.status, `load=${this.load.level}; ${v.evidence}`));
   }
 }
