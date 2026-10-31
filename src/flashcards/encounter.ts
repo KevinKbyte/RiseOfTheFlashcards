@@ -46,6 +46,10 @@ const MAX_HITS = 1;
 const TWO_PI = 2 * Math.PI;
 
 export function createEncounter(cfg: Readonly<EncounterConfig> = ENCOUNTER_DEFAULTS): Encounter {
+  // Creep speed divides by creepSeconds; 0 or NaN would produce Infinity/NaN distances.
+  if (!Number.isFinite(cfg.creepSeconds) || cfg.creepSeconds <= 0) {
+    throw new RangeError(`creepSeconds must be finite and > 0, got ${cfg.creepSeconds}`);
+  }
   return { phase: 'advancing', distance: cfg.spawnDistance, hits: 0, telegraphLeft: 0, cfg };
 }
 
@@ -63,6 +67,8 @@ export function tick(enc: Encounter, dt: number): Encounter {
       return { ...enc, distance };
     }
     case 'answering': {
+      // Fixed speed regardless of where the reveal happened: an early reveal from beyond
+      // knockbackDistance just takes longer than creepSeconds to arrive.
       const creepSpeed = (cfg.knockbackDistance - cfg.strikeDistance) / cfg.creepSeconds;
       const distance = enc.distance - creepSpeed * dt;
       // Excess dt past the strike point is dropped so the telegraph always runs its full length.
@@ -95,9 +101,15 @@ export function tick(enc: Encounter, dt: number): Encounter {
   }
 }
 
+/**
+ * Reveal the card: valid while walking in (any distance) or waiting at reach. Closer than
+ * knockbackDistance the enemy is pushed back to it; farther away it keeps its distance, so an
+ * early reveal buys extra time at the same fixed creep speed.
+ */
 export function slash(enc: Encounter): Encounter {
-  if (enc.phase !== 'slashable') return enc;
-  return { ...enc, phase: 'answering', distance: enc.cfg.knockbackDistance };
+  if (enc.phase !== 'advancing' && enc.phase !== 'slashable') return enc;
+  const distance = Math.max(enc.distance, enc.cfg.knockbackDistance);
+  return { ...enc, phase: 'answering', distance };
 }
 
 /** Correct answer; during the telegraph this cancels the pending hit. */
