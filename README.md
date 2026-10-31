@@ -12,6 +12,70 @@ npm run dev
 Use the Runtime and Editor controls in the managed browser to switch between
 the running experience and its authored scene.
 
+## Device-premises probe board
+
+A spike board (`src/probe/`) that checks on a real headset whether each premise
+the game depends on holds. Each row shows a verdict plus evidence; every update
+is also logged as a `[probe]` JSON console line and the full board is saved to
+`localStorage["probe.lastResults"]`. Evidence is labelled as Quest 2 (judges
+use Quest 3/3S).
+
+| Row | Premise | PASS when |
+| --- | --- | --- |
+| a | Mic inside the immersive session | permission granted in-session and 3 s capture peak RMS > 0.001 |
+| b | Whisper `onnx-community/whisper-tiny.en` on WebGPU | p50 of 5 timed runs on the row-a clip <= 1500 ms |
+| c | Input sources (controller -> hand) | hand input seen; controllers alone stay PENDING until you show both hands |
+| d | Persistence | after a reload, localStorage boot count and IndexedDB round-trip both survive |
+| e | Frame rate (FPS knee) | p5 >= 60 fps over >= 300 frames at load level 0; load +/- buttons step 50 meshes (max 1000) to find the knee as evidence |
+| f | `immersive-ar` + planes/mesh | AR session starts and detects > 0 planes or meshes in a 10 s window (`Run AR probe`) |
+| g | Offline reload under the service worker | the page boots with no network while SW-controlled |
+
+| Verdict | Meaning |
+| --- | --- |
+| PASS | premise measured and meets the bar |
+| FAIL | measured and misses the bar, or errored |
+| UNAVAILABLE | capability absent (no getUserMedia / WebGPU / immersive-ar / serviceWorker), or b ran on a silent clip or produced an empty transcript |
+| PENDING | not measured yet; the evidence text is the next operator step |
+
+### Run on a Quest
+
+Use a production build; row g needs the service worker, which dev builds never
+register, so g stays PENDING under `npm run dev`.
+
+```sh
+npm run build && npx vite preview --host 0.0.0.0 --port 8081
+```
+
+`iwsdkDev` serves HTTPS with a self-signed certificate (cached in
+`.iwsdk/https/`), so open `https://<LAN-IP>:8081` on the Quest and accept the
+certificate warning. Fallback over USB: `adb reverse tcp:8081 tcp:8081`, then
+open `http://localhost:8081` (localhost is a secure context).
+
+For row g: load once online, enable airplane mode, reload.
+
+### Offline notes
+
+- ONNX Runtime wasm is bundled same-origin (transformers.js would otherwise
+  fetch it from cdn.jsdelivr.net).
+- The SW precaches every `dist/` file (~31 MB); the cache name hashes file
+  contents, so a rebuild with changed bytes gets a fresh cache.
+- Still network-bound: controller profiles load from cdn.jsdelivr.net
+  (`@iwsdk/xr-input` default), and Whisper weights download from Hugging Face on
+  first run (then served from the transformers.js browser cache).
+
+### Tests
+
+```sh
+node_modules/.bin/vitest run
+node_modules/.bin/tsc --noEmit
+python -m pytest scripts/fsrs
+```
+
+The pytest suite checks that `scripts/fsrs/gen_vectors.py` regenerates
+`tests/fixtures/fsrs/vectors.json` byte-for-byte; the fixture is pinned to
+py-fsrs 6.3.2 (`scripts/fsrs/requirements.txt`). Regenerate with
+`python scripts/fsrs/gen_vectors.py`.
+
 ## Starter content
 
 The robot and welcome panel are small examples of authored scene content plus
