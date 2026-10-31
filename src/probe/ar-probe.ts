@@ -49,22 +49,29 @@ export class ArProbe {
     try {
       if (this.arSupported === null) await this.checkSupport();
       if (!this.arSupported) return;
-      if (this.world.session) {
+      // A lingering VR session must not be mistaken for the AR session we launch.
+      const prev = this.world.session;
+      if (prev) {
         this.world.exitXR();
-        await waitFor(() => this.world.session === undefined, EXIT_WAIT_MS);
+        if (!(await waitFor(() => this.world.session === undefined, EXIT_WAIT_MS))) {
+          this.note = 'VR exit timed out';
+          this.emit(true);
+          return;
+        }
       }
       this.world.launchXR({
         sessionMode: SessionMode.ImmersiveAR,
         features: { planeDetection: true, meshDetection: true },
       });
-      const session = (await waitFor(() => this.world.session !== undefined, START_WAIT_MS))
-        ? this.world.session
-        : undefined;
+      const started = () => this.world.session !== undefined && this.world.session !== prev;
+      const session = (await waitFor(started, START_WAIT_MS)) ? this.world.session : undefined;
       if (!session) {
         this.note = 'AR session did not start (activation consumed?); use the 2D "Run AR probe" button';
         this.emit();
         return;
       }
+      this.note = `AR running: look around the room (${COUNT_WINDOW_MS / 1000} s)`;
+      this.emit(true);
       await this.count(session);
     } finally {
       this.running = false;
@@ -97,8 +104,10 @@ export class ArProbe {
     this.emit();
   }
 
-  private emit(): void {
+  /** `pending` forces PENDING while a run is in progress or aborted before measuring. */
+  private emit(pending = false): void {
     const v = arVerdict({ arSupported: this.arSupported, planes: this.planes, meshes: this.meshes });
-    this.report(this.note ? makeResult('f', v.status, `${v.evidence}; ${this.note}`) : v);
+    const status = pending ? 'PENDING' : v.status;
+    this.report(this.note ? makeResult('f', status, `${v.evidence}; ${this.note}`) : v);
   }
 }
