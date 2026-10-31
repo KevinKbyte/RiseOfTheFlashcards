@@ -37,6 +37,10 @@ export class ArProbe {
     private readonly report: (r: PremiseResult) => void,
   ) {}
 
+  get isRunning(): boolean {
+    return this.running;
+  }
+
   async checkSupport(): Promise<void> {
     const xr = navigator.xr;
     this.arSupported = xr ? await xr.isSessionSupported('immersive-ar').catch(() => false) : false;
@@ -46,6 +50,10 @@ export class ArProbe {
   async run(): Promise<void> {
     if (this.running) return;
     this.running = true;
+    // Every row this run emits must reflect only this run's measurements.
+    this.planes = null;
+    this.meshes = null;
+    this.note = '';
     try {
       if (this.arSupported === null) await this.checkSupport();
       if (!this.arSupported) return;
@@ -94,8 +102,20 @@ export class ArProbe {
         if (f.detectedMeshes.size > maxMeshes) maxMeshes = f.detectedMeshes.size;
       }
     });
-    await sleep(COUNT_WINDOW_MS);
+    let endedEvent = false;
+    const onEnd = () => {
+      endedEvent = true;
+    };
+    session.addEventListener('end', onEnd);
+    const ended = await waitFor(() => endedEvent || this.world.session !== session, COUNT_WINDOW_MS);
+    session.removeEventListener('end', onEnd);
     stop();
+    // Zero counts from a truncated window are not a measurement; never FAIL on them.
+    if (ended) {
+      this.note = 'AR session ended early; re-run';
+      this.emit(true);
+      return;
+    }
     // A started AR session counts as measured: a missing detection API is a zero, not "unknown".
     this.planes = maxPlanes;
     this.meshes = maxMeshes;
@@ -108,6 +128,7 @@ export class ArProbe {
   private emit(pending = false): void {
     const v = arVerdict({ arSupported: this.arSupported, planes: this.planes, meshes: this.meshes });
     const status = pending ? 'PENDING' : v.status;
-    this.report(this.note ? makeResult('f', status, `${v.evidence}; ${this.note}`) : v);
+    const counts = `planes=${String(this.planes)} meshes=${String(this.meshes)}`;
+    this.report(this.note ? makeResult('f', status, `${counts}; ${this.note}`) : v);
   }
 }

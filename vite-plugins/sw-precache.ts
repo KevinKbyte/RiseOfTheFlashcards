@@ -36,7 +36,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE)
-      .then((cache) => cache.addAll(PRECACHE.map(scoped)))
+      .then((cache) => cache.addAll(PRECACHE.map((p) => new Request(scoped(p), { cache: 'reload' }))))
       .then(() => self.skipWaiting()),
   );
 });

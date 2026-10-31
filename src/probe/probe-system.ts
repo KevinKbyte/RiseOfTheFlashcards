@@ -14,6 +14,7 @@ import { fpsFromFrameDeltas } from './stats.js';
 import {
   audioRerunGate,
   fpsBoardVerdict,
+  fpsMeteringActive,
   inputVerdict,
   makeResult,
   type PremiseId,
@@ -77,7 +78,18 @@ export class ProbeSystem extends createSystem({}) {
 
   update(delta: number): void {
     // Allocation-free: a typed-array write only.
-    if (this.recording && !this.audioBusy) this.meter.push(delta * 1000);
+    if (this.meteringActive()) this.meter.push(delta * 1000);
+  }
+
+  private meteringActive(): boolean {
+    const blend = this.world.session?.environmentBlendMode;
+    return fpsMeteringActive({
+      recording: this.recording,
+      audioBusy: this.audioBusy,
+      arRunning: this.ar.isRunning,
+      // Passthrough (non-opaque blend) means an immersive-ar session.
+      immersiveAr: blend !== undefined && blend !== 'opaque',
+    });
   }
 
   private wirePanel(): Array<() => void> {
@@ -179,11 +191,11 @@ export class ProbeSystem extends createSystem({}) {
   }
 
   private summarizeFps(): void {
-    if (!this.recording || this.audioBusy) return;
+    if (!this.meteringActive()) return;
     const stats = fpsFromFrameDeltas(this.meter.snapshot(), FPS_WARMUP_FRAMES);
     if (stats.frames === 0) return;
     this.fpsByLevel.set(this.load.level, stats);
     const v = fpsBoardVerdict(this.fpsByLevel);
-    this.board.set(makeResult('e', v.status, `load=${this.load.level}; ${v.evidence}`));
+    this.board.set(v);
   }
 }

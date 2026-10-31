@@ -101,7 +101,7 @@ export function inputVerdict(i: { handsSeen: boolean; controllersSeen: boolean }
   const ev = `hands=${i.handsSeen} controllers=${i.controllersSeen}`;
   if (i.handsSeen) return makeResult('c', 'PASS', ev);
   if (i.controllersSeen) {
-    return makeResult('c', 'PENDING', `${ev}; controllers ok; put them down and show both hands`);
+    return makeResult('c', 'PENDING', `${ev}; controllers ok; put them down and show your hands`);
   }
   return makeResult('c', 'PENDING', ev);
 }
@@ -141,10 +141,24 @@ export function fpsBoardVerdict(
   if (!base) return makeResult('e', 'PENDING', 'no load-level-0 baseline yet');
   const levels = [...byLevel.entries()]
     .sort((x, y) => x[0] - y[0])
-    .map(([lvl, s]) => `L${lvl} ${Math.round(s.p50)}/${Math.round(s.p5)}`)
+    .map(([lvl, s]) => `L${lvl} ${Math.round(s.p50)}/${Math.round(s.p5)} (n=${s.frames})`)
     .join(' ');
   const l0 = fpsVerdict(base);
-  return makeResult('e', l0.status, `${l0.evidence}; ${levels}`);
+  const head =
+    l0.status === 'PENDING'
+      ? l0.evidence
+      : `L0 verdict: p50=${base.p50.toFixed(1)} p5=${base.p5.toFixed(1)} over ${base.frames} frames (bar p5>=${FPS_MIN})`;
+  return makeResult('e', l0.status, `${head}; ${levels}`);
+}
+
+/** AR probe and immersive-ar passthrough load the device differently; those frames are not the VR baseline. */
+export function fpsMeteringActive(i: {
+  recording: boolean;
+  audioBusy: boolean;
+  arRunning: boolean;
+  immersiveAr: boolean;
+}): boolean {
+  return i.recording && !i.audioBusy && !i.arRunning && !i.immersiveAr;
 }
 
 export function arVerdict(i: {
