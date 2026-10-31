@@ -152,9 +152,9 @@ describe('CorrectFeedback burst lifetime and pool', () => {
     const scene = new Object3D();
     const fx = new CorrectFeedback(scene);
     fx.play(new Vector3());
-    for (let i = 0; i < 30; i++) fx.update(1 / 60);
+    for (let i = 0; i < 18; i++) fx.update(1 / 60); // ~0.3 s
     expect(visibleBursts(scene)).toHaveLength(1);
-    for (let i = 0; i < 30; i++) fx.update(1 / 60);
+    for (let i = 0; i < 15; i++) fx.update(1 / 60); // ~0.55 s total
     expect(visibleBursts(scene)).toHaveLength(0);
   });
 
