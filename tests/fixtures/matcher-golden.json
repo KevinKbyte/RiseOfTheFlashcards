@@ -1,0 +1,1529 @@
+[
+  {
+    "name": "exact own answer",
+    "deck": [
+      {
+        "id": "aff",
+        "answer": "afferent"
+      },
+      {
+        "id": "mito",
+        "answer": "mitochondria"
+      },
+      {
+        "id": "ion",
+        "answer": "ion channel"
+      },
+      {
+        "id": "syn",
+        "answer": "synapse"
+      }
+    ],
+    "cardId": "aff",
+    "transcript": "afferent",
+    "expected": "correct"
+  },
+  {
+    "name": "exact ignores case, punctuation and outer whitespace",
+    "deck": [
+      {
+        "id": "aff",
+        "answer": "afferent"
+      },
+      {
+        "id": "mito",
+        "answer": "mitochondria"
+      },
+      {
+        "id": "ion",
+        "answer": "ion channel"
+      },
+      {
+        "id": "syn",
+        "answer": "synapse"
+      }
+    ],
+    "cardId": "syn",
+    "transcript": "  Synapse!  ",
+    "expected": "correct"
+  },
+  {
+    "name": "exact: hyphen in answer matches spaced transcript",
+    "deck": [
+      {
+        "id": "dna",
+        "answer": "Watson-Crick"
+      },
+      {
+        "id": "x",
+        "answer": "Franklin"
+      },
+      {
+        "id": "y",
+        "answer": "Pauling"
+      },
+      {
+        "id": "z",
+        "answer": "Chargaff"
+      }
+    ],
+    "cardId": "dna",
+    "transcript": "watson crick",
+    "expected": "correct"
+  },
+  {
+    "name": "exact own alias",
+    "deck": [
+      {
+        "id": "mm",
+        "answer": "Myanmar",
+        "aliases": [
+          "Burma"
+        ]
+      },
+      {
+        "id": "th",
+        "answer": "Thailand"
+      },
+      {
+        "id": "la",
+        "answer": "Laos"
+      },
+      {
+        "id": "kh",
+        "answer": "Cambodia"
+      }
+    ],
+    "cardId": "mm",
+    "transcript": "Burma",
+    "expected": "correct"
+  },
+  {
+    "name": "accented answer, unaccented transcript",
+    "deck": [
+      {
+        "id": "co",
+        "answer": "Bogot\u00e1"
+      },
+      {
+        "id": "pe",
+        "answer": "Lima"
+      },
+      {
+        "id": "cl",
+        "answer": "Santiago"
+      },
+      {
+        "id": "ve",
+        "answer": "Caracas"
+      }
+    ],
+    "cardId": "co",
+    "transcript": "Bogota",
+    "expected": "correct"
+  },
+  {
+    "name": "unaccented answer, accented transcript",
+    "deck": [
+      {
+        "id": "co",
+        "answer": "Bogota"
+      },
+      {
+        "id": "pe",
+        "answer": "Lima"
+      },
+      {
+        "id": "cl",
+        "answer": "Santiago"
+      },
+      {
+        "id": "ve",
+        "answer": "Caracas"
+      }
+    ],
+    "cardId": "co",
+    "transcript": "Bogot\u00e1",
+    "expected": "correct"
+  },
+  {
+    "name": "decomposed combining accent in transcript",
+    "deck": [
+      {
+        "id": "co",
+        "answer": "Bogot\u00e1"
+      },
+      {
+        "id": "pe",
+        "answer": "Lima"
+      },
+      {
+        "id": "cl",
+        "answer": "Santiago"
+      },
+      {
+        "id": "ve",
+        "answer": "Caracas"
+      }
+    ],
+    "cardId": "co",
+    "transcript": "Bogota\u0301",
+    "expected": "correct"
+  },
+  {
+    "name": "accented multi-word answer",
+    "deck": [
+      {
+        "id": "br",
+        "answer": "S\u00e3o Paulo"
+      },
+      {
+        "id": "ar",
+        "answer": "Buenos Aires"
+      },
+      {
+        "id": "uy",
+        "answer": "Montevideo"
+      },
+      {
+        "id": "py",
+        "answer": "Asunci\u00f3n"
+      }
+    ],
+    "cardId": "br",
+    "transcript": "sao paulo",
+    "expected": "correct"
+  },
+  {
+    "name": "leading article in answer stripped",
+    "deck": [
+      {
+        "id": "nile",
+        "answer": "the Nile"
+      },
+      {
+        "id": "amz",
+        "answer": "Amazon"
+      },
+      {
+        "id": "yz",
+        "answer": "Yangtze"
+      },
+      {
+        "id": "ms",
+        "answer": "Mississippi"
+      }
+    ],
+    "cardId": "nile",
+    "transcript": "Nile",
+    "expected": "correct"
+  },
+  {
+    "name": "leading article in transcript stripped",
+    "deck": [
+      {
+        "id": "nile",
+        "answer": "the Nile"
+      },
+      {
+        "id": "amz",
+        "answer": "Amazon"
+      },
+      {
+        "id": "yz",
+        "answer": "Yangtze"
+      },
+      {
+        "id": "ms",
+        "answer": "Mississippi"
+      }
+    ],
+    "cardId": "amz",
+    "transcript": "the Amazon",
+    "expected": "correct"
+  },
+  {
+    "name": "leading \"an\" stripped",
+    "deck": [
+      {
+        "id": "nile",
+        "answer": "the Nile"
+      },
+      {
+        "id": "amz",
+        "answer": "Amazon"
+      },
+      {
+        "id": "yz",
+        "answer": "Yangtze"
+      },
+      {
+        "id": "ms",
+        "answer": "Mississippi"
+      }
+    ],
+    "cardId": "amz",
+    "transcript": "an Amazon",
+    "expected": "correct"
+  },
+  {
+    "name": "only one leading article stripped",
+    "deck": [
+      {
+        "id": "nile",
+        "answer": "the Nile"
+      },
+      {
+        "id": "amz",
+        "answer": "Amazon"
+      },
+      {
+        "id": "yz",
+        "answer": "Yangtze"
+      },
+      {
+        "id": "ms",
+        "answer": "Mississippi"
+      }
+    ],
+    "cardId": "nile",
+    "transcript": "the the Nile",
+    "expected": "miss"
+  },
+  {
+    "name": "single-char answer A: exact",
+    "deck": [
+      {
+        "id": "va",
+        "answer": "A"
+      },
+      {
+        "id": "vb",
+        "answer": "B"
+      },
+      {
+        "id": "vc",
+        "answer": "C"
+      },
+      {
+        "id": "vd",
+        "answer": "D"
+      }
+    ],
+    "cardId": "va",
+    "transcript": "A",
+    "expected": "correct"
+  },
+  {
+    "name": "single-char answer A: punctuation ignored",
+    "deck": [
+      {
+        "id": "va",
+        "answer": "A"
+      },
+      {
+        "id": "vb",
+        "answer": "B"
+      },
+      {
+        "id": "vc",
+        "answer": "C"
+      },
+      {
+        "id": "vd",
+        "answer": "D"
+      }
+    ],
+    "cardId": "va",
+    "transcript": "a.",
+    "expected": "correct"
+  },
+  {
+    "name": "single-char answer A: bare article kept when nothing remains after strip",
+    "deck": [
+      {
+        "id": "va",
+        "answer": "A"
+      },
+      {
+        "id": "vb",
+        "answer": "B"
+      },
+      {
+        "id": "vc",
+        "answer": "C"
+      },
+      {
+        "id": "vd",
+        "answer": "D"
+      }
+    ],
+    "cardId": "va",
+    "transcript": "the A",
+    "expected": "correct"
+  },
+  {
+    "name": "single-char answer A: near sound is miss (too short for fuzzy)",
+    "deck": [
+      {
+        "id": "va",
+        "answer": "A"
+      },
+      {
+        "id": "vb",
+        "answer": "B"
+      },
+      {
+        "id": "vc",
+        "answer": "C"
+      },
+      {
+        "id": "vd",
+        "answer": "D"
+      }
+    ],
+    "cardId": "va",
+    "transcript": "ay",
+    "expected": "miss"
+  },
+  {
+    "name": "single-char answer A: other card letter is wrong",
+    "deck": [
+      {
+        "id": "va",
+        "answer": "A"
+      },
+      {
+        "id": "vb",
+        "answer": "B"
+      },
+      {
+        "id": "vc",
+        "answer": "C"
+      },
+      {
+        "id": "vd",
+        "answer": "D"
+      }
+    ],
+    "cardId": "va",
+    "transcript": "B",
+    "expected": "wrong"
+  },
+  {
+    "name": "shared answer: exact hit counts for first owner",
+    "deck": [
+      {
+        "id": "fr1",
+        "answer": "Paris"
+      },
+      {
+        "id": "fr2",
+        "answer": "Paris"
+      },
+      {
+        "id": "fr3",
+        "answer": "Lyon"
+      },
+      {
+        "id": "fr4",
+        "answer": "Marseille"
+      }
+    ],
+    "cardId": "fr1",
+    "transcript": "Paris",
+    "expected": "correct"
+  },
+  {
+    "name": "shared answer: exact hit counts for second owner",
+    "deck": [
+      {
+        "id": "fr1",
+        "answer": "Paris"
+      },
+      {
+        "id": "fr2",
+        "answer": "Paris"
+      },
+      {
+        "id": "fr3",
+        "answer": "Lyon"
+      },
+      {
+        "id": "fr4",
+        "answer": "Marseille"
+      }
+    ],
+    "cardId": "fr2",
+    "transcript": "paris",
+    "expected": "correct"
+  },
+  {
+    "name": "shared-answer card: other card exact answer is wrong",
+    "deck": [
+      {
+        "id": "fr1",
+        "answer": "Paris"
+      },
+      {
+        "id": "fr2",
+        "answer": "Paris"
+      },
+      {
+        "id": "fr3",
+        "answer": "Lyon"
+      },
+      {
+        "id": "fr4",
+        "answer": "Marseille"
+      }
+    ],
+    "cardId": "fr2",
+    "transcript": "Lyon",
+    "expected": "wrong"
+  },
+  {
+    "name": "and-token present in the answer is not a hedge",
+    "deck": [
+      {
+        "id": "sp",
+        "answer": "salt and pepper"
+      },
+      {
+        "id": "x",
+        "answer": "olive oil"
+      },
+      {
+        "id": "y",
+        "answer": "vinegar"
+      },
+      {
+        "id": "z",
+        "answer": "sugar"
+      }
+    ],
+    "cardId": "sp",
+    "transcript": "salt and pepper",
+    "expected": "correct"
+  },
+  {
+    "name": "fuzzy accept: one-letter STT slip",
+    "deck": [
+      {
+        "id": "ps",
+        "answer": "photosynthesis"
+      },
+      {
+        "id": "ch",
+        "answer": "chlorophyll"
+      },
+      {
+        "id": "st",
+        "answer": "stomata"
+      },
+      {
+        "id": "xy",
+        "answer": "xylem"
+      }
+    ],
+    "cardId": "ps",
+    "transcript": "photosynthesys",
+    "expected": "correct"
+  },
+  {
+    "name": "fuzzy accept: suffix slip on mitochondria",
+    "deck": [
+      {
+        "id": "aff",
+        "answer": "afferent"
+      },
+      {
+        "id": "mito",
+        "answer": "mitochondria"
+      },
+      {
+        "id": "ion",
+        "answer": "ion channel"
+      },
+      {
+        "id": "syn",
+        "answer": "synapse"
+      }
+    ],
+    "cardId": "mito",
+    "transcript": "mitochondrial",
+    "expected": "correct"
+  },
+  {
+    "name": "fuzzy accept against alias",
+    "deck": [
+      {
+        "id": "in",
+        "answer": "Calcutta",
+        "aliases": [
+          "Kolkata"
+        ]
+      },
+      {
+        "id": "b",
+        "answer": "Mumbai"
+      },
+      {
+        "id": "d",
+        "answer": "Delhi"
+      },
+      {
+        "id": "c",
+        "answer": "Chennai"
+      }
+    ],
+    "cardId": "in",
+    "transcript": "Calcuta",
+    "expected": "correct"
+  },
+  {
+    "name": "fuzzy ratio boundary: exactly 0.85 accepted",
+    "deck": [
+      {
+        "id": "eeg",
+        "answer": "electroencephalogram"
+      },
+      {
+        "id": "ecg",
+        "answer": "electrocardiogram"
+      },
+      {
+        "id": "mri",
+        "answer": "tomography"
+      },
+      {
+        "id": "x",
+        "answer": "ultrasound"
+      }
+    ],
+    "cardId": "eeg",
+    "transcript": "electroencefalogrem",
+    "expected": "correct"
+  },
+  {
+    "name": "fuzzy reject by ratio: 0.80 below 0.85",
+    "deck": [
+      {
+        "id": "eeg",
+        "answer": "electroencephalogram"
+      },
+      {
+        "id": "ecg",
+        "answer": "electrocardiogram"
+      },
+      {
+        "id": "mri",
+        "answer": "tomography"
+      },
+      {
+        "id": "x",
+        "answer": "ultrasound"
+      }
+    ],
+    "cardId": "eeg",
+    "transcript": "electroensefalogrem",
+    "expected": "miss"
+  },
+  {
+    "name": "fuzzy reject by ratio: mitochondrion",
+    "deck": [
+      {
+        "id": "aff",
+        "answer": "afferent"
+      },
+      {
+        "id": "mito",
+        "answer": "mitochondria"
+      },
+      {
+        "id": "ion",
+        "answer": "ion channel"
+      },
+      {
+        "id": "syn",
+        "answer": "synapse"
+      }
+    ],
+    "cardId": "mito",
+    "transcript": "mitochondrion",
+    "expected": "miss"
+  },
+  {
+    "name": "fuzzy reject by length: answer under 4 key chars",
+    "deck": [
+      {
+        "id": "oh",
+        "answer": "Ohm"
+      },
+      {
+        "id": "v",
+        "answer": "Volt"
+      },
+      {
+        "id": "a",
+        "answer": "Ampere"
+      },
+      {
+        "id": "w",
+        "answer": "Watt"
+      }
+    ],
+    "cardId": "oh",
+    "transcript": "ohms",
+    "expected": "miss"
+  },
+  {
+    "name": "fuzzy reject by prefix: \"not X\" is miss, not wrong",
+    "deck": [
+      {
+        "id": "aff",
+        "answer": "afferent"
+      },
+      {
+        "id": "mito",
+        "answer": "mitochondria"
+      },
+      {
+        "id": "ion",
+        "answer": "ion channel"
+      },
+      {
+        "id": "syn",
+        "answer": "synapse"
+      }
+    ],
+    "cardId": "aff",
+    "transcript": "not afferent",
+    "expected": "miss"
+  },
+  {
+    "name": "fuzzy reject by prefix: \"no X\" is miss",
+    "deck": [
+      {
+        "id": "ps",
+        "answer": "photosynthesis"
+      },
+      {
+        "id": "ch",
+        "answer": "chlorophyll"
+      },
+      {
+        "id": "st",
+        "answer": "stomata"
+      },
+      {
+        "id": "xy",
+        "answer": "xylem"
+      }
+    ],
+    "cardId": "ps",
+    "transcript": "no photosynthesis",
+    "expected": "miss"
+  },
+  {
+    "name": "fuzzy reject by margin: own and other candidates too close",
+    "deck": [
+      {
+        "id": "nt",
+        "answer": "neurotransmitter"
+      },
+      {
+        "id": "nts",
+        "answer": "neurotransmitters"
+      },
+      {
+        "id": "r",
+        "answer": "receptor"
+      },
+      {
+        "id": "ax",
+        "answer": "axon"
+      }
+    ],
+    "cardId": "nt",
+    "transcript": "neurotransmiter",
+    "expected": "miss"
+  },
+  {
+    "name": "fuzzy other-card hit is wrong",
+    "deck": [
+      {
+        "id": "ps",
+        "answer": "photosynthesis"
+      },
+      {
+        "id": "ch",
+        "answer": "chlorophyll"
+      },
+      {
+        "id": "st",
+        "answer": "stomata"
+      },
+      {
+        "id": "xy",
+        "answer": "xylem"
+      }
+    ],
+    "cardId": "ps",
+    "transcript": "chlorophyl",
+    "expected": "wrong"
+  },
+  {
+    "name": "fuzzy other-card hit is wrong (neuro deck)",
+    "deck": [
+      {
+        "id": "aff",
+        "answer": "afferent"
+      },
+      {
+        "id": "mito",
+        "answer": "mitochondria"
+      },
+      {
+        "id": "ion",
+        "answer": "ion channel"
+      },
+      {
+        "id": "syn",
+        "answer": "synapse"
+      }
+    ],
+    "cardId": "aff",
+    "transcript": "mitochondrial",
+    "expected": "wrong"
+  },
+  {
+    "name": "unrelated transcript is miss",
+    "deck": [
+      {
+        "id": "ps",
+        "answer": "photosynthesis"
+      },
+      {
+        "id": "ch",
+        "answer": "chlorophyll"
+      },
+      {
+        "id": "st",
+        "answer": "stomata"
+      },
+      {
+        "id": "xy",
+        "answer": "xylem"
+      }
+    ],
+    "cardId": "ps",
+    "transcript": "banana",
+    "expected": "miss"
+  },
+  {
+    "name": "reject list: efferent said for afferent",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "afferent",
+        "reject": [
+          "efferent"
+        ]
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      },
+      {
+        "id": "f3",
+        "answer": "Bavaria"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "efferent",
+    "expected": "wrong"
+  },
+  {
+    "name": "reject list: afferent said for efferent",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "efferent",
+        "reject": [
+          "afferent"
+        ]
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      },
+      {
+        "id": "f3",
+        "answer": "Bavaria"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "afferent",
+    "expected": "wrong"
+  },
+  {
+    "name": "no reject list: efferent said for afferent is miss",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "afferent"
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      },
+      {
+        "id": "f3",
+        "answer": "Bavaria"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "efferent",
+    "expected": "miss"
+  },
+  {
+    "name": "efferent is another card answer: wrong",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "afferent"
+      },
+      {
+        "id": "o",
+        "answer": "efferent"
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "efferent",
+    "expected": "wrong"
+  },
+  {
+    "name": "reject list: hypotonic said for hypertonic",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "hypertonic",
+        "reject": [
+          "hypotonic"
+        ]
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      },
+      {
+        "id": "f3",
+        "answer": "Bavaria"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "hypotonic",
+    "expected": "wrong"
+  },
+  {
+    "name": "reject list: hypertonic said for hypotonic",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "hypotonic",
+        "reject": [
+          "hypertonic"
+        ]
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      },
+      {
+        "id": "f3",
+        "answer": "Bavaria"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "hypertonic",
+    "expected": "wrong"
+  },
+  {
+    "name": "no reject list: hypotonic said for hypertonic is miss",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "hypertonic"
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      },
+      {
+        "id": "f3",
+        "answer": "Bavaria"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "hypotonic",
+    "expected": "miss"
+  },
+  {
+    "name": "hypotonic is another card answer: wrong",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "hypertonic"
+      },
+      {
+        "id": "o",
+        "answer": "hypotonic"
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "hypotonic",
+    "expected": "wrong"
+  },
+  {
+    "name": "reject list: endothermic said for exothermic",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "exothermic",
+        "reject": [
+          "endothermic"
+        ]
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      },
+      {
+        "id": "f3",
+        "answer": "Bavaria"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "endothermic",
+    "expected": "wrong"
+  },
+  {
+    "name": "reject list: exothermic said for endothermic",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "endothermic",
+        "reject": [
+          "exothermic"
+        ]
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      },
+      {
+        "id": "f3",
+        "answer": "Bavaria"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "exothermic",
+    "expected": "wrong"
+  },
+  {
+    "name": "no reject list: endothermic said for exothermic is miss",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "exothermic"
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      },
+      {
+        "id": "f3",
+        "answer": "Bavaria"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "endothermic",
+    "expected": "miss"
+  },
+  {
+    "name": "endothermic is another card answer: wrong",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "exothermic"
+      },
+      {
+        "id": "o",
+        "answer": "endothermic"
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "endothermic",
+    "expected": "wrong"
+  },
+  {
+    "name": "reject list: Russia said for Prussia",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "Prussia",
+        "reject": [
+          "Russia"
+        ]
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      },
+      {
+        "id": "f3",
+        "answer": "Bavaria"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "Russia",
+    "expected": "wrong"
+  },
+  {
+    "name": "reject list: Prussia said for Russia",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "Russia",
+        "reject": [
+          "Prussia"
+        ]
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      },
+      {
+        "id": "f3",
+        "answer": "Bavaria"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "Prussia",
+    "expected": "wrong"
+  },
+  {
+    "name": "no reject list: Russia said for Prussia is miss",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "Prussia"
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      },
+      {
+        "id": "f3",
+        "answer": "Bavaria"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "Russia",
+    "expected": "miss"
+  },
+  {
+    "name": "Russia is another card answer: wrong",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "Prussia"
+      },
+      {
+        "id": "o",
+        "answer": "Russia"
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "Russia",
+    "expected": "wrong"
+  },
+  {
+    "name": "reject list: hyperthyroidism said for hypothyroidism",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "hypothyroidism",
+        "reject": [
+          "hyperthyroidism"
+        ]
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      },
+      {
+        "id": "f3",
+        "answer": "Bavaria"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "hyperthyroidism",
+    "expected": "wrong"
+  },
+  {
+    "name": "reject list: hypothyroidism said for hyperthyroidism",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "hyperthyroidism",
+        "reject": [
+          "hypothyroidism"
+        ]
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      },
+      {
+        "id": "f3",
+        "answer": "Bavaria"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "hypothyroidism",
+    "expected": "wrong"
+  },
+  {
+    "name": "no reject list: hyperthyroidism said for hypothyroidism is miss",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "hypothyroidism"
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      },
+      {
+        "id": "f3",
+        "answer": "Bavaria"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "hyperthyroidism",
+    "expected": "miss"
+  },
+  {
+    "name": "hyperthyroidism is another card answer: wrong",
+    "deck": [
+      {
+        "id": "t",
+        "answer": "hypothyroidism"
+      },
+      {
+        "id": "o",
+        "answer": "hyperthyroidism"
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      }
+    ],
+    "cardId": "t",
+    "transcript": "hyperthyroidism",
+    "expected": "wrong"
+  },
+  {
+    "name": "hedge: \"X or Y\" is wrong",
+    "deck": [
+      {
+        "id": "aff",
+        "answer": "afferent"
+      },
+      {
+        "id": "mito",
+        "answer": "mitochondria"
+      },
+      {
+        "id": "ion",
+        "answer": "ion channel"
+      },
+      {
+        "id": "syn",
+        "answer": "synapse"
+      }
+    ],
+    "cardId": "aff",
+    "transcript": "afferent or efferent",
+    "expected": "wrong"
+  },
+  {
+    "name": "hedge: \"X and Y\" is wrong",
+    "deck": [
+      {
+        "id": "aff",
+        "answer": "afferent"
+      },
+      {
+        "id": "mito",
+        "answer": "mitochondria"
+      },
+      {
+        "id": "ion",
+        "answer": "ion channel"
+      },
+      {
+        "id": "syn",
+        "answer": "synapse"
+      }
+    ],
+    "cardId": "syn",
+    "transcript": "synapse and ion channel",
+    "expected": "wrong"
+  },
+  {
+    "name": "hedge: or-token absent from \"salt and pepper\" is wrong",
+    "deck": [
+      {
+        "id": "sp",
+        "answer": "salt and pepper"
+      },
+      {
+        "id": "x",
+        "answer": "olive oil"
+      },
+      {
+        "id": "y",
+        "answer": "vinegar"
+      },
+      {
+        "id": "z",
+        "answer": "sugar"
+      }
+    ],
+    "cardId": "sp",
+    "transcript": "salt or pepper",
+    "expected": "wrong"
+  },
+  {
+    "name": "precedence baseline: without a reject list, nucleoside fuzzy-matches nucleotide",
+    "deck": [
+      {
+        "id": "nt",
+        "answer": "nucleotide"
+      },
+      {
+        "id": "a",
+        "answer": "adenine"
+      },
+      {
+        "id": "g",
+        "answer": "guanine"
+      },
+      {
+        "id": "r",
+        "answer": "ribose"
+      }
+    ],
+    "cardId": "nt",
+    "transcript": "nucleoside",
+    "expected": "correct"
+  },
+  {
+    "name": "precedence: reject list beats fuzzy own match",
+    "deck": [
+      {
+        "id": "nt",
+        "answer": "nucleotide",
+        "reject": [
+          "nucleoside"
+        ]
+      },
+      {
+        "id": "a",
+        "answer": "adenine"
+      },
+      {
+        "id": "g",
+        "answer": "guanine"
+      },
+      {
+        "id": "r",
+        "answer": "ribose"
+      }
+    ],
+    "cardId": "nt",
+    "transcript": "nucleoside",
+    "expected": "wrong"
+  },
+  {
+    "name": "precedence: exact other-card beats fuzzy own match",
+    "deck": [
+      {
+        "id": "nt",
+        "answer": "nucleotide"
+      },
+      {
+        "id": "ns",
+        "answer": "nucleoside"
+      },
+      {
+        "id": "a",
+        "answer": "adenine"
+      },
+      {
+        "id": "g",
+        "answer": "guanine"
+      }
+    ],
+    "cardId": "nt",
+    "transcript": "nucleoside",
+    "expected": "wrong"
+  },
+  {
+    "name": "precedence: hedge beats own answer inside the hedge",
+    "deck": [
+      {
+        "id": "aff",
+        "answer": "afferent"
+      },
+      {
+        "id": "mito",
+        "answer": "mitochondria"
+      },
+      {
+        "id": "ion",
+        "answer": "ion channel"
+      },
+      {
+        "id": "syn",
+        "answer": "synapse"
+      }
+    ],
+    "cardId": "syn",
+    "transcript": "synapse or synapse",
+    "expected": "wrong"
+  },
+  {
+    "name": "precedence: exact own beats exact other on a shared answer",
+    "deck": [
+      {
+        "id": "fr1",
+        "answer": "Paris"
+      },
+      {
+        "id": "fr2",
+        "answer": "Paris"
+      },
+      {
+        "id": "fr3",
+        "answer": "Lyon"
+      },
+      {
+        "id": "fr4",
+        "answer": "Marseille"
+      }
+    ],
+    "cardId": "fr1",
+    "transcript": "the Paris",
+    "expected": "correct"
+  }
+]
