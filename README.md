@@ -19,7 +19,7 @@ decides which cards come back.
 | `relay/` | Pairing relay serverless function (companion page -> headset deck hand-off) and its tests |
 | `scripts/` | Repo tooling (credits audit, versionCode counter) and its tests |
 | `docs/` | Plan, ADRs, privacy policy, Devpost draft |
-| `tests/fixtures/` | Shared test fixtures, incl. `normalize.json` (answer-normalization contract for every implementation) |
+| `tests/fixtures/` | Shared test fixtures, incl. `normalize.json` (answer-normalization contract for every implementation) and `matcher-golden.json` (answer-matcher golden cases) |
 
 ## Builds
 

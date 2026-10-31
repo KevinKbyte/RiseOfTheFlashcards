@@ -9,6 +9,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 - MATCH-001..004: deterministic answer matcher (`relay/lib/matcher.mjs`) with 62 golden cases (`tests/fixtures/matcher-golden.json`);
   early start approved by Kev 2026-10-31.
+- BUILD-001..003: strictly increasing Android versionCode counter (`scripts/version-code.mjs next --state <file> [--ini
+  <DefaultEngine.ini>]`); optionally sets Unreal StoreVersion; a failed run never advances the state. Tests included.
 
 ## [0.1.0] - 2026-10-28
 
