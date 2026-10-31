@@ -27,7 +27,8 @@ D17 Onboarding cues, show don't tell (Kev, 2026-10-28; workshop notes show-dont-
   numbers? -> text + a visual. Max 1 active cue at a time; step up with idle time (rim glow -> pulse/bob -> ghost hand); retire each
   cue on success; a hint toggle replays cues. Slash (M1): ghost hand (hand model + handedness; controller ghost = SX, H-1)
   loops a slash through the reach-line card (D13); first run (D14) only; retired at first contact.
-  Which enemy: rim glow only on the engaged enemy (D13); wall-queued enemies unlit. Multi-layer enemies (M2; Kev: "higher level cards
+  Which enemy (EN-3 (agent default, Kev to confirm)): rim glow on every active advancing enemy; brighter glow hint on the target and on enemies halted at the
+  reach line (D13). "rim glow only on the engaged enemy (D13); wall-queued enemies unlit" **Superseded by** EN-3; verbatim in ledgers EN-3. Multi-layer enemies (M2; Kev: "higher level cards
   have multiple layers"): visible card stack, only the top card highlighted/answerable, each correct answer peels one. Answer: D2
   mic-live earcon + pulsing mic glyph on the D13a panel. Silent-mode orbs (M10): all pulse equally on idle, never singling out the correct
   one. Where: wall-crack light at each spawn (M15, D13). Dodge (M3, D7): floor lean-direction marker on the first telegraph of the
@@ -71,7 +72,7 @@ D19 Wave survival + win (Kev, 2026-10-28; M24, Q11, Q12; FSRS pass E-FS-6, E-FS-
   Any other empty queue = practice run, no WIN (blocks a free WIN at limits 0). Endless: neither tier; ends only at 0 pips. Retreat any time ->
   mastery screen. Mastery screen: waves survived, tier won, personal best per (mode, selection) in the D5 save, next-due count worded "next
   uprising: N cards" (rolls at the local 04:00 study-day boundary, D5). Grade lock: D5. First run (D14) stays 6 cards, no-fail, no Overtime. Horde =
-  the D13 wall queue. Wreckage = the D17 wall-crack persists and grows one tier per wave on MRUK wall planes; ring fallback (D8) = a barricade
+  the deck queue beyond maxActive, not yet spawned (D13, EN-3 (agent default, Kev to confirm); "the D13 wall queue" **Superseded by** EN-3). Wreckage = the D17 wall-crack persists and grows one tier per wave on MRUK wall planes; ring fallback (D8) = a barricade
   taking the same tiers; decal count capped, checked at S11 >=60 fps. Built: S2 packing + budget + queue + grade lock + Overtime + win check, S6 run
   end, S6a mastery fields + PB save, S8 wreckage + barricade, S9 deck select + limit steppers + Endless + Retreat + window tuning, S11 decal cap.
 D20 Quest 3S compatibility (Kev 2026-10-28 "yes add the 3S compat decision to the plan", ledgers E-K-d): Quest 2 baseline, Quest 3S compatible, one

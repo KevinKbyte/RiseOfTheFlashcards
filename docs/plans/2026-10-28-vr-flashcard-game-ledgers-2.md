@@ -110,3 +110,10 @@ below live in [2026-10-28-vr-flashcard-game.md](2026-10-28-vr-flashcard-game.md)
   walls."
   Superseded spec wording (verbatim): ENC-001 "Max 1 engaged enemy (revealed, or halted at the reach line); others queue at their
   walls."
+  Follow-up 2026-10-31 (coordinator defaults, Kev to confirm): multi-card target stays revealed until all cards peeled (each peel =
+  CARDS-012 feedback, knockback per card kept); fewer walls than active -> ring fallback for the rest, 15 deg min gap between wall
+  spawns; single-engaged lines reconciled (D17 glow, D19 Horde, D13a/ENC-003 "target enemy").
+  Superseded wording (verbatim): D13 EN-3 "A correct answer defeats the target and the deck refills active up to maxActive." and
+  "Multi-card enemies (M2) unchanged."; CARDS-010 "Correct answer defeats the target; the deck refills active up to maxActive." and
+  "Multi-card enemies unchanged."; D13a "hides the engaged enemy's approach"; ENC-003 "never occludes the engaged enemy"; D17 "Which
+  enemy: rim glow only on the engaged enemy (D13); wall-queued enemies unlit."; D19 "Horde = the D13 wall queue."

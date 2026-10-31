@@ -200,6 +200,8 @@ D8 MR only. Play-forward yaw = tracking-space forward, recomputed on every recen
   in quest 2"): the IWSDK build (D1) currently runs immersive-vr with sceneUnderstanding off; next slice switches it to immersive-ar
   passthrough + plane detection for wall spawns. Quest 2: grayscale passthrough, walls only from the user's manual Space Setup (A5);
   ring fallback otherwise. On-device check: probe row f (device-spike ar-probe).
+  Fewer qualifying walls than active enemies (EN-3) (agent default, Kev to confirm): remaining spawns use the 2.5 m ring fallback across the same arc;
+  wall spawns keep a minimum 15 deg bearing gap from each other.
 D9 CREDITS.md from first commit; README credits GitHub KevinKbyte only, never the YouTube channel.
 D10 Secrets + signing: no STT secret ships (on-device, D2; Wit token handling **Superseded by** D2, ledgers V-1). gitleaks local
   pre-commit hook from S1 with a canary check; CI gitleaks on the private GitHub remote from 2026-10-28 (Q2). Release keystore created in
@@ -236,9 +238,11 @@ D13 Engagement distance = "slash, pop-out, creep" (Kev 2026-10-31, ledgers EN-1;
   attack first"): up to maxActive (default 3; tuning knob like the D14 speed) card-enemies advance at once, each from its own D8 wall
   spawn (ring fallback). Unrevealed ones halt at the reach line and never attack. The player picks the target: reveal any one at any
   distance (EN-2 rules apply to it). Exactly one revealed at a time (the voice-answer target); selecting another while one is revealed
-  is ignored until that one resolves. Others keep advancing while you answer; Grading (D3a) freezes only the target. A correct answer
-  defeats the target and the deck refills active up to maxActive. Deck cleared = deck empty and 0 active enemies. Multi-card enemies
-  (M2) unchanged. "Max 1 engaged enemy (revealed, or halted at the reach line) at a time; others queue at their walls"
+  is ignored until that one resolves. Others keep advancing while you answer; Grading (D3a) freezes only the target. A multi-card
+  (M2) target stays the target (revealed) until all its cards are peeled; each correct answer peels one card with the feedback above;
+  knockback per card unchanged (agent default, Kev to confirm). Defeating the target (last card peeled) refills active from the deck up to maxActive. Deck
+  cleared = deck empty and 0 active enemies. "A correct answer defeats the target" and "Multi-card enemies (M2) unchanged"
+  **Superseded by** EN-3 follow-up 2026-10-31; verbatim in ledgers EN-3. "Max 1 engaged enemy (revealed, or halted at the reach line) at a time; others queue at their walls"
   **Superseded by** EN-3; verbatim in ledgers EN-3.
   Old wording (finisher, slash + attack both in the strike slot, card text for 0.5 m) **Superseded** 2026-10-31; verbatim in ledgers EN-1.
   EN-1 wording (slash only at the reach line, always knocked back to ~2 m, creep time default 8 s) **Superseded by** EN-2 2026-10-31;
@@ -247,7 +251,7 @@ D13a Card panel (Kev 2026-10-31, EN-1; picked over "Stop + countdown ring" and h
   "on slash" **Superseded by** EN-2) the card face
   pops out as a semi-transparent panel (~70% opaque, dark backing), world/body-locked, never head-locked (comfort; would hide the enemy);
   ~1.0 m away, ~15 deg below eye line, yaw-only lazy-follow with ~20 deg dead zone, anchored to the D7 baseline; offset so it never
-  hides the engaged enemy's approach. Card text sized for the panel at ~1 m, not 0.5 m; S11 checks it at Quest 2 and Quest 3S FoV.
+  hides the target enemy's approach ("engaged enemy" **Superseded by** EN-3 (agent default, Kev to confirm)). Card text sized for the panel at ~1 m, not 0.5 m; S11 checks it at Quest 2 and Quest 3S FoV.
   Prototype: game-iwsdk proto/flashcards test page gets this loop now for an on-device try before G1 (Nov 3); S3 (Nov 6) builds it.
   Risks (EN-1): untested on device; per-card recoil may read as stalling; follow-panel comfort; plan churn before G1.
   "untested on device" **Superseded by** EN-2: first on-device run (Quest 2) 2026-10-31; panel readability unchanged (stays at ~1 m).

@@ -114,7 +114,7 @@ Deferred to relay integration:
   m); telegraphs and attacks happen only there. Re-slash after a miss is valid at any distance. EN-1 always-knockback-to-~2 m
   wording **Superseded by** EN-2.
 - ENC-003: Panel ~70% opaque with dark backing, world/body-locked, never head-locked; ~1.0 m away, ~15 deg below eye line, yaw-only
-  lazy-follow with ~20 deg dead zone, anchored to the D7 dodge baseline; never occludes the engaged enemy. Text sized at ~1 m.
+  lazy-follow with ~20 deg dead zone, anchored to the D7 dodge baseline; never occludes the target enemy (CARDS-010). Text sized at ~1 m. "engaged enemy" **Superseded by** EN-3 (agent default, Kev to confirm).
 - ENC-004: Creep speed fixed = (2.0 - 0.5) m / 8 s = 0.1875 m/s, so reveal -> strike slot >= 8 s (>= 6 s no-speech cap + 2 s
   grading timeout); earlier reveal = more time; the pacing knob. Grading (GRADE-004) freezes it. EN-1 "creep time, default 8 s"
   **Superseded by** EN-2.
@@ -133,11 +133,15 @@ CARDS-001..005 are prototype-local IDs in the game-iwsdk cards-proto tests; this
 - CARDS-010: Up to maxActive (default 3, tuning knob) card-enemies advance at once, each from its own CARDS-011 spawn; unrevealed
   ones halt at the reach line and never attack. Player picks the target: reveal any one at any distance (ENC-002 applies to it).
   Exactly one revealed at a time (the voice-answer target); selecting another while one is revealed is ignored until it resolves.
-  Others keep advancing while the target is answered; Grading (GRADE-004) freezes only the target. Correct answer defeats the
-  target; the deck refills active up to maxActive. Deck cleared = deck empty and 0 active enemies. Multi-card enemies unchanged.
+  Others keep advancing while the target is answered; Grading (GRADE-004) freezes only the target. A multi-card target stays the
+  target (revealed) until all its cards are peeled; each correct answer peels one card and triggers CARDS-012; knockback per card
+  (ENC-006) unchanged (agent default, Kev to confirm). Defeating the target (last card peeled) refills active from the deck up to maxActive. Deck cleared =
+  deck empty and 0 active enemies. "Correct answer defeats the target" and "Multi-card enemies unchanged" **Superseded by** EN-3
+  follow-up (verbatim in ledgers EN-3).
 - CARDS-011: Wall spawn picker: each active enemy gets its own wall spawn 1.2-3.5 m away within +/-35 deg of play-forward (plan
   D8); ring fallback (2.5 m, same arc) on no scene, permission denied, 5 s scene timeout, no qualifying wall, or head outside the
-  loaded room. IWSDK prototype: immersive-ar passthrough + plane detection (Quest 2: grayscale, walls only from manual Space
+  loaded room. Fewer qualifying walls than active enemies (agent default, Kev to confirm): remaining spawns use the ring fallback across the same arc;
+  wall spawns keep a minimum 15 deg bearing gap. IWSDK prototype: immersive-ar passthrough + plane detection (Quest 2: grayscale, walls only from manual Space
   Setup); on-device check = probe row f (device-spike ar-probe).
 - CARDS-012: Every correct answer gives feedback: visible (panel shatters, card peels, ENC-006) + short sound + controller/hand
   haptic where available.
