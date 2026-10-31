@@ -25,7 +25,7 @@
 
   .label {
     color: #f5d90a;
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 700;
   }
 
@@ -43,19 +43,19 @@
 
   .title {
     color: #fafaf7;
-    font-size: 18px;
+    font-size: 22px;
     font-weight: 700;
   }
 
   .status {
     color: #dddfe3;
-    font-size: 18px;
+    font-size: 22px;
     font-weight: 700;
   }
 
   .evidence {
     color: #b8bbc2;
-    font-size: 14px;
+    font-size: 18px;
   }
 
   .controls {
@@ -111,5 +111,6 @@
     <div id="load-value" class="load-value">load 0</div>
     <Button id="load-plus"><ButtonLabel>Load +</ButtonLabel></Button>
     <Button id="ar-button"><ButtonLabel>Run AR probe</ButtonLabel></Button>
+    <Button id="audio-button"><ButtonLabel>Re-run audio</ButtonLabel></Button>
   </div>
 </Panel>
