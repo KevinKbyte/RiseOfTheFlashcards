@@ -3,7 +3,10 @@
 // source maps or itself. URLs resolve against the SW registration scope so the build works from a
 // GitHub Pages subpath or a LAN host (base './'). Install caches everything and activates at once;
 // activate drops stale caches and claims clients; fetch serves same-origin GETs cache-first and
-// falls back to the cached index.html for navigations when the network is down.
+// falls back to the cached index.html for navigations when the network is down. Navigations match
+// the cache ignoring the query string (so ./?x=1 is served from the cached ./ offline); other
+// requests stay keyed exactly. The cache name changes whenever any built file's CONTENT changes,
+// not only when file names change, so a same-named rebuild still evicts the stale cache.
 import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -84,6 +87,16 @@ describe('cacheNameFor', () => {
     expect(cacheNameFor([...list, './b.js'])).not.toBe(cacheNameFor(list));
     expect(cacheNameFor(['./', './a2.js', './index.html'])).not.toBe(cacheNameFor(list));
   });
+
+  it('changes when the content digest changes for the same list', () => {
+    expect(cacheNameFor(list, 'digest-a')).not.toBe(cacheNameFor(list, 'digest-b'));
+    expect(cacheNameFor(list, 'digest-a')).not.toBe(cacheNameFor(list));
+  });
+
+  it('is deterministic for the same list and digest, and keeps the prefix', () => {
+    expect(cacheNameFor([...list], 'digest-a')).toBe(cacheNameFor(list, 'digest-a'));
+    expect(cacheNameFor(list, 'digest-a')).toMatch(/^probe-precache-.+/);
+  });
 });
 
 type Listener = (event: any) => void;
@@ -120,9 +133,21 @@ class FakeCache {
   async put(r: string | { url: string }, res: Response): Promise<void> {
     this.entries.set(keyOf(r), res);
   }
-  async match(r: string | { url: string }): Promise<Response | undefined> {
-    return this.entries.get(keyOf(r))?.clone();
+  async match(
+    r: string | { url: string },
+    opts: { ignoreSearch?: boolean } = {},
+  ): Promise<Response | undefined> {
+    if (!opts.ignoreSearch) return this.entries.get(keyOf(r))?.clone();
+    const want = stripSearch(keyOf(r));
+    for (const [k, v] of this.entries) if (stripSearch(k) === want) return v.clone();
+    return undefined;
   }
+}
+
+function stripSearch(u: string): string {
+  const url = new URL(u);
+  url.search = '';
+  return url.href;
 }
 
 class FakeCaches {
@@ -144,9 +169,12 @@ class FakeCaches {
   async has(name: string): Promise<boolean> {
     return this.store.has(name);
   }
-  async match(r: string | { url: string }): Promise<Response | undefined> {
+  async match(
+    r: string | { url: string },
+    opts: { ignoreSearch?: boolean } = {},
+  ): Promise<Response | undefined> {
     for (const c of this.store.values()) {
-      const hit = await c.match(r);
+      const hit = await c.match(r, opts);
       if (hit) return hit;
     }
     return undefined;
@@ -283,6 +311,38 @@ describe('renderServiceWorker (evaluated in a sandbox)', () => {
     expect(await (await response())!.text()).toBe('cached:https://h/sub/index.html');
   });
 
+  it('renderServiceWorker(list, digest) bakes in the digest-specific cache name', async () => {
+    const src = renderServiceWorker(list, 'digest-a');
+    expect(src).toContain(cacheNameFor(list, 'digest-a'));
+    expect(src).not.toContain(cacheNameFor(list));
+  });
+
+  it('offline navigation with a query string is served from the cached ./ entry (ignoreSearch)', async () => {
+    const sw = loadSw(list);
+    await sw.lifecycle('install');
+    sw.net.online = false;
+    const { respondWith, response } = sw.dispatchFetch(req('https://h/sub/?x=1', { navigate: true }));
+    expect(respondWith).toHaveBeenCalled();
+    expect(await (await response())!.text()).toBe('cached:https://h/sub/');
+  });
+
+  it('a non-navigation request with a query string is still keyed exactly (goes to network)', async () => {
+    const sw = loadSw(list);
+    await sw.lifecycle('install');
+    sw.fetchFake.mockClear();
+    const { response } = sw.dispatchFetch(req('https://h/sub/assets/x.js?v=2'));
+    expect(await (await response())!.text()).toBe('net:https://h/sub/assets/x.js?v=2');
+    expect(sw.fetchFake).toHaveBeenCalledTimes(1);
+  });
+
+  it('a non-navigation request with a query string offline is not served the query-less entry', async () => {
+    const sw = loadSw(list);
+    await sw.lifecycle('install');
+    sw.net.online = false;
+    const { response } = sw.dispatchFetch(req('https://h/sub/assets/x.js?v=2'));
+    await expect(response()).rejects.toThrow('Failed to fetch');
+  });
+
   it('emits valid JS when a path contains a quote (list is safely embedded)', async () => {
     const odd = ['./', "./it's.js", './index.html'];
     const sw = loadSw(odd);
@@ -351,16 +411,54 @@ describe('swPrecache plugin', () => {
     expect(src).toContain('./assets/a.js');
   });
 
-  it('emits sw.js equal to renderServiceWorker of the walked list', async () => {
-    const outDir = join(root, 'dist');
-    await seed(outDir);
+  const CACHE_NAME_RE = /probe-precache-[0-9a-zA-Z_-]+/g;
+  const cacheNameIn = (src: string): string => {
+    const m = /const CACHE = "(probe-precache-[^"]+)"/.exec(src);
+    if (!m) throw new Error('CACHE constant not found in sw.js');
+    return m[1];
+  };
+
+  async function build(outDir: string): Promise<string> {
     const p = swPrecache();
     await call(p.configResolved as Hook, { build: { outDir }, root });
     await call(p.closeBundle as Hook);
+    return readFile(join(outDir, 'sw.js'), 'utf8');
+  }
+
+  it('emits sw.js equal to renderServiceWorker of the walked list, up to the content-hashed cache name', async () => {
+    const outDir = join(root, 'dist');
+    await seed(outDir);
+    const src = await build(outDir);
     const expected = renderServiceWorker(
       buildPrecacheList(['index.html', 'assets/a.js', 'assets/a.js.map', 'assets/nested/b.css', 'ort.wasm']),
+      'any-digest',
     );
-    expect(await readFile(join(outDir, 'sw.js'), 'utf8')).toBe(expected);
+    expect(src.replace(CACHE_NAME_RE, 'NAME')).toBe(expected.replace(CACHE_NAME_RE, 'NAME'));
+  });
+
+  it('cache name changes when a file content changes but the file names do not', async () => {
+    const a = join(root, 'dist-a');
+    const b = join(root, 'dist-b');
+    await seed(a);
+    await seed(b);
+    await writeFile(join(b, 'index.html'), '<!doctype html><title>edited</title>');
+    const nameA = cacheNameIn(await build(a));
+    const nameB = cacheNameIn(await build(b));
+    expect(nameB).not.toBe(nameA);
+    expect(nameA).not.toBe(
+      cacheNameFor(buildPrecacheList(['index.html', 'assets/a.js', 'assets/nested/b.css', 'ort.wasm'])),
+    );
+  });
+
+  it('cache name is stable across identical builds, ignoring a previous sw.js in outDir', async () => {
+    const a = join(root, 'dist-a');
+    const b = join(root, 'dist-b');
+    await seed(a);
+    await seed(b);
+    const first = cacheNameIn(await build(a));
+    const rebuilt = cacheNameIn(await build(a));
+    expect(rebuilt).toBe(first);
+    expect(cacheNameIn(await build(b))).toBe(first);
   });
 
   it('does not precache a stale sw.js left in outDir by a previous build', async () => {

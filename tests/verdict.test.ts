@@ -2,6 +2,12 @@
 // UNAVAILABLE or PENDING -- from its measured inputs, with inclusive bars where the contract
 // says so (whisper p50 <= 1500 ms, frame-rate p5 >= 60), a strict bar for mic silence
 // (peakRms > 0.001), and every result labelled as Quest 2 evidence because judges use Quest 3/3S.
+// A verdict never claims PASS on evidence that does not prove the premise: whisper latency from a
+// silent clip or empty transcript is UNAVAILABLE (no valid measurement); frame rate needs >= 300
+// frames and is judged on the load-level-0 baseline only (other levels are evidence); persistence
+// needs the IndexedDB counter to match the boot count; offline needs the page to have BOOTED offline
+// under SW control (going offline on a live page proves nothing); controllers without hands is
+// PENDING (prompt to show hands), not an early FAIL.
 import { describe, expect, it } from 'vitest';
 import {
   FPS_MIN,
@@ -10,6 +16,7 @@ import {
   QUEST2_LABEL,
   WHISPER_P50_BAR_MS,
   arVerdict,
+  fpsBoardVerdict,
   fpsVerdict,
   inputVerdict,
   makeResult,
@@ -98,30 +105,67 @@ describe('micVerdict', () => {
 
 // Covers: SPIKE-b
 describe('whisperVerdict', () => {
+  const ok = { webgpu: true, clipSilent: false, transcript: 'hello world' };
+
   it('UNAVAILABLE without WebGPU', () => {
-    expectShape(whisperVerdict({ webgpu: false, latenciesMs: [100] }), 'b', 'UNAVAILABLE');
+    expectShape(whisperVerdict({ ...ok, webgpu: false, latenciesMs: [100] }), 'b', 'UNAVAILABLE');
   });
 
   it('PENDING with no latency samples', () => {
-    expectShape(whisperVerdict({ webgpu: true, latenciesMs: [] }), 'b', 'PENDING');
+    expectShape(whisperVerdict({ ...ok, latenciesMs: [] }), 'b', 'PENDING');
   });
 
   it('PASS when p50 is exactly 1500 ms (inclusive bar)', () => {
-    expectShape(whisperVerdict({ webgpu: true, latenciesMs: [1500] }), 'b', 'PASS');
-    expectShape(whisperVerdict({ webgpu: true, latenciesMs: [1400, 1600] }), 'b', 'PASS');
+    expectShape(whisperVerdict({ ...ok, latenciesMs: [1500] }), 'b', 'PASS');
+    expectShape(whisperVerdict({ ...ok, latenciesMs: [1400, 1600] }), 'b', 'PASS');
   });
 
   it('FAIL when p50 is above 1500 ms', () => {
-    expectShape(whisperVerdict({ webgpu: true, latenciesMs: [1500.5] }), 'b', 'FAIL');
-    expectShape(whisperVerdict({ webgpu: true, latenciesMs: [900, 2000, 2100] }), 'b', 'FAIL');
+    expectShape(whisperVerdict({ ...ok, latenciesMs: [1500.5] }), 'b', 'FAIL');
+    expectShape(whisperVerdict({ ...ok, latenciesMs: [900, 2000, 2100] }), 'b', 'FAIL');
   });
 
   it('evidence contains the rounded p50 in ms', () => {
     // p50 of [1000, 1499.6] = 1249.8 -> 1250
-    const r = whisperVerdict({ webgpu: true, latenciesMs: [1000, 1499.6] });
+    const r = whisperVerdict({ ...ok, latenciesMs: [1000, 1499.6] });
     expect(r.evidence).toContain('1250');
-    const r2 = whisperVerdict({ webgpu: true, latenciesMs: [2000, 2400, 2201.2] });
+    const r2 = whisperVerdict({ ...ok, latenciesMs: [2000, 2400, 2201.2] });
     expect(r2.evidence).toContain('2201');
+  });
+
+  it('UNAVAILABLE (silent clip) when the clip was silent, even if p50 meets the bar', () => {
+    const r = whisperVerdict({ ...ok, clipSilent: true, latenciesMs: [800] });
+    expectShape(r, 'b', 'UNAVAILABLE');
+    expect(r.evidence).toContain('silent clip');
+  });
+
+  it('UNAVAILABLE (silent clip) even when p50 is over the bar -- no speech, no valid measurement', () => {
+    const r = whisperVerdict({ ...ok, clipSilent: true, latenciesMs: [2500] });
+    expectShape(r, 'b', 'UNAVAILABLE');
+    expect(r.evidence).toContain('silent clip');
+  });
+
+  it('UNAVAILABLE (empty transcript) when the transcript is empty or whitespace-only', () => {
+    for (const transcript of ['', '   ', ' \n\t ']) {
+      const r = whisperVerdict({ ...ok, transcript, latenciesMs: [800] });
+      expectShape(r, 'b', 'UNAVAILABLE');
+      expect(r.evidence).toContain('empty transcript');
+    }
+  });
+
+  it('silent clip takes precedence in evidence when the transcript is also empty', () => {
+    const r = whisperVerdict({ ...ok, clipSilent: true, transcript: '', latenciesMs: [800] });
+    expectShape(r, 'b', 'UNAVAILABLE');
+    expect(r.evidence).toContain('silent clip');
+  });
+
+  it('still UNAVAILABLE (no WebGPU) and PENDING (no runs) before the clip checks', () => {
+    expectShape(whisperVerdict({ ...ok, webgpu: false, clipSilent: true, latenciesMs: [800] }), 'b', 'UNAVAILABLE');
+    expectShape(whisperVerdict({ ...ok, clipSilent: true, latenciesMs: [] }), 'b', 'PENDING');
+  });
+
+  it('PASS for a non-silent clip with a non-empty transcript and p50 <= 1500', () => {
+    expectShape(whisperVerdict({ ...ok, transcript: ' the quick fox ', latenciesMs: [800] }), 'b', 'PASS');
   });
 });
 
@@ -132,8 +176,10 @@ describe('inputVerdict', () => {
     expectShape(inputVerdict({ handsSeen: true, controllersSeen: true }), 'c', 'PASS');
   });
 
-  it('FAIL when only controllers are seen', () => {
-    expectShape(inputVerdict({ handsSeen: false, controllersSeen: true }), 'c', 'FAIL');
+  it('PENDING (not an early FAIL) when only controllers are seen, prompting to show hands', () => {
+    const r = inputVerdict({ handsSeen: false, controllersSeen: true });
+    expectShape(r, 'c', 'PENDING');
+    expect(r.evidence).toContain('controllers ok; put them down and show both hands');
   });
 
   it('PENDING when nothing is seen', () => {
@@ -144,22 +190,44 @@ describe('inputVerdict', () => {
 // Covers: SPIKE-d
 describe('persistenceVerdict', () => {
   it('FAIL when an error is reported, even after a reload', () => {
-    expectShape(persistenceVerdict({ bootCount: 3, persisted: true, error: 'QuotaExceededError' }), 'd', 'FAIL');
+    expectShape(
+      persistenceVerdict({ bootCount: 3, persisted: true, idbPrev: 2, error: 'QuotaExceededError' }),
+      'd',
+      'FAIL',
+    );
   });
 
-  it('PASS once the boot count reaches 2 (survived a reload)', () => {
-    expectShape(persistenceVerdict({ bootCount: 2, persisted: true }), 'd', 'PASS');
-    expectShape(persistenceVerdict({ bootCount: 7, persisted: false }), 'd', 'PASS');
+  it('PASS once the boot count reaches 2 and IDB held the previous boot count', () => {
+    expectShape(persistenceVerdict({ bootCount: 2, persisted: true, idbPrev: 1 }), 'd', 'PASS');
+    expectShape(persistenceVerdict({ bootCount: 7, persisted: false, idbPrev: 6 }), 'd', 'PASS');
   });
 
-  it('PENDING on first boot (reload to confirm)', () => {
-    expectShape(persistenceVerdict({ bootCount: 1, persisted: null }), 'd', 'PENDING');
-    expectShape(persistenceVerdict({ bootCount: 0, persisted: true }), 'd', 'PENDING');
+  it('FAIL (IDB lost) when the stored previous count does not equal bootCount - 1', () => {
+    const r = persistenceVerdict({ bootCount: 3, persisted: true, idbPrev: 1 });
+    expectShape(r, 'd', 'FAIL');
+    expect(r.evidence).toContain('IDB lost (prev=1, expected 2)');
+  });
+
+  it('FAIL (IDB lost) when IDB returned nothing on a reload', () => {
+    const r = persistenceVerdict({ bootCount: 2, persisted: true, idbPrev: undefined });
+    expectShape(r, 'd', 'FAIL');
+    expect(r.evidence).toContain('IDB lost (prev=undefined, expected 1)');
+  });
+
+  it('FAIL (IDB lost) on a type mismatch -- the comparison is strict', () => {
+    const r = persistenceVerdict({ bootCount: 2, persisted: true, idbPrev: '1' });
+    expectShape(r, 'd', 'FAIL');
+    expect(r.evidence).toContain('IDB lost');
+  });
+
+  it('PENDING on first boot with no IDB value yet (reload once)', () => {
+    expectShape(persistenceVerdict({ bootCount: 1, persisted: null, idbPrev: undefined }), 'd', 'PENDING');
+    expectShape(persistenceVerdict({ bootCount: 0, persisted: true, idbPrev: undefined }), 'd', 'PENDING');
   });
 
   it('evidence includes the persisted value', () => {
     for (const persisted of [true, false, null]) {
-      const r = persistenceVerdict({ bootCount: 2, persisted });
+      const r = persistenceVerdict({ bootCount: 2, persisted, idbPrev: 1 });
       expect(r.evidence).toContain(String(persisted));
     }
   });
@@ -175,13 +243,58 @@ describe('fpsVerdict', () => {
     expectShape(fpsVerdict({ p50: 72, p5: Number.NaN, frames: 10 }), 'e', 'PENDING');
   });
 
-  it('PASS when p5 is exactly 60 (inclusive bar)', () => {
-    expectShape(fpsVerdict({ p50: 72, p5: 60, frames: 100 }), 'e', 'PASS');
-    expectShape(fpsVerdict({ p50: 90, p5: 88, frames: 100 }), 'e', 'PASS');
+  it('PENDING (collecting) below the 300-frame minimum, even when p5 would pass or fail', () => {
+    for (const p5 of [72, 30]) {
+      const r = fpsVerdict({ p50: 72, p5, frames: 299 });
+      expectShape(r, 'e', 'PENDING');
+      expect(r.evidence).toContain('collecting');
+    }
+  });
+
+  it('PASS when p5 is exactly 60 (inclusive bar) at the 300-frame minimum', () => {
+    expectShape(fpsVerdict({ p50: 72, p5: 60, frames: 300 }), 'e', 'PASS');
+    expectShape(fpsVerdict({ p50: 90, p5: 88, frames: 1000 }), 'e', 'PASS');
   });
 
   it('FAIL when p5 is below 60', () => {
-    expectShape(fpsVerdict({ p50: 72, p5: 59.99, frames: 100 }), 'e', 'FAIL');
+    expectShape(fpsVerdict({ p50: 72, p5: 59.99, frames: 300 }), 'e', 'FAIL');
+  });
+});
+
+// Covers: SPIKE-e
+describe('fpsBoardVerdict (status from load level 0 only)', () => {
+  const s = (p50: number, p5: number, frames = 600) => ({ p50, p5, frames });
+
+  it('PENDING when there is no level-0 baseline', () => {
+    expectShape(fpsBoardVerdict(new Map()), 'e', 'PENDING');
+    expectShape(fpsBoardVerdict(new Map([[50, s(72, 70)]])), 'e', 'PENDING');
+  });
+
+  it('PASS when L0 p5 >= 60 even though a heavier level fails', () => {
+    const r = fpsBoardVerdict(new Map([[0, s(72, 71)], [200, s(45, 30)]]));
+    expectShape(r, 'e', 'PASS');
+  });
+
+  it('FAIL when L0 p5 < 60 even though other levels pass', () => {
+    const r = fpsBoardVerdict(new Map([[0, s(70, 55)], [50, s(90, 88)]]));
+    expectShape(r, 'e', 'FAIL');
+  });
+
+  it('PENDING (collecting) when L0 has fewer than 300 frames', () => {
+    const r = fpsBoardVerdict(new Map([[0, s(72, 71, 120)], [50, s(72, 71)]]));
+    expectShape(r, 'e', 'PENDING');
+    expect(r.evidence).toContain('collecting');
+  });
+
+  it('evidence lists every level ascending as rounded p50/p5', () => {
+    const r = fpsBoardVerdict(
+      new Map([
+        [200, s(45.2, 29.6)],
+        [0, s(72.4, 70.6)],
+        [50, s(70, 66.4)],
+      ]),
+    );
+    expect(r.evidence).toContain('L0 72/71 L50 70/66 L200 45/30');
   });
 });
 
@@ -213,19 +326,33 @@ describe('arVerdict', () => {
 
 // Covers: SPIKE-g
 describe('offlineVerdict', () => {
+  const base = { swSupported: true, controlled: true, online: false, bootedOffline: true };
+
   it('UNAVAILABLE without service-worker support', () => {
-    expectShape(offlineVerdict({ swSupported: false, controlled: true, online: false }), 'g', 'UNAVAILABLE');
+    expectShape(offlineVerdict({ ...base, swSupported: false }), 'g', 'UNAVAILABLE');
   });
 
   it('PENDING when the page is not SW-controlled yet', () => {
-    expectShape(offlineVerdict({ swSupported: true, controlled: false, online: false }), 'g', 'PENDING');
+    expectShape(offlineVerdict({ ...base, controlled: false, bootedOffline: false }), 'g', 'PENDING');
   });
 
   it('PENDING when controlled but still online (airplane mode + reload)', () => {
-    expectShape(offlineVerdict({ swSupported: true, controlled: true, online: true }), 'g', 'PENDING');
+    const r = offlineVerdict({ ...base, online: true, bootedOffline: false });
+    expectShape(r, 'g', 'PENDING');
+    expect(r.evidence).toBe('controlled; enable airplane mode and reload');
   });
 
-  it('PASS when controlled and loaded offline', () => {
-    expectShape(offlineVerdict({ swSupported: true, controlled: true, online: false }), 'g', 'PASS');
+  it('PENDING (reload) when the live page went offline after an online boot', () => {
+    const r = offlineVerdict({ ...base, online: false, bootedOffline: false });
+    expectShape(r, 'g', 'PENDING');
+    expect(r.evidence).toContain('reload');
+  });
+
+  it('PASS when the page booted offline under SW control', () => {
+    expectShape(offlineVerdict(base), 'g', 'PASS');
+  });
+
+  it('PASS stays once the network returns -- the offline boot is the proof', () => {
+    expectShape(offlineVerdict({ ...base, online: true }), 'g', 'PASS');
   });
 });

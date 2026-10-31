@@ -1,6 +1,7 @@
 // Requirement: the device probe turns raw timings and audio samples into the numbers its
 // verdicts judge -- percentiles (linear interpolation), RMS loudness, and frame-rate p50/p5 --
-// without mutating inputs and without inventing data when there is none.
+// without mutating inputs and without inventing data when there is none. Frame-rate stats can
+// skip the first N warm-up frames after a reset (shader compile / load hitches are not steady state).
 import { describe, expect, it } from 'vitest';
 import { fpsFromFrameDeltas, percentile, rms } from '../src/probe/stats.js';
 
@@ -93,5 +94,40 @@ describe('fpsFromFrameDeltas', () => {
     const deltas = [20, 0, 16];
     fpsFromFrameDeltas(deltas);
     expect(deltas).toEqual([20, 0, 16]);
+  });
+
+  it('skipFirst ignores the first N raw deltas (warm-up after reset) before computing', () => {
+    // 10 warm-up hitches at 100 ms (10 fps) then steady 16 ms (62.5 fps)
+    const deltas = [...Array(10).fill(100), 16, 16, 16];
+    const r = fpsFromFrameDeltas(deltas, 10);
+    expect(r.frames).toBe(3);
+    expect(r.p5).toBeCloseTo(62.5, 10);
+    expect(r.p50).toBeCloseTo(62.5, 10);
+  });
+
+  it('skipFirst defaults to 0 (all deltas count)', () => {
+    const deltas = [...Array(10).fill(100), 16, 16, 16];
+    expect(fpsFromFrameDeltas(deltas).frames).toBe(13);
+    expect(fpsFromFrameDeltas(deltas, 0).frames).toBe(13);
+  });
+
+  it('skipFirst counts raw positions, including deltas that would have been dropped', () => {
+    const r = fpsFromFrameDeltas([0, Number.NaN, 100, 20], 2);
+    expect(r.frames).toBe(2);
+  });
+
+  it('skipFirst at or beyond the input length yields NaN, NaN, 0', () => {
+    for (const skip of [3, 50]) {
+      const r = fpsFromFrameDeltas([16, 16, 16], skip);
+      expect(r.frames).toBe(0);
+      expect(r.p50).toBeNaN();
+      expect(r.p5).toBeNaN();
+    }
+  });
+
+  it('skipFirst does not mutate the input array', () => {
+    const deltas = [100, 100, 16];
+    fpsFromFrameDeltas(deltas, 2);
+    expect(deltas).toEqual([100, 100, 16]);
   });
 });
