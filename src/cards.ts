@@ -1,7 +1,7 @@
 /**
- * VR flashcard page: each card is guarded by an enemy that walks in along -Z. Selecting the enemy
- * once it is in reach slashes it; the card's prompt pops out on a see-through panel with answer
- * orbs below it. Selecting an orb (controller trigger, hand pinch ray, or mouse) feeds chooseAnswer.
+ * VR flashcard page: each card is guarded by a cartoon-faced enemy that walks in along -Z. Selecting
+ * the enemy at any distance slashes (reveals) it; the card's prompt pops out on a see-through panel
+ * with answer orbs below it. Selecting an orb (controller trigger, hand pinch ray, or mouse) feeds chooseAnswer.
  */
 import {
   CanvasTexture,
@@ -75,6 +75,53 @@ function paintText(texture: CanvasTexture, lines: readonly string[], bg: string)
   texture.needsUpdate = true;
 }
 
+// Grumpy, mischievous face on a transparent canvas; drawn over the card back so the prompt stays
+// hidden until the reveal.
+function paintFace(canvas: HTMLCanvasElement): void {
+  const ctx = canvas.getContext('2d')!;
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  ctx.lineCap = 'round';
+  const eyeY = h * 0.4;
+  const eyeR = w * 0.13;
+  for (const side of [-1, 1]) {
+    const x = w / 2 + side * w * 0.2;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(x, eyeY, eyeR, 0, 2 * Math.PI);
+    ctx.fill();
+    // Pupils glance inward and down for a scheming look.
+    ctx.fillStyle = '#111827';
+    ctx.beginPath();
+    ctx.arc(x - side * eyeR * 0.3, eyeY + eyeR * 0.25, eyeR * 0.5, 0, 2 * Math.PI);
+    ctx.fill();
+    // Angry brow: high at the outside, low toward the nose.
+    ctx.strokeStyle = '#111827';
+    ctx.lineWidth = w * 0.06;
+    ctx.beginPath();
+    ctx.moveTo(x + side * eyeR * 1.2, eyeY - eyeR * 1.7);
+    ctx.lineTo(x - side * eyeR * 1.1, eyeY - eyeR * 0.9);
+    ctx.stroke();
+  }
+  // Lopsided frown that curls up at one corner: grumpy with a smirk.
+  ctx.strokeStyle = '#111827';
+  ctx.lineWidth = w * 0.05;
+  ctx.beginPath();
+  ctx.moveTo(w * 0.3, h * 0.74);
+  ctx.quadraticCurveTo(w * 0.48, h * 0.64, w * 0.66, h * 0.72);
+  ctx.quadraticCurveTo(w * 0.71, h * 0.74, w * 0.72, h * 0.69);
+  ctx.stroke();
+  // Single fang under the mouth for mischief.
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(w * 0.4, h * 0.705);
+  ctx.lineTo(w * 0.46, h * 0.69);
+  ctx.lineTo(w * 0.435, h * 0.76);
+  ctx.closePath();
+  ctx.fill();
+}
+
 function textPlane(
   lines: readonly string[],
   width: number,
@@ -105,6 +152,8 @@ export class CardsSystem extends createSystem({
   private enemy: Entity | undefined;
   private enemyEdge: MeshBasicMaterial | undefined;
   private readonly enemyBase = new Vector3();
+  // Built once and shared by every enemy; owned (and disposed) here, not by the enemy entity.
+  private face: { geometry: PlaneGeometry; material: MeshBasicMaterial } | undefined;
   private anchor: Entity | undefined;
   private panelMesh: Mesh<PlaneGeometry, MeshBasicMaterial> | undefined;
   private message: Entity | undefined;
@@ -158,15 +207,22 @@ export class CardsSystem extends createSystem({
     this.clearEncounter();
     this.message?.dispose();
     this.message = undefined;
+    this.face?.material.map?.dispose();
+    this.face?.material.dispose();
+    this.face?.geometry.dispose();
+    this.face = undefined;
     super.destroy();
   }
 
-  // Selecting the enemy stands in for a slash; a real swing gesture is a later slice.
+  // Selecting the enemy stands in for a slash; a real swing gesture is a later slice. slash()
+  // returns the same object when the phase does not allow it (already revealed or cleared).
   private applySlash(): void {
     if (!this.pendingSlash) return;
     this.pendingSlash = false;
-    if (this.enc === null || this.enc.phase !== 'slashable') return;
-    this.enc = slash(this.enc);
+    if (this.enc === null) return;
+    const next = slash(this.enc);
+    if (next === this.enc) return;
+    this.enc = next;
     this.showPanel();
   }
 
@@ -211,9 +267,30 @@ export class CardsSystem extends createSystem({
     );
     back.position.z = 0.005;
     edge.add(back);
+    const face = this.faceParts();
+    const faceMesh = new Mesh(face.geometry, face.material);
+    faceMesh.position.z = 0.01;
+    // Runtime-only so entity dispose skips the shared face resources (destroy() frees them).
+    faceMesh.userData.iwsdkRuntimeOnly = true;
+    edge.add(faceMesh);
     this.enemy = this.world.createTransformEntity(edge);
     this.enemy.addComponent(RayInteractable);
     this.updateEnemy();
+  }
+
+  private faceParts(): { geometry: PlaneGeometry; material: MeshBasicMaterial } {
+    if (this.face !== undefined) return this.face;
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = Math.round((256 * ENEMY_H) / ENEMY_W);
+    paintFace(canvas);
+    const map = new CanvasTexture(canvas);
+    map.colorSpace = SRGBColorSpace;
+    // alphaTest (not blending) keeps the face in the opaque pass with depth writes, so it never
+    // mis-sorts against the see-through panel.
+    const material = new MeshBasicMaterial({ map, alphaTest: 0.5 });
+    this.face = { geometry: new PlaneGeometry(ENEMY_W, ENEMY_H), material };
+    return this.face;
   }
 
   private updateEnemy(): void {
