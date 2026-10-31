@@ -30,6 +30,9 @@ export const WHISPER_P50_BAR_MS = 1500;
 export const FPS_MIN = 60;
 export const FPS_MIN_FRAMES = 300;
 export const MIC_SILENCE_RMS = 0.001;
+/** Peak 50 ms window RMS a clip needs before Whisper latency on it counts as a speech measurement. */
+export const SPEECH_RMS = 0.01;
+export const MIC_SUSPENDED = 'audio context suspended; tap Re-run audio';
 
 export function makeResult(id: PremiseId, status: Status, evidence: string): PremiseResult {
   return { id, title: PREMISE_TITLES[id], status, evidence, label: QUEST2_LABEL };
@@ -40,11 +43,16 @@ export function micVerdict(i: {
   inSession: boolean;
   outcome: 'granted' | 'denied' | 'error' | null;
   peakRms: number;
+  ctxState?: string;
 }): PremiseResult {
   if (!i.supported) return makeResult('a', 'UNAVAILABLE', 'getUserMedia unsupported');
   if (i.outcome === null) return makeResult('a', 'PENDING', 'not requested yet');
   if (i.outcome !== 'granted') return makeResult('a', 'FAIL', `permission ${i.outcome}`);
   if (!i.inSession) return makeResult('a', 'FAIL', 'granted outside immersive session');
+  // A non-running context delivers no samples, so silence there says nothing about the mic.
+  if (i.ctxState !== undefined && i.ctxState !== 'running') {
+    return makeResult('a', 'PENDING', `${MIC_SUSPENDED} (audioCtx=${i.ctxState})`);
+  }
   const ev = `peakRms=${i.peakRms.toFixed(4)}`;
   return i.peakRms > MIC_SILENCE_RMS
     ? makeResult('a', 'PASS', ev)
@@ -56,15 +64,37 @@ export function whisperVerdict(i: {
   latenciesMs: readonly number[];
   clipSilent: boolean;
   transcript: string;
+  hasClip?: boolean;
 }): PremiseResult {
   if (!i.webgpu) return makeResult('b', 'UNAVAILABLE', 'no WebGPU adapter');
+  if (i.hasClip === false) return makeResult('b', 'UNAVAILABLE', 'no mic clip (see row a)');
   if (i.latenciesMs.length === 0) return makeResult('b', 'PENDING', 'no timed runs yet');
   // Latency on silence or an empty decode is not a valid measurement of real transcription.
   if (i.clipSilent) return makeResult('b', 'UNAVAILABLE', 'silent clip; speak during recording');
   if (i.transcript.trim() === '') return makeResult('b', 'UNAVAILABLE', 'empty transcript');
+  if (!hasSpeech(i.transcript)) return makeResult('b', 'UNAVAILABLE', 'no speech in transcript; use Re-run audio');
   const p50 = percentile(i.latenciesMs, 50);
   const ev = `p50=${Math.round(p50)} ms over ${i.latenciesMs.length} runs (bar ${WHISPER_P50_BAR_MS} ms)`;
   return makeResult('b', p50 <= WHISPER_P50_BAR_MS ? 'PASS' : 'FAIL', ev);
+}
+
+/** Whisper emits "[BLANK_AUDIO]" / "(buzzing)" for non-speech; only a real word of 2+ letters counts. */
+function hasSpeech(transcript: string): boolean {
+  const stripped = transcript.replace(/\[[^\]]*\]|\([^)]*\)/g, ' ');
+  return /[A-Za-z]{2,}/.test(stripped);
+}
+
+export function classifyWhisperError(e: unknown): PremiseResult {
+  const text = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+  if (/fetch|network/i.test(text)) {
+    return makeResult('b', 'UNAVAILABLE', `model not cached/offline; ${text}`);
+  }
+  return makeResult('b', 'FAIL', `whisper error: ${text}`);
+}
+
+/** Re-run audio outside a live session must not request the mic: that would test the wrong premise. */
+export function audioRerunGate(inSession: boolean): PremiseResult | null {
+  return inSession ? null : makeResult('a', 'PENDING', 'enter XR to re-run audio');
 }
 
 export function inputVerdict(i: { handsSeen: boolean; controllersSeen: boolean }): PremiseResult {

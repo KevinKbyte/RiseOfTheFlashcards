@@ -12,6 +12,7 @@ import { runPersistenceProbe } from './persistence.js';
 import { ResultBoard } from './results.js';
 import { fpsFromFrameDeltas } from './stats.js';
 import {
+  audioRerunGate,
   fpsBoardVerdict,
   inputVerdict,
   makeResult,
@@ -150,6 +151,13 @@ export class ProbeSystem extends createSystem({}) {
 
   private async runAudio(): Promise<void> {
     if (this.audioBusy) return;
+    const gate = audioRerunGate(this.world.session !== undefined);
+    if (gate) {
+      // Only a not-yet-final row a takes the hint; a recorded verdict must survive a stray tap.
+      const a = this.board.all().find((r) => r.id === 'a');
+      if (!a || a.status === 'PENDING') this.board.set(gate);
+      return;
+    }
     this.audioBusy = true;
     const status = (id: PremiseId) => (text: string) => this.board.set(makeResult(id, 'PENDING', text));
     let micDone = false;

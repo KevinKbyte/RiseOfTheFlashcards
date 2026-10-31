@@ -6,7 +6,14 @@
 import ortMjsUrl from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.mjs?url';
 import ortWasmUrl from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?url';
 import { percentile, rms } from './stats.js';
-import { MIC_SILENCE_RMS, makeResult, micVerdict, whisperVerdict, type PremiseResult } from './verdict.js';
+import {
+  SPEECH_RMS,
+  classifyWhisperError,
+  makeResult,
+  micVerdict,
+  whisperVerdict,
+  type PremiseResult,
+} from './verdict.js';
 
 const CLIP_MS = 3000;
 const WHISPER_RATE = 16000;
@@ -110,11 +117,13 @@ export async function runMicProbe(
   try {
     onStatus('RECORDING 3 s - SPEAK NOW');
     const { peakRms, clip, ctxState } = await capture(stream);
-    const v = micVerdict({ supported, inSession: grantedInSession, outcome: 'granted', peakRms });
+    const v = micVerdict({ supported, inSession: grantedInSession, outcome: 'granted', peakRms, ctxState });
     const ev =
       `${v.evidence}; perm before=${permBefore} after=${await micPermissionState()}; ` +
       `grant ${grantMs} ms (long = prompt shown); audioCtx=${ctxState}`;
-    return { result: makeResult('a', v.status, ev), clip, peakRms };
+    // A non-running context recorded nothing; handing on its zeros would let b judge fake silence.
+    const usable = ctxState === 'running';
+    return { result: makeResult('a', v.status, ev), clip: usable ? clip : null, peakRms };
   } finally {
     for (const track of stream.getTracks()) track.stop();
   }
@@ -125,11 +134,14 @@ export async function runWhisperProbe(
   peakRms: number,
   onStatus: StatusFn,
 ): Promise<PremiseResult> {
-  const clipSilent = clip === null || peakRms <= MIC_SILENCE_RMS;
+  const clipSilent = clip === null || peakRms < SPEECH_RMS;
+  const hasClip = clip !== null;
   const gpu = (navigator as Navigator & { gpu?: { requestAdapter(): Promise<unknown> } }).gpu;
   const adapter = gpu ? await gpu.requestAdapter().catch(() => null) : null;
-  if (!adapter) return whisperVerdict({ webgpu: false, latenciesMs: [], clipSilent, transcript: '' });
-  const input = clip ?? new Float32Array(CLIP_SAMPLES);
+  if (!adapter || !hasClip) {
+    return whisperVerdict({ webgpu: adapter !== null, latenciesMs: [], clipSilent, transcript: '', hasClip });
+  }
+  const input = clip;
   try {
     const t0 = performance.now();
     const { pipeline, env } = await import('@huggingface/transformers');
@@ -141,6 +153,7 @@ export async function runWhisperProbe(
       },
     });
     const loadMs = Math.round(performance.now() - t0);
+    onStatus(`running whisper 1 warm-up + ${TIMED_RUNS} runs...`);
     await asr(input);
     const latenciesMs: number[] = [];
     let text = '';
@@ -154,10 +167,10 @@ export async function runWhisperProbe(
     // An UNAVAILABLE verdict omits latency; keep the raw p50 as context, not as the verdict.
     const raw = v.status === 'UNAVAILABLE' ? `; raw p50=${Math.round(percentile(latenciesMs, 50))} ms` : '';
     const ev =
-      `${v.evidence}${raw}; load ${loadMs} ms; clip=${clip ? 'mic' : 'silence'} peakRms=${peakRms.toFixed(4)}; ` +
+      `${v.evidence}${raw}; load ${loadMs} ms; peakRms=${peakRms.toFixed(4)}; ` +
       `text="${text.trim().slice(0, 40)}"`;
     return makeResult('b', v.status, ev);
   } catch (e) {
-    return makeResult('b', 'FAIL', `whisper error: ${msg(e)}`);
+    return classifyWhisperError(e);
   }
 }
