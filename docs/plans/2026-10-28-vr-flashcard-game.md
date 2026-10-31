@@ -4,7 +4,7 @@ GOAL: judged Quest 3/3S build (dev + test on Quest 2 only, A4 waiver; residuals 
   hand, answers by voice or silent orbs; live in "Competition" channel by Nov 18 12:00 PT, unchanged to ~Dec 11. Success = Devpost
   submitted + invite URL installs on a non-org account + >=60 fps on device (Quest 2; 3/3S unmeasured, A4-R1) + voice answer works
   after a fresh invite-URL install. Decision: stack at gate G1 (Nov 3, off the MemriPal Nov 4 deadline).
-Out of scope: multiplayer, LLM grading, MemriPal or realm-of-recall code/assets (recon R19), VR (non-passthrough) arena,
+Out of scope: multiplayer, LLM grading beyond D3a (Kev 2026-10-31), MemriPal or realm-of-recall code/assets (recon R19), VR (non-passthrough) arena,
   post-Dec-11 MemriPal import (separate branch, never the judged channel).
 Facts: R1-R20 in [2026-10-28-vr-flashcard-recon.md](2026-10-28-vr-flashcard-recon.md).
 Kev decisions 2026-10-28: ENGINE (Unreal, spike-gated; D1; 5.8 per Kev 10-30, A2), Q1, Q2, Q4-Q12, G0a, G0b, new D15, D19 (Open questions + ledgers).
@@ -24,7 +24,8 @@ M8 Full-time VR from Nov 5; before Nov 4 only spikes.
 M9 Speech recognition in headset (on-device only, D2; Web Speech API rejected per MemriPal ADR 0008).
 M10 Silent mode (slash answer orbs) for bus-stop test + accessibility.
 M11 Deck input: bundled starter decks + companion paste page with pairing code.
-M12 Deterministic fuzzy answer matcher with aliases; no LLM grading.
+M12 Deterministic fuzzy answer matcher with aliases, always first; "no LLM grading" amended by Kev 2026-10-31 to hybrid D3a (ledgers C-1):
+  "both, live can be toggled in the settings". Slash kept, point-to-select rejected ("slash feels better"; M1 unchanged, never re-propose).
 M13 Engine choice Unreal (spike-gated) vs Unity fallback evaluated (ADR 0001; Kev sign-off 2026-10-28; D1).
 M14 Spaced repetition (Best Reason to Come Back).
 M15 Purposeful passthrough: enemies emerge from real walls via MRUK.
@@ -51,10 +52,9 @@ Kev answers 2026-10-28 (FSRS pass; not M-items; ledgers E-K-a, E-K-b1..E-K-b3, E
   following fsrs principles (so we can do something similar to anki where we set the number of cards for a day)" (D5); "#1 - yeah otherwise user can
   cheese it and dodge for 1-2 minutes after doing one correct" (D19); "ultimates can push cards further away, so yuo have more time to answer it"
   (D4); "Two tiers (Recommended)" (D19); "12 new / 120 reviews (Recommended)" (D5); "Again / Hard / Good (Recommended)" (D4, D5).
-Scope constraint ladder (fidelity, not features) if behind at the Nov 12 checkpoint: 2 starter decks instead of 3 (floor 2: M11 says
-  "decks", plural; cut Basic Science first, Q4); D15 experimental features cut (base build already has 1 ultimate type fired repeatedly, Q9);
-  placeholder VFX/audio; mastery screen as text list; tutorial as 3 prompts; imported-deck list capped at 1 slot (still with delete
-  confirm + Undo). Never drop an M-item.
+Scope constraint ladder (fidelity, not features) if behind at the Nov 12 checkpoint: 2 starter decks instead of 3 (floor 2: M11 says "decks", plural;
+  cut Basic Science first, Q4); D15 experimental features cut (base build already has 1 ultimate type fired repeatedly, Q9); placeholder VFX/audio;
+  mastery screen as text list; tutorial as 3 prompts; imported-deck list capped at 1 slot (still with delete confirm + Undo). Never drop an M-item.
 
 ## Assumptions
 A1 Before Nov 5 only spikes, no game code. Honest budget: ~14 h Kev time Oct 28-Nov 3 (SP1 ~7 h, SP2 ~5 h, G0/G1 + 3 ADRs ~2 h); MemriPal has priority. Overflow rule: G1 takes its default (see G1) and any unfinished SP1 step runs Nov 5 AM before S1.
@@ -108,7 +108,7 @@ D1 ENGINE (Kev 2026-10-28; dual-track 2026-10-29, ledgers E-K-c, E-IW): THIS rep
 D2 STT ON-DEVICE ONLY (Kev 2026-10-30 "sherpa-onnx default (Recommended)", after a 3-adversary round; ledgers V-1), behind
   IAnswerRecognizer. Default = sherpa-onnx grammar/keyword recognizer constrained to the card's expected answers (deck answers + aliases
   + [unk]). The Nov 2 spike (SP2) also measures Whisper tiny.en q8_0 (Runtime Speech Recognizer, Fab, paid), promoted only if it meets
-  the A3 premise on Quest. Neither passes -> silent orbs default (M10 no-mic path). Never a cloud recognizer or cloud fallback (Wit
+  the A3 premise on Quest. Neither passes -> silent orbs default (M10 no-mic path). Never cloud STT or audio upload; D3a is text-only (Wit
   dropped, V-1). IWSDK build: voice OFF by default until a spike proves getUserMedia inside an immersive session; transformers.js Whisper
   only if its WebGPU path hits p50 <= 1500 ms. Risks (V-1): Whisper hallucination on silence/1 s clips; inference vs frame pacing (no
   Quest 2 benchmark); open-source UE whisper plugin archived.
@@ -116,6 +116,9 @@ D2 STT ON-DEVICE ONLY (Kev 2026-10-30 "sherpa-onnx default (Recommended)", after
   until the recognizer's end-of-speech, capped at 6 s with no speech start (cap -> "didn't catch"); the mic is closed outside it. Mic is
   re-acquired on app focus/resume (Unity: OnApplicationPause/Focus; Unreal: the engine's app-lifecycle events), never assumed live.
 D3 Matcher (deterministic, no LLM). Normalize: NFKD, drop combining marks (Unicode Mn), lowercase, strip punctuation, collapse whitespace, strip a leading article (a/an/the) only if the remainder is non-empty. Candidates = distinct normalized answer+alias strings across the deck, each mapped to the set of cards that own it. Correct: exact match to a candidate owned by this card; or fuzzy: both strings >=4 normalized chars, ratio = 1 - lev(a,b)/max(len a, len b) >= 0.85, first 4 normalized chars identical, nearest candidate owned by this card, margin >= 0.1 over the best candidate not owned by this card. Wrong: same rules resolve to a candidate not owned by this card; or exact hit on the card's `reject` list; or hedge guard (transcript contains "or"/"and" token absent from the answer). Everything else non-empty = miss. Negation guard dropped (prefix rule blocks leading "not/no/never"; ratio blocks the rest). No number-word conversion; top hypothesis only.
+D3a Claude (Kev 2026-10-31, M12, ledgers C-1; contract spec GRADE-001..008, RELAY-013/014). Load-time: deck POST adds Claude aliases + rejects
+  (starter decks once offline, committed); play stays deterministic + offline. Live: Settings toggle, upgrade-only (D4 Grading), free-form
+  recognizer only, default OFF unless G1 picks Whisper; Haiku dev/test, Sonnet judged. Built: S10 ~0.5 slice-day; live S10+S4 ~1-1.5, Nov 16 buffer.
 D4 Answer outcomes (single table; "encounter" = one card-enemy's card until it is removed; one FSRS write per encounter, rated per D5):
 
 | Outcome | Classified when | Enemy | Player | FSRS rating (D5) |
@@ -123,6 +126,7 @@ D4 Answer outcomes (single table; "encounter" = one card-enemy's card until it i
 | Voice correct | D3 correct | -1 card | none | Good if first scored attempt with only Didn't catch before it; Hard after a miss; none if Again was already written |
 | Voice wrong | D3 wrong | none | hit | Again (written at once) if first scored attempt; else none |
 | Voice miss | non-empty, not correct/wrong (ratio, margin, prefix, length fails) | none | none | none; caps a later correct at Hard; counts toward 2-attempt orb trigger |
+| Grading (D3a toggle ON) | D3 miss on a free-form transcript, never empty/[unk] | advance + attack timer frozen | none | Claude correct -> Voice correct row; wrong/error/2 s timeout/offline -> Voice miss row (orb trigger unchanged) |
 | Didn't catch | empty transcript or 6 s cap | none | none | none; counts toward 2-attempt orb trigger |
 | Hard STT error | error callback or no final transcript 3 s after end of speech | none | none | none (a Hard-STT-only encounter writes nothing; card stays due/uncovered); orbs immediately for THIS card only; next card tries voice again |
 | Orb correct (voice mode, after misses/errors) | slash correct orb | -1 card | none | Hard if a miss or Didn't catch preceded and no Again was written; else none |
@@ -133,24 +137,22 @@ D4 Answer outcomes (single table; "encounter" = one card-enemy's card until it i
 Orbs = 1 correct + 3 distractors drawn from distinct normalized answers not owned by this card (deck validation guarantees >=4 distinct answers). Silent mode: user toggle any time; latches automatically ONLY on mic permission denial.
 Orb trigger: any 2 non-correct voice attempts in one encounter (wrong, miss, didn't catch, in any mix) -> orbs for this card; a player who keeps saying wrong answers is never stuck taking hits. Each voice attempt needs a fresh slash on the same card.
 Ultimate charge: +1 per correct outcome (voice or orb, assisted or not); firing the ultimate resets charge to 0.
-D5 SR = FSRS-6 (Kev 2026-10-28; ledgers E-FS-1..E-FS-8): 21 default weights, desired retention 0.90, no optimizer, fuzz OFF (D18), no
-  learning steps, interval = clamp(round(S),1,365) whole study days. Engine-free C++ Core module (~70-300 LOC) hand-ported from py-fsrs
-  (MIT; CREDITS); golden vectors from a pinned py-fsrs script under tests/fixtures (own test + README entry) live in THIS repo as the
-  source of truth; the IWSDK repo (D1) runs ts-fsrs 6.0.0 against them (FSRS-6 21 weights + fuzz-off UNVERIFIED). Rating per D4, one
-  write per encounter, Easy never emitted (recognizer latency confounds speed); unresolved at run end = Again if orbs were shown, else no write.
-  Study day = local 04:00 rollover (Anki-style); run_day frozen at run start; due iff due_day <= run_day AND last_review_day < run_day.
-  Grade lock: max 1 FSRS write per card per study day, queue cards only; Overtime misses-first = ungraded relearn.
-  Budget (Anki-style; S9 steppers; default 12 new / 120 reviews): global {new_today, reviews_today} across selections, so switching
-  decks cannot multiply it; edits apply next study day; new/day >=1 while any New card remains; New stops once the review cap is hit.
-  Today's queue = snapshot on the day's first run per selection under {run_day, selection hash}: due cards by lowest retrievability (up
-  to the review cap), then New in deck order (up to the remaining new allowance). Armor tier = stability bins (<1, <3, <7, <21, >=21 d),
-  visual only. Card ID = lowercase hex of the first 16 bytes of SHA-256 over UTF-8 of (NFC, trimmed, whitespace-collapsed front +
-  U+001F + back) (never string.GetHashCode; no punctuation strip, so "5-3" != "53"); parser keeps the first of any duplicate ID and
-  reports the count; editing a card's text makes it a new card by design. Save = one JSON in persistentDataPath with per-card {S, D,
-  state, due_day, last_review_day, reps, lapses}, daily counters, queue snapshot, run_day: write temp + flush; if primary missing ->
-  File.Move(temp, primary), else File.Replace(temp, primary, .bak); load order primary -> .bak -> fresh state. Deck schema root =
-  {"version":1,"title":...,"cards":[{"front","back","aliases":[],"reject":[]}]}; Core (C++ parser) holds all validation (caps,
-  required non-empty fields, >=4 distinct answers, duplicate IDs) and rejects top-level arrays and missing/empty required fields.
+D5 SR = FSRS-6 (Kev 2026-10-28; ledgers E-FS-1..E-FS-8): 21 default weights, desired retention 0.90, no optimizer, fuzz OFF (D18), no learning steps,
+  interval = clamp(round(S),1,365) whole study days. Engine-free C++ Core module (~70-300 LOC) hand-ported from py-fsrs (MIT; CREDITS); golden vectors
+  from a pinned py-fsrs script under tests/fixtures (own test + README entry) live in THIS repo as the source of truth; the IWSDK repo (D1) runs
+  ts-fsrs 6.0.0 against them (FSRS-6 21 weights + fuzz-off UNVERIFIED). Rating per D4, one write per encounter, Easy never emitted (recognizer latency
+  confounds speed); unresolved at run end = Again if orbs were shown, else no write. Study day = local 04:00 rollover (Anki-style); run_day frozen at
+  run start; due iff due_day <= run_day AND last_review_day < run_day. Grade lock: max 1 FSRS write per card per study day, queue cards only; Overtime
+  misses-first = ungraded relearn. Budget (Anki-style; S9 steppers; default 12 new / 120 reviews): global {new_today, reviews_today} across
+  selections, so switching decks cannot multiply it; edits apply next study day; new/day >=1 while any New card remains; New stops once the review cap
+  is hit. Today's queue = snapshot on the day's first run per selection under {run_day, selection hash}: due cards by lowest retrievability (up to the
+  review cap), then New in deck order (up to the remaining new allowance). Armor tier = stability bins (<1, <3, <7, <21, >=21 d), visual only. Card ID
+  = lowercase hex of the first 16 bytes of SHA-256 over UTF-8 of (NFC, trimmed, whitespace-collapsed front + U+001F + back) (never string.GetHashCode;
+  no punctuation strip, so "5-3" != "53"); parser keeps the first of any duplicate ID and reports the count; editing a card's text makes it a new card
+  by design. Save = one JSON in persistentDataPath with per-card {S, D, state, due_day, last_review_day, reps, lapses}, daily counters, queue
+  snapshot, run_day: write temp + flush; if primary missing -> File.Move(temp, primary), else File.Replace(temp, primary, .bak); load order primary ->
+  .bak -> fresh state. Deck schema root = {"version":1,"title":...,"cards":[{"front","back","aliases":[],"reject":[]}]}; Core (C++ parser) holds all
+  validation (caps, required non-empty fields, >=4 distinct answers, duplicate IDs) and rejects top-level arrays and missing/empty required fields.
   Unity-fallback JsonUtility / Game.Json adapter detail: ledgers MV-6.
 D6 Pairing relay (M11), headset-shows-code direction: headset POST /pair -> function creates a 6-char Crockford code (32^6 ~ 1.07e9)
   with SET NX EX 900 and returns it; headset shows the code and polls GET /pair/<code> every 3 s for up to 15 min; companion paste page
@@ -165,8 +167,8 @@ D6 Pairing relay (M11), headset-shows-code direction: headset POST /pair -> func
   caps and renders deck text with TMP rich text disabled. Imported decks: list in headset; delete = select + confirm + Undo
   (rules.global/ui-delete-needs-confirmation.md); a deleted deck is hidden, its card progress kept.
   Freeze policy (G0b, Kev 2026-10-28; rules.md:168): relay fail-soft is automatic (headset circuit breaker -> "import unavailable", no
-  manual step). Nov 18-Dec 11 allowed ops are ONLY {RELAY_ENABLED flip off, byte-identical privacy-page redeploy}; no code changes. Each
-  op is logged with timestamp + reason, and the policy is disclosed in the Devpost testing instructions.
+  manual step). Nov 18-Dec 11 allowed ops are ONLY {RELAY_ENABLED flip off, GRADER_ENABLED flip off (D3a), byte-identical privacy-page
+  redeploy}; no code changes. Each op is logged with timestamp + reason, and the policy is disclosed in the Devpost testing instructions.
 D7 Dodge + interruptions (Kev 2026-10-28 "Any input pauses (Recommended)", ledgers E-K-a): baseline = mean head position over the 1.5 s before
   telegraph onset, FROZEN from onset until the attack resolves (overlapping attacks share the earliest frozen baseline until all resolve); the
   baseline rolls only outside attack windows. Dodge = lateral or downward displacement >=20 cm from the frozen baseline at the hit frame; forward
@@ -242,8 +244,7 @@ D18 Agent validation loop + reusable E2E suite (Kev, 2026-10-28; M22, M23): the 
   checks in VR at 3 points only (after the Nov 2 spike, once the core loop works, before submission) for what tooling cannot judge:
   comfort/sickness, slash feel, real hand-tracking accuracy, mic in a noisy room, video sign-off. Debug input layer: console commands
   for slash, dodge, ultimate (input-agnostic event) and "answer <text>" (injects text past the recognizer, so logic is tested without a mic);
-  stripped from shipping builds. Structured event log (spawn, hit, layer peel, answer, grade, dodge, pip lost, frame time) is the
-  assertion surface.
+  stripped from shipping builds. Structured event log (spawn, hit, layer peel, answer, grade, dodge, pip lost, frame time) is the assertion surface.
   T0 headless logic: UE Automation, `-nullrhi`, seconds, on every change.
   T1 rendered E2E on PC with the Meta XR Simulator (OpenXR runtime, synthetic rooms), before each commit:
     `UnrealEditor-Cmd <proj> -ExecCmds="Automation RunTests <filter>; Quit" -unattended`, real RHI (screenshots need it, never -nullrhi).
@@ -253,8 +254,7 @@ D18 Agent validation loop + reusable E2E suite (Kev, 2026-10-28; M22, M23): the 
     headset unworn via the proximity bypass `adb shell am broadcast -a com.oculus.vrpowermanager.prox_close` (re-send each run);
     capture with `adb shell screenrecord`/`screencap`; fps via OVR Metrics Tool CSV over adb; asserts M6 fps.
   Selection (M23: affected-only in every tier, no full-run opt-in, path-to-tag map + reference scan, never a
-    full-suite fallback) + Enforcement (sole runner script, runner-bypass hook, logged reasons, selector tests;
-    S1 CRITERIA): ledgers MV-9.
+    full-suite fallback) + Enforcement (sole runner script, runner-bypass hook, logged reasons, selector tests; S1 CRITERIA): ledgers MV-9.
   Reusable suite (M23): each mechanic slice S3-S7 adds >=1 scenario built from shared step helpers (start run, spawn card, slash,
     answer, dodge, ultimate); scenario = scripted inputs + event-log asserts + baseline screenshots compared with tolerance. The
     suite never shrinks: a superseded scenario is replaced, not deleted.
@@ -340,8 +340,7 @@ S2 Nov 5 PM core logic (may spill to Nov 6 AM; slip charged to the Nov 16 buffer
   gate (Q4): numeric answers rejected; answers <4 normalized chars flagged (exact-match only under D3) for SP2 measurement; homophone answers need
   an alias (e.g. sun/son).
 S3 Nov 6 slash + card enemy (wall emerge -> advance to strike slot, D13) + answer window + damage + D17 cues + D18 scenario.
-S4 Nov 7 voice via IAnswerRecognizer + D4 outcomes (per-card fallback, 3 s timeout) + earcon + mic re-acquire on resume + D17 cue
-  + D18 scenario.
+S4 Nov 7 voice via IAnswerRecognizer + D4 outcomes (per-card fallback, 3 s timeout) + earcon + mic re-acquire on resume + D17 cue + D18 scenario.
 S5 Nov 8 silent orbs + toggle + D17 cue + D18 scenario.
 S6a Nov 9 (half day, MemriPal finals) FSRS persistence (D5 save: card state, daily counters, queue snapshot, run_day) + on-device golden vectors +
   EditMode save tests + mastery screen.
@@ -359,14 +358,12 @@ S9 Nov 13 first-five-minutes tutorial (incl. per-player strike-slot calibration,
 S10 Nov 14 relay (D6) + automated function tests + headset pairing + imported-deck list + privacy policy final; relay circuit
   breaker (G0b); Upstash idle-archive check (free database must not be archived while idle through Dec 11).
 S11 Nov 15 perf + polish + CREDITS audit (script) + device test on Quest 2 (incl. FoV at the arc edge; re-scoped from Quest 3/3S
-  by the A4 waiver, so the Nov 1 / Nov 15 3/3S device dates are void and S8 walls run on Quest 2; residuals A4-R1..R3) + D18 T2 run
-  + RC upload.
+  by the A4 waiver, so the Nov 1 / Nov 15 3/3S device dates are void and S8 walls run on Quest 2; residuals A4-R1..R3) + D18 T2 run + RC upload.
 S12 Nov 16 buffer + RC invite install verify + fresh-install save check + video capture (D12).
 S13 Nov 17 video review + Devpost (rules.md:139-144,155; hackathon.md:80: tagline (140 chars), track Gaming, division (New Experience
   per G0a unless re-ruled; editable until Nov 18 12:00 PT, guidelines.md:101), invite URL (judges-only field if one exists), video link,
   text description with inspiration / how built / future plans / target launch date, D11 paragraph, testing instructions incl. the G0b
-  freeze-ops disclosure, screenshots; content rating per rules.md:154, target 10+); submit by 21:00 PT. Nov 18 bugfix-only, no uploads
-  after 08:00 PT.
+  freeze-ops disclosure, screenshots; content rating per rules.md:154, target 10+); submit by 21:00 PT. Nov 18 bugfix-only, no uploads after 08:00 PT.
 F Nov 18-Dec 11 freeze; weekly checks, each with its action:
   relay round-trip (fail -> check quota, flip RELAY_ENABLED off if abused); privacy URL 200 (fail -> byte-identical redeploy of the
   static page); channel install (fail -> contact Meta support). Every relay/privacy op logged with timestamp + reason (G0b, D6). After
@@ -424,14 +421,14 @@ S4 0 mic opens outside window; 3/3 forced hard STT errors -> orbs <1 s AND next 
 S5 full run with mic off 1/1.
 S6a EditMode: fresh dir first save then load 1/1; corrupt primary -> .bak 1/1; truncated primary + missing .bak -> fresh state 1/1; FSRS card state,
   daily counters and queue snapshot persist across app restart on device 3/3; FSRS golden vectors on device N/N.
-S6 3-card pool with no ultimate needs exactly 3 correct; dodge at >=20 cm lateral/down; lean at telegraph start held through a 2 s telegraph ->
-  dodged 3/3; same with accessibility slow telegraph 3/3; slow 1 s lean -> dodged 3/3; 0 false dodges in 20 forward-lean slashes; recenter + resume
-  then dodge correct 3/3; enemy outside +/-40 deg never starts a telegraph 3/3; no hand tracked mid-telegraph -> prompt, freeze, fresh baseline, one
-  replay, lands at its hit frame 3/3; hide again during the replay -> still lands 3/3; menu pause and recenter mid-telegraph -> same rule
-  2/2; recenter or 20 cm re-seat during a pause or replay -> 0 auto-dodges 3/3; 2 overlapping frozen attacks -> each replays once 2/2; hands
-  hidden during an answer window -> answer graded normally 3/3; menu pause mid-speech -> mic closed, recognition discarded, rated as Voice
-  wrong (D4), 0 pips lost 3/3, before speech -> Didn't catch 3/3; telemetry over 1 full run: max head displacement from run start <=30 cm
-  1/1 and 100% of slash contacts <=0.65 m from the head.
+S6 3-card pool with no ultimate needs exactly 3 correct; dodge at >=20 cm lateral/down; lean at telegraph start held through a 2 s telegraph -> dodged
+  3/3; same with accessibility slow telegraph 3/3; slow 1 s lean -> dodged 3/3; 0 false dodges in 20 forward-lean slashes; recenter + resume then
+  dodge correct 3/3; enemy outside +/-40 deg never starts a telegraph 3/3; no hand tracked mid-telegraph -> prompt, freeze, fresh baseline, one
+  replay, lands at its hit frame 3/3; hide again during the replay -> still lands 3/3; menu pause and recenter mid-telegraph -> same rule 2/2;
+  recenter or 20 cm re-seat during a pause or replay -> 0 auto-dodges 3/3; 2 overlapping frozen attacks -> each replays once 2/2; hands hidden during
+  an answer window -> answer graded normally 3/3; menu pause mid-speech -> mic closed, recognition discarded, rated as Voice wrong (D4), 0 pips lost
+  3/3, before speech -> Didn't catch 3/3; telemetry over 1 full run: max head displacement from run start <=30 cm 1/1 and 100% of slash contacts
+  <=0.65 m from the head.
 S7 ultimate at exactly 5; 6th correct while charged -> ultimate still fires 1/1; two-palm push -> ultimate 3/3 and 0 slash events; charged, palms
   forward, one-hand slash -> registers 3/3; uncharged two-palm push -> 0 3/3; 0 ultimate triggers in 60 s of charged slashing (hands) 1/1;
   knockback: strike-slot enemy pushed back toward its wall spawn, its in-flight attack cancelled, 0 cards removed, hit cap + attempt/orb
@@ -454,9 +451,10 @@ S10 round-trip 3/3 (headset shows code, page posts, deck in headset <=5 s after 
   automated tests exit 0 with `// Covers:` tags and normalize.json fixture N/N in JS; RELAY_ENABLED=false -> 503 and headset shows
   "import unavailable" 1/1; relay unreachable -> headset circuit breaker shows "import unavailable" with no manual step 1/1; Upstash
   free-tier idle-archive policy checked and the database stays active idle through Dec 11 1/1; 0 Upstash token hits in built page
-  bundle (grep); rich-text tags rendered literal 1/1; deck delete needs confirm and Undo restores 1/1; privacy page lists 6/6 (voice +
-  bystander speech processed on-device only, rate-limit IP keys with TTL, function logs without bodies, deck 15-min storage,
-  scene data stays on device, deletion contact).
+  bundle (grep); rich-text tags rendered literal 1/1; deck delete needs confirm and Undo restores 1/1; privacy page lists 7/7 (voice
+  audio on-device only, transcripts to Anthropic only with D3a live grading on, rate-limit IP keys with TTL, function logs without bodies,
+  deck 15-min storage + deck text to Anthropic at import, scene data stays on device, deletion contact); D3a: GRADER_ENABLED=false -> /grade
+  503 + deck stored unaugmented 2/2; stub Claude wrong/error/timeout -> miss 3/3; 0 ANTHROPIC_API_KEY hits in page bundle 1/1.
 S11 median >=72 fps, 1% low >=60 over 5 min Quest 2; Quest 3/3S run waived 2026-10-28 (A4), residual A4-R1 logged 1/1; on Quest 2:
   card text + telegraph readable at arc edge 1/1 (judge-FoV residual A4-R3); credits audit script exit 0 (0 uncredited assets);
   on-device normalization self-test 10/10 on the RC build; RC build registers 0 debug commands 1/1 (E-SEC-4); RC upload accepted.

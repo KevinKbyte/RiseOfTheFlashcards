@@ -494,3 +494,7 @@ Ultimate charge: +1 per correct outcome (voice or orb, assisted or not); firing 
 | S7 CRITERIA | A+X charged -> ultimate 3/3, uncharged -> 0 3/3; one controller + one hand, 0.5 s A/X hold -> ultimate 3/3 (only if SIG-1 shows mixed input); 0 ultimate triggers in 60 s of charged slashing, hands and controllers 2/2 |
 | SX CRITERIA | S1-S7 hands-only CRITERIA still pass with SX on 1/1; full run with no controller paired still passes 1/1 |
 | SIGNALS | S6 SIG-1 (Meta docs: do Quest 2/3 report hands and controllers at once? check before S6) -> now before SX |
+## Claude grading decision 2026-10-31 (C-1)
+- C-1 Kev 2026-10-31, verbatim: "we have 200$ claude API credits so we can hit claude so that it verifies what user said is correct"; "yeah we
+  can send to haiku for testing, and sonnet for demo"; "both, live can be toggled in the settings"; "slash feels better" (point-to-select rejected).
+  Plan M12 amended (not dropped), D3a, D4 Grading row, D6 freeze ops; spec GRADE-001..008, RELAY-013/014. After correctness/failure/simplicity rounds.

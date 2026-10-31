@@ -33,6 +33,13 @@ Source plan: docs/plans/2026-10-28-vr-flashcard-game.md (D-, S-, M-IDs there).
   (default-src 'self', no inline script), X-Content-Type-Options: nosniff, Referrer-Policy: no-referrer. Paste page
   script/style live in public/app.js + public/app.css (same-origin src, no inline event handlers). codeFromPath reads
   /pair/<code> or /api/pair/<code>; one trailing slash on /pair/<code>/ is ignored for GET and POST.
+- RELAY-013: POST /grade (plan D3a, GRADE-003) body {front, answer, aliases?, reject?, transcript}; unknown fields dropped, RELAY-010
+  caps + RELAY-004 rich-text rule, transcript key <=200 chars (MATCH-005), else 400 with no echo. Relay re-runs match() on a one-card
+  deck from the body; Claude is called only on 'miss' (hedge/reject always first). 200 {verdict:"correct"|"miss"}; any non-miss
+  matcher result, Claude non-correct or failure -> "miss".
+- RELAY-014: GRADER_ENABLED !== "true" -> /grade 503 and deck POST skips GRADE-001 (deck still stored); RELAY_ENABLED unaffected.
+  /grade has its own per-client-key bucket, 30 per 600 s (Upstash prefix relay:ratelimit:grade), separate from RELAY-005/009; a
+  throwing limiter or counter -> 503 (headset: miss).
 
 ## Normalization (plan D3/D6)
 
@@ -42,7 +49,7 @@ Source plan: docs/plans/2026-10-28-vr-flashcard-game.md (D-, S-, M-IDs there).
 
 ## Answer matcher (plan D3, S2)
 
-relay/lib/matcher.mjs, deterministic (no LLM); reuses relay/lib/normalize.mjs. Matcher key = NORM-001 then strip one
+relay/lib/matcher.mjs, deterministic (no LLM inside; GRADE-*); reuses relay/lib/normalize.mjs. Matcher key = NORM-001 then strip one
 leading article (a/an/the) only if the remainder is non-empty. Candidates = distinct keys of every card answer + alias
 in the deck, each mapped to the set of cards owning it. Top STT hypothesis only; no number-word conversion.
 
@@ -58,7 +65,7 @@ in the deck, each mapped to the set of cards owning it. Top STT hypothesis only;
   ratio rule -> miss, not wrong. Precedence, first hit wins: (1) hedge -> wrong; (2) exact reject-list hit -> wrong;
   (3) exact own -> correct; (4) exact other -> wrong; (5) fuzzy own -> correct; (6) fuzzy other -> wrong; (7) else miss.
 - MATCH-004: Miss: any other non-empty transcript (length, ratio, prefix or margin fail). Empty transcript is
-  Didn't catch (plan D4), not a matcher outcome.
+  Didn't catch (plan D4), not a matcher outcome. With live grading on, a miss may be upgraded to correct (GRADE-003).
 - MATCH-005: Input limits. match() throws TypeError when: deck not an array; any card not an object with string `id`
   and string `answer`; `aliases`/`reject` present but not an array of strings; cardId not in deck; transcript not a
   string; transcript key empty (punctuation/whitespace only; caller shows Didn't catch per D4). Throws RangeError when
@@ -69,6 +76,31 @@ Deferred to relay integration:
 - validate.mjs deck schema is front/back without id; matcher expects {id, answer}. Relay assigns card ids server-side
   and never accepts a client cardId unchecked.
 - validate.mjs MAX_SIDE_CHARS/MAX_ENTRY_CHARS must also be enforced on normalize(s).length (NFKD expansion).
+
+## Claude grading (plan D3a, M12; Kev 2026-10-31, ledgers C-1)
+
+- GRADE-001: Load-time aliases. Deck POST (RELAY-002) asks Claude for extra aliases + reject entries per card before storing. Output
+  is validated and capped like client input (RELAY-004/010 caps per merged list, rich text, dedupe by matcher key); an alias whose key
+  matches another card's answer/alias, or a reject matching this card's answer/alias, is dropped. Claude failure or timeout (10 s)
+  -> deck stored unaugmented, never a 4xx/5xx caused by Claude.
+- GRADE-002: Starter decks get GRADE-001 once, offline at build time, by a script; output committed and reviewed in the diff. Play
+  never calls Claude for aliases; matching stays deterministic and offline.
+- GRADE-003: Live grading, upgrade-only. Only when GRADE-005 is ON, the recognizer is free-form, and match() = miss on a non-empty
+  transcript (never empty or "[unk]"): headset POSTs /grade (RELAY-013). Claude correct -> Voice correct (plan D4); wrong, error,
+  timeout, offline -> Voice miss (no hit; counts toward the 2-attempt orb trigger). Never overrides a matcher correct/wrong.
+- GRADE-004: During grading the encounter is in a 'grading' state: enemy advance + attack timer frozen; the 3 s Hard-STT clock stops
+  at final transcript. Client timeout 2000 ms -> miss. Circuit breaker: 2 consecutive failures -> matcher-only for the session.
+- GRADE-005: In-game Settings toggle "Live AI grading", persisted. Default OFF unless SP2/G1 picks a free-form recognizer
+  (Whisper); with the grammar recognizer it sends nothing.
+- GRADE-006: Claude call: forced tool `grade`, input_schema {verdict: enum["correct","wrong"]}, temperature 0, small max_tokens;
+  anything else -> miss. Card + transcript in delimited data tags, labeled untrusted. Model ID pinned in server env:
+  claude-haiku-5-5 dev/test, claude-sonnet-5-5 judged/demo. ANTHROPIC_API_KEY server-side only (as RELAY-008); logs never hold
+  transcripts (as RELAY-007).
+- GRADE-007: Cost caps: global daily Upstash counter over GRADE-001 + GRADE-003 calls fails closed (miss / unaugmented deck);
+  Anthropic console spend cap below the $200 credit, auto-reload off; GRADER_ENABLED flip is a freeze-window op (plan D6).
+- GRADE-008: Grading sits behind an injectable grader interface; a stub (fixture map transcript -> verdict, unknown -> miss, timeout
+  and error modes) serves every gating unit/E2E test (plan M23), which never hit the network. A live golden set (>=40 miss-bucket
+  cases incl. injection) runs manually, non-gating, against the ship model (Sonnet) before RC.
 
 ## Credits audit (plan M18, S1)
 

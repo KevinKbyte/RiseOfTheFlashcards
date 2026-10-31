@@ -1,6 +1,6 @@
 # Privacy policy (draft)
 
-Last updated: 2026-10-28. Applies to the game Rise of the Flashcards for Meta Quest and its companion deck-paste page.
+Last updated: 2026-10-31. Applies to the game Rise of the Flashcards for Meta Quest and its companion deck-paste page.
 
 The game has no accounts. This page lists everything it sends off your headset, how long it is kept, and how to have it deleted.
 
@@ -13,17 +13,20 @@ The game has no accounts. This page lists everything it sends off your headset, 
 
 ## What leaves the headset
 
-1. Voice audio of each spoken answer, and its text transcript, are processed on the headset only
-   (on-device recognizer, ADR 0002) and never uploaded or stored.
+1. Voice audio of each spoken answer is processed on the headset only (on-device recognizer, ADR 0002) and never uploaded or stored.
+   Its text transcript stays on the headset too, unless you turn on Live AI grading in Settings: then the transcript of an answer the
+   game could not match is sent, with that card's text, through our relay to Anthropic (Claude API) for a correct/incorrect verdict.
+   We do not store it.
 2. Bystander speech: anyone talking near you while the mic is open is captured too, and handled the same as item 1.
 3. Your IP address is used as a rate-limit key when you start pairing or post a deck (relay on Vercel + Upstash). The key expires after
    the 60 s rate-limit window.
 4. Relay function logs (Vercel) record request path, status and timing, never the request body or deck text. Kept per Vercel's log
    retention for the hosting plan.
 5. A deck you paste on the companion page is held in the relay store (Upstash Redis). It is deleted the moment the headset collects it,
-   and in any case after 15 minutes.
+   and in any case after 15 minutes. When the deck is posted, its card text is sent through our relay to Anthropic (Claude API) once,
+   to suggest extra accepted answers.
 
-Items 1 and 2 are listed for clarity: audio never leaves the headset.
+Audio never leaves the headset; text transcripts leave it only as item 1 describes.
 
 ## What stays on the headset
 
