@@ -50,6 +50,18 @@ Source plan: docs/plans/2026-10-28-vr-flashcard-game.md (D-, S-, M-IDs there).
 - CRED-002: Exit 0 when all covered (including when no asset root exists), exit 1 listing each uncovered path,
   exit 2 when CREDITS.md is missing.
 
+## Build tooling (plan line 191, SP1)
+
+- BUILD-001: `node scripts/version-code.mjs next --state <file>` reads {"versionCode":N} (missing file = 0), writes
+  N+1 and prints it, exit 0. Corrupt state (bad JSON/empty, N not a non-negative integer, or N >= 2100000000 because
+  N+1 would exceed the Google Play max of 2100000000) -> exit 1, stderr message, file unchanged.
+- BUILD-002: Optional `--ini <DefaultEngine.ini>` sets StoreVersion=<N+1> in
+  [/Script/AndroidRuntimeSettings.AndroidRuntimeSettings]: replaces the existing line, else adds one inside the
+  section, else appends the section. All other bytes unchanged (CRLF kept); StoreVersion lines in other sections are
+  never touched. Missing ini file -> exit 1, nothing written.
+- BUILD-003: Strictly increasing; a failed run never advances the state. Unknown subcommand or missing --state ->
+  exit 2 with usage on stderr.
+
 ## Repo hygiene
 
 - REPO-001: .gitignore ignores .claude/* except !.claude/spec-cache/ (local settings, worktrees stay out) and no

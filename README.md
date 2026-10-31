@@ -17,7 +17,7 @@ decides which cards come back.
 | Path | Contents |
 |---|---|
 | `relay/` | Pairing relay serverless function (companion page -> headset deck hand-off) and its tests |
-| `scripts/` | Repo tooling (credits audit) and its tests |
+| `scripts/` | Repo tooling (credits audit, versionCode counter) and its tests |
 | `docs/` | Plan, ADRs, privacy policy, Devpost draft |
 | `tests/fixtures/` | Shared test fixtures, incl. `normalize.json` (answer-normalization contract for every implementation) |
 
@@ -35,6 +35,7 @@ Preferred build for judges: decided at the end of the IWSDK device spike (plan D
 ```bash
 node --test                           # all relay + script tests, from repo root
 node scripts/credits-audit.mjs        # exit 1 lists any asset file missing from CREDITS.md
+node scripts/version-code.mjs next --state <file> [--ini <DefaultEngine.ini>]   # bump versionCode, print it, optionally set StoreVersion
 ```
 
 ## Docs
