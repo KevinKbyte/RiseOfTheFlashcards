@@ -40,6 +40,23 @@ Source plan: docs/plans/2026-10-28-vr-flashcard-game.md (D-, S-, M-IDs there).
   -> space, collapse whitespace runs to one space, trim. Shared fixture tests/fixtures/normalize.json
   ([{input, expected}]) is the contract for every implementation (JS relay now, engine side later).
 
+## Answer matcher (plan D3, S2)
+
+relay/lib/matcher.mjs, deterministic (no LLM); reuses relay/lib/normalize.mjs. Matcher key = NORM-001 then strip one
+leading article (a/an/the) only if the remainder is non-empty. Candidates = distinct keys of every card answer + alias
+in the deck, each mapped to the set of cards owning it. Top STT hypothesis only; no number-word conversion.
+
+- MATCH-001: Exact -> correct: transcript key equals a candidate owned by this card (a candidate shared with other
+  cards still counts).
+- MATCH-002: Fuzzy -> correct: both strings >=4 key chars; ratio = 1 - lev(a,b)/max(len a, len b) >= 0.85; first 4
+  key chars identical; nearest candidate owned by this card; margin >= 0.1 over the best candidate NOT owned by this
+  card. Any check failing -> not fuzzy-accepted.
+- MATCH-003: Wrong: the MATCH-001/002 rules resolve to a candidate not owned by this card; or exact key hit on this
+  card's `reject` list (near-miss, e.g. efferent for afferent); or hedge guard: transcript has an "or"/"and" token
+  absent from the answer ("X or Y", "X and Y"). No negation guard: "not X" fails the prefix rule -> miss, not wrong.
+- MATCH-004: Miss: any other non-empty transcript (length, ratio, prefix or margin fail). Empty transcript is
+  Didn't catch (plan D4), not a matcher outcome.
+
 ## Credits audit (plan M18, S1)
 
 - CRED-001: scripts/credits-audit.mjs scans asset roots (default: Assets/ and Content/ under the repo root,
