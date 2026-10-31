@@ -49,13 +49,26 @@ in the deck, each mapped to the set of cards owning it. Top STT hypothesis only;
 - MATCH-001: Exact -> correct: transcript key equals a candidate owned by this card (a candidate shared with other
   cards still counts).
 - MATCH-002: Fuzzy -> correct: both strings >=4 key chars; ratio = 1 - lev(a,b)/max(len a, len b) >= 0.85; first 4
-  key chars identical; nearest candidate owned by this card; margin >= 0.1 over the best candidate NOT owned by this
-  card. Any check failing -> not fuzzy-accepted.
+  key chars identical; nearest candidate owned by this card; margin (score - rival >= 0.1 - 1e-9, so an exact 0.1
+  margin passes) over the best candidate NOT owned by this card. Any check failing -> not fuzzy-accepted. The >=4-char
+  checks are a guard the ratio rule already implies.
 - MATCH-003: Wrong: the MATCH-001/002 rules resolve to a candidate not owned by this card; or exact key hit on this
   card's `reject` list (near-miss, e.g. efferent for afferent); or hedge guard: transcript has an "or"/"and" token
-  absent from the answer ("X or Y", "X and Y"). No negation guard: "not X" fails the prefix rule -> miss, not wrong.
+  absent from every one of the card's answer + aliases ("X or Y", "X and Y"). No negation guard: "not X" fails the
+  prefix rule -> miss, not wrong. Precedence, first hit wins: (1) hedge -> wrong; (2) exact reject-list hit -> wrong;
+  (3) exact own -> correct; (4) exact other -> wrong; (5) fuzzy own -> correct; (6) fuzzy other -> wrong; (7) else miss.
 - MATCH-004: Miss: any other non-empty transcript (length, ratio, prefix or margin fail). Empty transcript is
   Didn't catch (plan D4), not a matcher outcome.
+- MATCH-005: Input limits. match() throws TypeError when: deck not an array; any card not an object with string `id`
+  and string `answer`; `aliases`/`reject` present but not an array of strings; cardId not in deck; transcript not a
+  string; transcript key empty (punctuation/whitespace only; caller shows Didn't catch per D4). Throws RangeError when
+  the transcript key exceeds 200 chars. Fuzzy skips candidates with length ratio min/max < 0.75 (cannot reach 0.85 or
+  matter within the margin): pure optimization, identical results.
+
+Deferred to relay integration:
+- validate.mjs deck schema is front/back without id; matcher expects {id, answer}. Relay assigns card ids server-side
+  and never accepts a client cardId unchecked.
+- validate.mjs MAX_SIDE_CHARS/MAX_ENTRY_CHARS must also be enforced on normalize(s).length (NFKD expansion).
 
 ## Credits audit (plan M18, S1)
 
