@@ -106,8 +106,9 @@ Deferred to relay integration:
 ## Encounter flow + card panel (plan D13, D13a; Kev 2026-10-31, ledgers EN-1, EN-2)
 
 - ENC-001: Enemy emerges at its wall spawn (D8), advances toward a reach line ~0.6 m in front of the play-forward head and halts
-  there if unrevealed. Reveal = select or slash the card-enemy at ANY distance. Max 1 engaged enemy (revealed, or halted at the
-  reach line); others queue at their walls. EN-1 slash-only-at-reach-line wording **Superseded by** EN-2 (verbatim in ledgers EN-2).
+  there if unrevealed. Reveal = select or slash the card-enemy at ANY distance. EN-1 slash-only-at-reach-line wording
+  **Superseded by** EN-2 (verbatim in ledgers EN-2). Max-1-engaged-enemy wording **Superseded by** CARDS-010 (EN-3; verbatim in
+  ledgers EN-3).
 - ENC-002: Reveal -> card face pops out as the ENC-003 panel and the enemy keeps coming, no reset: revealed inside 2 m -> knocked
   back to 2 m (ultimate knockback mechanics), else continues from where it is, toward the 0.5 m strike slot (calibrated 0.40-0.60
   m); telegraphs and attacks happen only there. Re-slash after a miss is valid at any distance. EN-1 always-knockback-to-~2 m
@@ -121,9 +122,25 @@ Deferred to relay integration:
   its own; then knockback to 2 m + creep repeat.
 - ENC-006: Correct answer in any revealed phase (creep, telegraph, after knockback) shatters the panel and peels a card; a
   multi-card enemy is knocked back per card by the ENC-002 rule. Ultimate on a creeping enemy pushes it back further, panel kept,
-  creep resumes from there. EN-1 "also during the telegraph" scope **Superseded by** EN-2.
+  creep resumes from there. EN-1 "also during the telegraph" scope **Superseded by** EN-2. Sound + haptic: CARDS-012.
 - ENC-007: Card-enemies show a cartoon face (eyes + mouth, angry/mischievous) on the player-facing side; it is not the card face:
   the prompt stays hidden until reveal. Theme: cards rising against the human.
+
+## Card-enemy wave, spawns, hit feedback (plan D8, D13; Kev 2026-10-31, ledgers EN-3)
+
+CARDS-001..005 are prototype-local IDs in the game-iwsdk cards-proto tests; this cache starts at CARDS-010.
+
+- CARDS-010: Up to maxActive (default 3, tuning knob) card-enemies advance at once, each from its own CARDS-011 spawn; unrevealed
+  ones halt at the reach line and never attack. Player picks the target: reveal any one at any distance (ENC-002 applies to it).
+  Exactly one revealed at a time (the voice-answer target); selecting another while one is revealed is ignored until it resolves.
+  Others keep advancing while the target is answered; Grading (GRADE-004) freezes only the target. Correct answer defeats the
+  target; the deck refills active up to maxActive. Deck cleared = deck empty and 0 active enemies. Multi-card enemies unchanged.
+- CARDS-011: Wall spawn picker: each active enemy gets its own wall spawn 1.2-3.5 m away within +/-35 deg of play-forward (plan
+  D8); ring fallback (2.5 m, same arc) on no scene, permission denied, 5 s scene timeout, no qualifying wall, or head outside the
+  loaded room. IWSDK prototype: immersive-ar passthrough + plane detection (Quest 2: grayscale, walls only from manual Space
+  Setup); on-device check = probe row f (device-spike ar-probe).
+- CARDS-012: Every correct answer gives feedback: visible (panel shatters, card peels, ENC-006) + short sound + controller/hand
+  haptic where available.
 
 ## Credits audit (plan M18, S1)
 

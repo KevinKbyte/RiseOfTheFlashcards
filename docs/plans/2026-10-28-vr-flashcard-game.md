@@ -75,7 +75,7 @@ A4 WAIVED 2026-10-28 (Kev, verbatim: "i am not going to buy quest 3/3s, just goi
   A4-R2 scene, A4-R3 FoV, A4-R4 footage; detail in ledgers MV-4.
 A5 Quest 2 passthrough + manual Space Setup is a dev stand-in for MRUK, not evidence of judge-room behaviour (S8 matrix covers the
   gap). With no 3/3S (A4 waiver) it is also the only test rig: S8 runs on Quest 2; 3/3S colour passthrough + Space Setup stays
-  residual A4-R2. On-device capture of passthrough is unverified (SP1 checks it).
+  residual A4-R2. On-device capture of passthrough is unverified (SP1 checks it). IWSDK prototype passthrough switch: D8 (EN-3).
 A6 Repo (MIT) on a private GitHub remote with CI gitleaks from 2026-10-28; flipped public at G1 (Q2); privacy page + relay on
   Vercel free tier until Dec 11.
 A7 Video public (rules.md:141) on a new YouTube channel for the game, not Kev's personal channel (Q1; M17 still never links that one).
@@ -196,6 +196,10 @@ D8 MR only. Play-forward yaw = tracking-space forward, recomputed on every recen
   as such in ADR 0001 and Devpost; gaze-dwell select is a D15 experimental toggle. Ring fallback (2.5 m, same arc, still passthrough)
   if: no scene, permission denied, MRUK timeout (5 s), no qualifying wall, or head outside the loaded room (MRUK current room null /
   point not in room).
+  Prototype (EN-3; Kev 2026-10-31: "shouldnt the cards be coming out of the walls and everything via passthrough? is it not possible
+  in quest 2"): the IWSDK build (D1) currently runs immersive-vr with sceneUnderstanding off; next slice switches it to immersive-ar
+  passthrough + plane detection for wall spawns. Quest 2: grayscale passthrough, walls only from the user's manual Space Setup (A5);
+  ring fallback otherwise. On-device check: probe row f (device-spike ar-probe).
 D9 CREDITS.md from first commit; README credits GitHub KevinKbyte only, never the YouTube channel.
 D10 Secrets + signing: no STT secret ships (on-device, D2; Wit token handling **Superseded by** D2, ledgers V-1). gitleaks local
   pre-commit hook from S1 with a canary check; CI gitleaks on the private GitHub remote from 2026-10-28 (Q2). Release keystore created in
@@ -222,11 +226,20 @@ D13 Engagement distance = "slash, pop-out, creep" (Kev 2026-10-31, ledgers EN-1;
   of the head, so reveal -> strike slot >= 8 s (>= 6 s no-speech cap + 2 s grading timeout, D2, D3a); earlier reveal = more time.
   Speed is the pacing knob (D14, Q8); needs one tune on Quest 3/3S. Grading (D3a) freezes the creep.
   Telegraphs and attacks happen only in the strike slot: arrived unanswered -> 2 s telegraph -> hit (D4 row) -> knockback to 2 m, repeat.
-  A correct answer in any revealed phase (creep, telegraph, after knockback) shatters the panel and peels a card; a multi-card enemy
+  A correct answer in any revealed phase (creep, telegraph, after knockback) shatters the panel and peels a card, with a short sound
+  and a hand/controller haptic where available: feedback on EVERY correct answer (EN-3, Kev: "every time the user hits a card
+  successfully (answers it successfully), there should be some feedback"); a multi-card enemy
   (M2) is knocked back per card by the reveal rule (to 2 m only if inside 2 m). Re-slash after a miss or Didn't catch (re-opens the
   answer window) is valid at any distance. Optional later: speed bonus by kill distance.
-  Q8 (2026-10-28): 0.5 m is the default; the slot is calibrated per player within 0.40-0.60 m (S9). Max 1 engaged enemy (revealed, or
-  halted at the reach line) at a time; others queue at their walls.
+  Q8 (2026-10-28): 0.5 m is the default; the slot is calibrated per player within 0.40-0.60 m (S9).
+  Wave + choose target (EN-3, Kev 2026-10-31: "there should be multiple cards coming at the user, and user gets to choose which card to
+  attack first"): up to maxActive (default 3; tuning knob like the D14 speed) card-enemies advance at once, each from its own D8 wall
+  spawn (ring fallback). Unrevealed ones halt at the reach line and never attack. The player picks the target: reveal any one at any
+  distance (EN-2 rules apply to it). Exactly one revealed at a time (the voice-answer target); selecting another while one is revealed
+  is ignored until that one resolves. Others keep advancing while you answer; Grading (D3a) freezes only the target. A correct answer
+  defeats the target and the deck refills active up to maxActive. Deck cleared = deck empty and 0 active enemies. Multi-card enemies
+  (M2) unchanged. "Max 1 engaged enemy (revealed, or halted at the reach line) at a time; others queue at their walls"
+  **Superseded by** EN-3; verbatim in ledgers EN-3.
   Old wording (finisher, slash + attack both in the strike slot, card text for 0.5 m) **Superseded** 2026-10-31; verbatim in ledgers EN-1.
   EN-1 wording (slash only at the reach line, always knocked back to ~2 m, creep time default 8 s) **Superseded by** EN-2 2026-10-31;
   verbatim in ledgers EN-2.
@@ -241,41 +254,9 @@ D13a Card panel (Kev 2026-10-31, EN-1; picked over "Stop + countdown ring" and h
   Enemy look (Kev 2026-10-31, EN-2: "cartoonise the cards (add faces to them), since they're rising against the human"): each
   card-enemy shows a cartoon face (eyes + mouth, angry/mischievous) on its player-facing side; the face is not the card face, so the
   prompt text stays hidden until reveal. Theme: cards rising against the human.
-D14 Run loop (finisher-added; rules.md:126,128 "Satisfying in <=10 minutes", bus-stop test; FSRS pass E-FS-6): a run reserves min(12, uncovered
-  queue) graded cards at start (uncovered = a today's-queue card with last_review_day < run_day, D5); reserved cards the run never reaches return to
-  the queue unspent. Fillers top the run up to 12: cards graded today (lapses first), then introduced not-due cards by lowest retrievability;
-  fillers are ungraded (0 FSRS writes, 0 budget), never New, never uncovered queue cards. Cards are packed into enemies of 1, 2 or 3 cards (M2; any
-  n 1..12), graded cards first in queue order, as D19 graded waves, then D19 Overtime. Study-ahead removed (it would overrun the daily budget).
-  Player has 5 shield pips; a hit removes 1, capped at 1 hit per encounter (Q8); the run ends at 0 pips, on WIN or on Retreat (D19; Endless only at
-  0 pips). First run = 6 cards, no-fail (0 pips does not end it), no Overtime: it ends after its graded waves. Every run ends in the mastery screen;
-  FSRS ratings are saved per encounter (D5), so an early end loses no progress. Target graded-phase length 4-8 min; Overtime and Endless are
-  open-ended. Q8 (2026-10-28): counts (12 cards, 5 pips) stay fixed; pacing (advance speed, attack cadence) is the tuning knob.
-  Kev 2026-10-31 (EN-1): D13 creep time (default 8 s, floor 6 s cap + 2 s grading) is the primary pacing knob.
-  **Superseded by** EN-2 2026-10-31: the D13 fixed creep speed (0.1875 m/s; reveal -> strike slot >= 8 s) is the primary pacing knob.
-D15 Experimental settings pane (Kev, 2026-10-28): one on/off toggle per experimental feature; initially gaze-dwell select of answer
-  orbs and menu buttons (1.2 s dwell, Q5) and a second, mastery-unlocked ultimate type (Q9; base build = 1 ultimate type fired
-  repeatedly). S9 calibrates each with it on and off; anything that underperforms ships OFF in the submitted build and is not
-  mentioned in Devpost or the video.
-D16 In-game intro scene (Kev, 2026-10-28): on first launch a virtual phone placed on a detected table surface (MRUK) cracks and sad
-  flashcards band together and swarm out, then combat starts; doubles as the trailer breakout shot (rules.md:237, no AI footage). Scope
-  ~1 day UE, built in S9. Cuttable: if behind at S12, the skit falls back to paper cards + drawer and the intro is skipped. First
-  launch only, <=10 s, skippable by pinch (or any trigger with SX). No-table fallback (D8 ring-fallback triggers, or no qualifying table): the
-  phone spawns at waist height ~0.8 m in front of the player, facing them, and the same intro plays.
-D17 Onboarding cues, show don't tell (Kev, 2026-10-28; workshop notes show-dont-tell.md + which-cue-when.png, Jelitza): pick the cue
-  that answers the player's current question: How? -> ghost hand; What? -> glow + motion; Where? -> signage in the world; names/
-  numbers? -> text + a visual. Max 1 active cue at a time; step up with idle time (rim glow -> pulse/bob -> ghost hand); retire each
-  cue on success; a hint toggle replays cues. Slash (M1): ghost hand (hand model + handedness; controller ghost = SX, H-1)
-  loops a slash through the reach-line card (D13); first run (D14) only; retired at first contact.
-  Which enemy: rim glow only on the engaged enemy (D13); wall-queued enemies unlit. Multi-layer enemies (M2; Kev: "higher level cards
-  have multiple layers"): visible card stack, only the top card highlighted/answerable, each correct answer peels one. Answer: D2
-  mic-live earcon + pulsing mic glyph on the D13a panel. Silent-mode orbs (M10): all pulse equally on idle, never singling out the correct
-  one. Where: wall-crack light at each spawn (M15, D13). Dodge (M3, D7): floor lean-direction marker on the first telegraph of the
-  first run; retired after the first dodge. Ultimate (M4, D7 input): palms glow when charged; ghost two-palm-push demo on first charge
-  only (controller glow/ghost = SX). Text only for card prompt/answer/numbers, always paired with a glow. Built per slice:
-  S3 slash/glow/stack, S4 mic glyph, S5 orbs, S6 dodge marker, S7 ultimate. Cuttable: falls back to the constraint ladder's "tutorial as 3
-  prompts" (Must-keep). Open: diegetic wrist-turn UI (pop-up in the hand on a wrist turn) for hints/mastery (Kev's note).
-D18-D20 (agent validation loop + E2E, wave survival + win, Quest 3S compatibility): moved verbatim 2026-10-31 to
-  [2026-10-28-vr-flashcard-game-decisions-2.md](2026-10-28-vr-flashcard-game-decisions-2.md) (500-line cap); IDs unchanged.
+D14-D20 (run loop, experimental pane, intro scene, onboarding cues, agent validation loop + E2E, wave survival + win, Quest 3S
+  compatibility): moved verbatim 2026-10-31 to [2026-10-28-vr-flashcard-game-decisions-2.md](2026-10-28-vr-flashcard-game-decisions-2.md)
+  (500-line cap; D14-D17 moved with EN-3); IDs unchanged.
 
 ## Slices
 UE spike (Kev, 2026-10-28; D1): SP1 + SP2 run on UE 5.8 + Meta XR 207 source-built (A2; MetaXRPlatform OFF) with on-device voice (D2); pass = SP1
@@ -324,6 +305,7 @@ S3 Nov 6 slash + card enemy (wall emerge -> reveal at any distance, unrevealed h
   knockback to 2 m only if inside 2 m -> strike slot, D13) + cartoon enemy face (D13a) + answer window + damage + D17 cues + D18
   scenario. Pre-G1 IWSDK prototype of the same loop: D13a. EN-1 "reach line -> slash knockback" **Superseded by** EN-2.
   Real hand swing gesture at a distance: later slice (reveal by select works now).
+  EN-3: multi-enemy wave (maxActive 3) + choose target + correct-answer sound/haptic feedback (D13).
 S4 Nov 7 voice via IAnswerRecognizer + D4 outcomes (per-card fallback, 3 s timeout) + earcon + mic re-acquire on resume + D17 cue + D18 scenario.
 S5 Nov 8 silent orbs + toggle + D17 cue + D18 scenario.
 S6a Nov 9 (half day, MemriPal finals) FSRS persistence (D5 save: card state, daily counters, queue snapshot, run_day) + on-device golden vectors +
@@ -406,6 +388,9 @@ S3 20/20 slashes register with hands, 2/2 hands (slash = fingertip speed >=1.0 m
   re-slash after a miss at > 2 m re-opens the window 3/3; correct while creeping at > 2 m clears 3/3; enemy face visible, prompt
   hidden before reveal 5/5; arrived unanswered -> 2 s telegraph then hit then knockback to 2 m 3/3;
   correct during the telegraph -> panel shattered, 0 hits 3/3; 2-card enemy -> knockback per card 2/2; panel never occludes the enemy 5/5.
+  EN-3: 3 enemies advance at once, each from its own spawn 3/3; select a 2nd while one is revealed -> ignored 3/3; non-targets keep
+  advancing during the answer window and Grading 3/3; correct -> active refilled to maxActive 3/3; deck empty + 0 active -> deck
+  cleared 1/1; every correct answer -> visible + sound + haptic (where available) 5/5.
   EN-1 "5/5 enemies travel wall -> reach line and no slash registers before arrival", "slash -> knockback to ~2 m + panel shown 5/5",
   "creep to strike slot >= 8 s 5/5" **Superseded by** EN-2.
 S4 0 mic opens outside window; 3/3 forced hard STT errors -> orbs <1 s AND next card's voice answer works 3/3; empty transcript -> 0 damage 3/3; 2 non-correct attempts -> orbs 3/3; 6 s silence -> didn't catch 3/3; Wi-Fi off: voice answers still graded 3/3 and the run completes 1/1; silent mode not auto-latched by any error except mic denial 1/1.
@@ -489,6 +474,8 @@ Resolved 2026-10-28 (Kev): ENGINE, Q1-Q12, D15, D19, G0a, G0b in
   "slash at reach line" **Superseded by** EN-2: reveal at any distance, fixed-speed creep, cartoon enemy faces (D13, D13a).
 - Resolved 2026-10-31 (Kev, EN-2): "after a miss the enemy is out of reach, so the re-slash point is undefined" -> re-slash valid at any
   distance (D13).
+- Resolved 2026-10-31 (Kev, EN-3): multi-enemy wave + choose target, feedback on every correct answer (D13); prototype passthrough
+  wall spawns via immersive-ar + plane detection (D8).
 
 ## Adversarial cheat sheet
 - Primary technical risk: big decks and one-correct WINs; grades or WINs given for nothing (deck-switch budget, empty queue, paused window).

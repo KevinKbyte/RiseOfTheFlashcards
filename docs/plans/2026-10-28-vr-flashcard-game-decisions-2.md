@@ -1,7 +1,40 @@
-# VR flashcard combat game: design decisions D18-D20
-Moved verbatim 2026-10-31 from [2026-10-28-vr-flashcard-game.md](2026-10-28-vr-flashcard-game.md) (500-line cap); the M/A/D/S/Q
+# VR flashcard combat game: design decisions D14-D20
+Moved verbatim 2026-10-31 from [2026-10-28-vr-flashcard-game.md](2026-10-28-vr-flashcard-game.md) (500-line cap; D18-D20 first, D14-D17 with EN-3); the M/A/D/S/Q
 IDs cited below live there; ledger IDs in [2026-10-28-vr-flashcard-game-ledgers.md](2026-10-28-vr-flashcard-game-ledgers.md).
 
+D14 Run loop (finisher-added; rules.md:126,128 "Satisfying in <=10 minutes", bus-stop test; FSRS pass E-FS-6): a run reserves min(12, uncovered
+  queue) graded cards at start (uncovered = a today's-queue card with last_review_day < run_day, D5); reserved cards the run never reaches return to
+  the queue unspent. Fillers top the run up to 12: cards graded today (lapses first), then introduced not-due cards by lowest retrievability;
+  fillers are ungraded (0 FSRS writes, 0 budget), never New, never uncovered queue cards. Cards are packed into enemies of 1, 2 or 3 cards (M2; any
+  n 1..12), graded cards first in queue order, as D19 graded waves, then D19 Overtime. Study-ahead removed (it would overrun the daily budget).
+  Player has 5 shield pips; a hit removes 1, capped at 1 hit per encounter (Q8); the run ends at 0 pips, on WIN or on Retreat (D19; Endless only at
+  0 pips). First run = 6 cards, no-fail (0 pips does not end it), no Overtime: it ends after its graded waves. Every run ends in the mastery screen;
+  FSRS ratings are saved per encounter (D5), so an early end loses no progress. Target graded-phase length 4-8 min; Overtime and Endless are
+  open-ended. Q8 (2026-10-28): counts (12 cards, 5 pips) stay fixed; pacing (advance speed, attack cadence) is the tuning knob.
+  Kev 2026-10-31 (EN-1): D13 creep time (default 8 s, floor 6 s cap + 2 s grading) is the primary pacing knob.
+  **Superseded by** EN-2 2026-10-31: the D13 fixed creep speed (0.1875 m/s; reveal -> strike slot >= 8 s) is the primary pacing knob.
+D15 Experimental settings pane (Kev, 2026-10-28): one on/off toggle per experimental feature; initially gaze-dwell select of answer
+  orbs and menu buttons (1.2 s dwell, Q5) and a second, mastery-unlocked ultimate type (Q9; base build = 1 ultimate type fired
+  repeatedly). S9 calibrates each with it on and off; anything that underperforms ships OFF in the submitted build and is not
+  mentioned in Devpost or the video.
+D16 In-game intro scene (Kev, 2026-10-28): on first launch a virtual phone placed on a detected table surface (MRUK) cracks and sad
+  flashcards band together and swarm out, then combat starts; doubles as the trailer breakout shot (rules.md:237, no AI footage). Scope
+  ~1 day UE, built in S9. Cuttable: if behind at S12, the skit falls back to paper cards + drawer and the intro is skipped. First
+  launch only, <=10 s, skippable by pinch (or any trigger with SX). No-table fallback (D8 ring-fallback triggers, or no qualifying table): the
+  phone spawns at waist height ~0.8 m in front of the player, facing them, and the same intro plays.
+D17 Onboarding cues, show don't tell (Kev, 2026-10-28; workshop notes show-dont-tell.md + which-cue-when.png, Jelitza): pick the cue
+  that answers the player's current question: How? -> ghost hand; What? -> glow + motion; Where? -> signage in the world; names/
+  numbers? -> text + a visual. Max 1 active cue at a time; step up with idle time (rim glow -> pulse/bob -> ghost hand); retire each
+  cue on success; a hint toggle replays cues. Slash (M1): ghost hand (hand model + handedness; controller ghost = SX, H-1)
+  loops a slash through the reach-line card (D13); first run (D14) only; retired at first contact.
+  Which enemy: rim glow only on the engaged enemy (D13); wall-queued enemies unlit. Multi-layer enemies (M2; Kev: "higher level cards
+  have multiple layers"): visible card stack, only the top card highlighted/answerable, each correct answer peels one. Answer: D2
+  mic-live earcon + pulsing mic glyph on the D13a panel. Silent-mode orbs (M10): all pulse equally on idle, never singling out the correct
+  one. Where: wall-crack light at each spawn (M15, D13). Dodge (M3, D7): floor lean-direction marker on the first telegraph of the
+  first run; retired after the first dodge. Ultimate (M4, D7 input): palms glow when charged; ghost two-palm-push demo on first charge
+  only (controller glow/ghost = SX). Text only for card prompt/answer/numbers, always paired with a glow. Built per slice:
+  S3 slash/glow/stack, S4 mic glyph, S5 orbs, S6 dodge marker, S7 ultimate. Cuttable: falls back to the constraint ladder's "tutorial as 3
+  prompts" (Must-keep). Open: diegetic wrist-turn UI (pop-up in the hand on a wrist turn) for hints/mastery (Kev's note).
 D18 Agent validation loop + reusable E2E suite (Kev, 2026-10-28; M22, M23): the agent plays, sees and fixes the game unattended; Kev
   checks in VR at 3 points only (after the Nov 2 spike, once the core loop works, before submission) for what tooling cannot judge:
   comfort/sickness, slash feel, real hand-tracking accuracy, mic in a noisy room, video sign-off. Debug input layer: console commands

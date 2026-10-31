@@ -93,3 +93,20 @@ below live in [2026-10-28-vr-flashcard-game.md](2026-10-28-vr-flashcard-game.md)
   knockback mechanics) and its card face pops out as the ENC-003 panel; the enemy then creeps back toward the 0.5 m strike slot";
   ENC-004 "Creep time >= 6 s no-speech cap + 2 s grading timeout, default 8 s; the pacing knob."; ENC-006 "Correct answer (also
   during the telegraph)" and "a multi-card enemy is knocked back per card".
+
+## Wave, target choice, hit feedback decision 2026-10-31 (EN-3)
+- EN-3 Kev 2026-10-31, verbatim: "there should be multiple cards coming at the user, and user gets to choose which card to attack
+  first, and also shouldnt the cards be coming out of the walls and everything via passthrough? is it not possible in quest 2"; "every
+  time the user hits a card successfully (answers it successfully), there should be some feedback".
+  Decided: up to maxActive (default 3, tuning knob) card-enemies advance at once, each from its own D8 wall spawn (ring fallback);
+  unrevealed halt at the reach line; player reveals any one at any distance; exactly one revealed (voice target), other selects ignored
+  until it resolves; others keep advancing, Grading freezes only the target; correct defeats it, deck refills to maxActive; deck
+  cleared = deck empty + 0 active; M2 unchanged. Every correct answer = visible shatter/peel + short sound + haptic where available.
+  Passthrough: possible on Quest 2 (grayscale; walls only from manual Space Setup); IWSDK prototype moves from immersive-vr
+  (sceneUnderstanding off) to immersive-ar + plane detection next slice; on-device check = probe row f (device-spike ar-probe).
+  Plan A5, D8, D13, S3 + S3 CRITERIA, Open questions; D14-D17 moved to decisions-2 (500-line cap); spec ENC-001, ENC-006 amended,
+  CARDS-010..012 added.
+  Superseded D13 wording (verbatim): "Max 1 engaged enemy (revealed, or halted at the reach line) at a time; others queue at their
+  walls."
+  Superseded spec wording (verbatim): ENC-001 "Max 1 engaged enemy (revealed, or halted at the reach line); others queue at their
+  walls."

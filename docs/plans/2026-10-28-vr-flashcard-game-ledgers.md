@@ -453,4 +453,4 @@ Ultimate charge: +1 per correct outcome (voice or orb, assisted or not); firing 
 
 ## Voice, hands-only, Claude grading decisions (V-1, H-1, C-1)
 Moved verbatim 2026-10-31 to [2026-10-28-vr-flashcard-game-ledgers-2.md](2026-10-28-vr-flashcard-game-ledgers-2.md) (500-line cap),
-which also holds later Kev decisions (EN-1).
+which also holds later Kev decisions (EN-1..EN-3).

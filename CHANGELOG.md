@@ -13,6 +13,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 - Plan/spec (Kev 2026-10-31): Claude load-time aliases + toggleable upgrade-only live grading (D3a, GRADE-001..008, RELAY-013/014).
 - Plan/spec (Kev 2026-10-31): slash at reach line, semi-transparent pop-out card panel, enemy creeps back (D13, D13a, ENC-001..006).
 - Plan/spec (Kev 2026-10-31): reveal at any distance, fixed-speed creep, cartoon enemy faces (D13, D13a, ENC-001..007; ledgers EN-2).
+- Plan/spec (Kev 2026-10-31): multi-enemy wave + choose target, wall spawn picker with ring fallback, correct-answer sound + haptic
+  feedback (D8, D13, CARDS-010..012; ledgers EN-3). Plan D14-D17 moved to `docs/plans/2026-10-28-vr-flashcard-game-decisions-2.md`.
 - BUILD-001..003: strictly increasing Android versionCode counter (`scripts/version-code.mjs next --state <file> [--ini
   <DefaultEngine.ini>]`); optionally sets Unreal StoreVersion; a failed run never advances the state. Tests included.
 
