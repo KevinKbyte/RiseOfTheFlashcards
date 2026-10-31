@@ -7,7 +7,8 @@
 // frames and is judged on the load-level-0 baseline only (other levels are evidence); persistence
 // needs the IndexedDB counter to match the boot count; offline needs the page to have BOOTED offline
 // under SW control (going offline on a live page proves nothing); controllers without hands is
-// PENDING (prompt to show hands), not an early FAIL.
+// PENDING (prompt to show your hands -- one hand is enough), not an early FAIL. The frame-rate
+// evidence labels the L0 baseline as the verdict and lists every level with its frame count.
 import { describe, expect, it } from 'vitest';
 import {
   FPS_MIN,
@@ -179,7 +180,9 @@ describe('inputVerdict', () => {
   it('PENDING (not an early FAIL) when only controllers are seen, prompting to show hands', () => {
     const r = inputVerdict({ handsSeen: false, controllersSeen: true });
     expectShape(r, 'c', 'PENDING');
-    expect(r.evidence).toContain('controllers ok; put them down and show both hands');
+    // PASS needs only one hand, so the prompt must not ask for both.
+    expect(r.evidence).toContain('controllers ok; put them down and show your hands');
+    expect(r.evidence).not.toContain('both hands');
   });
 
   it('PENDING when nothing is seen', () => {
@@ -286,15 +289,21 @@ describe('fpsBoardVerdict (status from load level 0 only)', () => {
     expect(r.evidence).toContain('collecting');
   });
 
-  it('evidence lists every level ascending as rounded p50/p5', () => {
+  it('evidence lists every level ascending as rounded p50/p5 with its frame count', () => {
     const r = fpsBoardVerdict(
       new Map([
-        [200, s(45.2, 29.6)],
-        [0, s(72.4, 70.6)],
-        [50, s(70, 66.4)],
+        [200, s(45.2, 29.6, 310)],
+        [0, s(72.4, 70.6, 600)],
+        [50, s(70, 66.4, 120)],
       ]),
     );
-    expect(r.evidence).toContain('L0 72/71 L50 70/66 L200 45/30');
+    expect(r.evidence).toContain('L0 72/71 (n=600) L50 70/66 (n=120) L200 45/30 (n=310)');
+  });
+
+  it('evidence labels the baseline as the L0 verdict with its bar, with no load= prefix', () => {
+    const r = fpsBoardVerdict(new Map([[0, s(72.4, 70.6, 600)], [50, s(70, 66.4, 120)]]));
+    expect(r.evidence.startsWith('L0 verdict: p50=72.4 p5=70.6 over 600 frames (bar p5>=60)')).toBe(true);
+    expect(r.evidence).not.toContain('load=');
   });
 });
 
