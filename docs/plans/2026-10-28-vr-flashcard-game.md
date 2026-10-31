@@ -20,6 +20,7 @@ M6 Hands = sole required input, controllers optional stretch SX (H-1, supersedes
   limit <=30 cm head/hand radius satisfies both rules.md:122 radius and guidelines.md:47 diameter readings); judged on Quest 3/3S; >=60 fps.
 M7 Deadline Nov 18 12:00 PT; build live + unchanged to ~Dec 11.
 M8 Full-time VR from Nov 5; before Nov 4 only spikes.
+  Kev 2026-10-31: early start approved for engine-neutral core logic (S2 matcher fixtures) and an IWSDK flashcard prototype.
 M9 Speech recognition in headset (on-device only, D2; Web Speech API rejected per MemriPal ADR 0008).
 M10 Silent mode (slash answer orbs) for bus-stop test + accessibility.
 M11 Deck input: bundled starter decks + companion paste page with pairing code.
@@ -57,6 +58,7 @@ Scope constraint ladder (fidelity, not features) if behind at the Nov 12 checkpo
 
 ## Assumptions
 A1 Before Nov 5 only spikes, no game code. Honest budget: ~14 h Kev time Oct 28-Nov 3 (SP1 ~7 h, SP2 ~5 h, G0/G1 + 3 ADRs ~2 h); MemriPal has priority. Overflow rule: G1 takes its default (see G1) and any unfinished SP1 step runs Nov 5 AM before S1.
+  Kev 2026-10-31: early start approved for engine-neutral core logic (S2 matcher fixtures) and an IWSDK flashcard prototype.
 A2 UE 5.8.0 (Kev 2026-10-30, verbatim: "we have UE5.8 installed, lets use that"; was 5.7) at C:/Program Files/Epic Games/UE_5.8
   (CL53629095), no install needed: its Engine/Config/Android/Android_SDK.json pins NDK 27.2.12479018 (r27c); JDK 21 (Android Studio
   JBR 21.0.5), SDK platforms 33-36, build-tools 34-36 present. Meta XR plugins v207 (ISDK v207 supports 5.7/5.8), never vendored;
