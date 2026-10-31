@@ -22,17 +22,6 @@ import {
 
 const publicAssetUrl = (filePath: string): string =>
   `${import.meta.env.BASE_URL}${filePath.replace(/^\/+/u, '')}`;
-const DEFAULT_STOCK_ASSET_BASE =
-  'https://cdn.jsdelivr.net/npm/@iwsdk/example-assets@0.4.2/assets';
-const configuredStockAssetBase =
-  import.meta.env.VITE_IWSDK_EXAMPLE_ASSET_BASE_URL?.trim();
-const stockAssetBase = (
-  configuredStockAssetBase || DEFAULT_STOCK_ASSET_BASE
-).replace(/\/+$/u, '');
-
-function stockAssetUrl(assetId: string, fileName: string): string {
-  return `${stockAssetBase}/${assetId}/${fileName}`;
-}
 
 const uikitml = (fileName: string, name: string) => ({
   url: publicAssetUrl(`ui/${fileName}`),
@@ -50,13 +39,8 @@ export default defineAssets({
   'graphite-ring': createGraphiteRing(),
   'gallery-set': createGallerySet(),
   'sideboard-set': createSideboardSet(),
-  robot: {
-    url: stockAssetUrl('robot', 'robot.gltf'),
-    type: AssetType.GLTF,
-    name: 'Robot',
-    priority: 'lazy',
-  },
   'welcome-panel': uikitml('welcome.uikitml', 'Welcome Panel'),
+  'probe-panel': uikitml('probe.uikitml', 'Probe Panel'),
   'label-grab': uikitml('label-grab.uikitml', 'Grab Label'),
   'label-select': uikitml('label-select.uikitml', 'Select Label'),
   'label-spin': uikitml('label-spin.uikitml', 'Spin Label'),

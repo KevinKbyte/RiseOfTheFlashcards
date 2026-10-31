@@ -52,6 +52,6 @@
   <div class="number"><span class="digit">2</span></div>
   <div class="text">
     <span class="title">Select</span>
-    <span class="how">Point at the robot, then select</span>
+    <span class="how">Point at a probe button, then select</span>
   </div>
 </div>

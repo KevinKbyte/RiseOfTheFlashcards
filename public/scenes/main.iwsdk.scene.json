@@ -227,46 +227,6 @@
           }
         },
         {
-          "id": "robot",
-          "name": "Robot",
-          "metadata": {
-            "iwsdk.validation": {
-              "allowFloating": true
-            }
-          },
-          "content": {
-            "type": "asset",
-            "asset": "robot",
-            "castShadow": true
-          },
-          "transform": {
-            "position": [0, 1.2, -0.02],
-            "scale": 0.6
-          },
-          "components": {
-            "AudioSource": {
-              "src": "./audio/chime.mp3",
-              "maxInstances": 3,
-              "playbackMode": "fade-restart"
-            },
-            "RayInteractable": {},
-            "Robot": {}
-          }
-        },
-        {
-          "id": "robot-contact",
-          "name": "Contact Shadow",
-          "transform": {
-            "position": [0, 0.921, -0.02]
-          },
-          "components": {
-            "ContactShadow": {
-              "size": [0.37, 0.37],
-              "height": 0.00074
-            }
-          }
-        },
-        {
           "id": "select-label",
           "name": "Select Label",
           "content": {
@@ -366,6 +326,22 @@
         "position": [0, 2.3, -5.15],
         "rotationDeg": [-6, 0, 0],
         "scale": 0.46
+      },
+      "components": {
+        "RayInteractable": {}
+      }
+    },
+    {
+      "id": "probe-panel",
+      "name": "Probe Panel",
+      "content": {
+        "type": "asset",
+        "asset": "probe-panel"
+      },
+      "transform": {
+        "position": [0.9, 1.45, -0.9],
+        "rotationDeg": [0, -25.3, 0],
+        "scale": 0.14
       },
       "components": {
         "RayInteractable": {}
