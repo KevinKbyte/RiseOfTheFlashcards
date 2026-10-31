@@ -32,6 +32,7 @@ import {
   type FaceParts,
   type Glow,
 } from './card-enemy.js';
+import { CorrectFeedback } from './card-feedback.js';
 import { paintText, textPlane } from './card-paint.js';
 import { planeToWall, type PlaneLike } from './card-walls.js';
 import { CAPITALS, pickOrbs, type Card } from './flashcards/deck.js';
@@ -126,16 +127,29 @@ export class CardsSystem extends createSystem({
   // One slot per kind per frame: of two same-frame presses only the last is kept; acceptable.
   private pendingEnemyId: string | null = null;
   private pendingOrb: Entity | null = null;
+  // Captured in the press callback, while the answering trigger or pinch is still held.
+  private pendingGamepad: Gamepad | undefined;
+  private fxRoot!: Entity;
+  private feedback!: CorrectFeedback;
+  private readonly fxAt = new Vector3();
 
   init(): void {
+    this.fxRoot = this.world.createTransformEntity(new Group());
+    this.feedback = new CorrectFeedback(this.fxRoot.object3D!);
     for (const card of CAPITALS) this.cards.set(card.id, card);
     this.wave = createWave(shuffled(CAPITALS.map((c) => c.id)));
     if (isWaveCleared(this.wave)) this.showCleared();
     this.cleanupFuncs.push(
       this.queries.pressed.subscribe('qualify', (entity) => {
+        this.feedback.unlockAudio();
         const id = this.enemyIds.get(entity);
         if (id !== undefined) this.pendingEnemyId = id;
-        else if (this.orbLabels.has(entity)) this.pendingOrb = entity;
+        else if (this.orbLabels.has(entity)) {
+          this.pendingOrb = entity;
+          const { left, right } = this.input.xr.gamepads;
+          const pad = left?.getSelecting() ? left : right?.getSelecting() ? right : undefined;
+          this.pendingGamepad = pad?.gamepad;
+        }
       }),
       this.queries.planes.subscribe('qualify', () => {
         this.wallsDirty = true;
@@ -154,6 +168,7 @@ export class CardsSystem extends createSystem({
     if (this.wallsDirty) this.rebuildWalls();
     this.applyReveal();
     this.applyOrb();
+    this.feedback.update(dt);
     if (this.message !== undefined) return;
 
     const prevHits = this.targetHits();
@@ -179,6 +194,8 @@ export class CardsSystem extends createSystem({
     this.face?.material.dispose();
     this.face?.geometry.dispose();
     this.face = undefined;
+    this.feedback.destroy();
+    this.fxRoot.dispose();
     super.destroy();
   }
 
@@ -221,6 +238,10 @@ export class CardsSystem extends createSystem({
       return;
     }
     this.wave = answerTarget(this.wave, true);
+    const enemyObj = this.views.get(targetId)?.entity.object3D;
+    if (enemyObj !== undefined) enemyObj.getWorldPosition(this.fxAt);
+    else this.fxAt.copy(this.eye);
+    this.feedback.play(this.fxAt, this.pendingGamepad);
     this.clearPanel();
     this.removeEnemy(targetId);
     if (isWaveCleared(this.wave)) this.showCleared();
