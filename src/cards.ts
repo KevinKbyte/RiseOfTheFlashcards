@@ -135,7 +135,7 @@ export class CardsSystem extends createSystem({
   // tick() is pure and returns a fresh state each frame: a tiny allocation accepted for the
   // prototype in exchange for a fully unit-tested encounter loop.
   update(delta: number): void {
-    const dt = Math.min(Math.max(delta, 0), MAX_DT);
+    const dt = Number.isFinite(delta) ? Math.min(Math.max(delta, 0), MAX_DT) : 0;
     this.clock += dt;
     this.applySlash();
     if (this.applyOrb()) return;
@@ -239,11 +239,13 @@ export class CardsSystem extends createSystem({
     return this.headEuler.setFromQuaternion(this.headQuat, 'YXZ').y;
   }
 
-  // The anchor is a world-space, yaw-only frame at the eye (never parented to the camera); the
-  // pitched panel and the orbs hang off it so one yaw update turns them together.
+  // The anchor is a world-space, yaw-only frame placed once at the eye when the panel pops out
+  // (never parented to the camera, never following head position); the pitched panel and the orbs
+  // hang off it so one yaw update turns them together.
   private showPanel(): void {
     if (this.state.current === null) return;
-    this.anchorYaw = this.readHead();
+    const headYaw = this.readHead();
+    this.anchorYaw = Number.isFinite(headYaw) ? headYaw : 0;
     const root = new Group();
     const pitch = (PANEL.pitchBelowDeg * Math.PI) / 180;
     this.panelMesh = textPlane(this.panelLines(), PANEL_W, PANEL_H, PANEL_BG, PANEL.opacity);
@@ -254,6 +256,8 @@ export class CardsSystem extends createSystem({
     );
     this.panelMesh.rotation.x = -pitch;
     root.add(this.panelMesh);
+    root.position.copy(this.eye);
+    root.rotation.set(0, this.anchorYaw, 0);
     this.anchor = this.world.createTransformEntity(root);
 
     const { orbs } = this.state;
@@ -277,8 +281,9 @@ export class CardsSystem extends createSystem({
     const obj = this.anchor?.object3D;
     if (obj === undefined) return;
     const headYaw = this.readHead();
+    // A degenerate head pose would make panelYaw throw; hold the panel for this frame instead.
+    if (!Number.isFinite(headYaw)) return;
     this.anchorYaw = panelYaw(this.anchorYaw, headYaw);
-    obj.position.copy(this.eye);
     obj.rotation.set(0, this.anchorYaw, 0);
   }
 
