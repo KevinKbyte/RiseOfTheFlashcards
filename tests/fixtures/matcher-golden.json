@@ -678,7 +678,7 @@
     "expected": "miss"
   },
   {
-    "name": "fuzzy reject by prefix: \"not X\" is miss, not wrong",
+    "name": "fuzzy reject by ratio: \"not X\" is miss, not wrong",
     "deck": [
       {
         "id": "aff",
@@ -702,7 +702,7 @@
     "expected": "miss"
   },
   {
-    "name": "fuzzy reject by prefix: \"no X\" is miss",
+    "name": "fuzzy reject by ratio: \"no X\" is miss",
     "deck": [
       {
         "id": "ps",
@@ -1525,5 +1525,107 @@
     "cardId": "fr1",
     "transcript": "the Paris",
     "expected": "correct"
+  },
+  {
+    "name": "hedge guard skips an alias containing \"and\": Bosnia and Herzegovina said exactly",
+    "deck": [
+      {
+        "id": "ba",
+        "answer": "Bosnia",
+        "aliases": [
+          "Bosnia and Herzegovina"
+        ]
+      },
+      {
+        "id": "hr",
+        "answer": "Croatia"
+      },
+      {
+        "id": "rs",
+        "answer": "Serbia"
+      },
+      {
+        "id": "si",
+        "answer": "Slovenia"
+      }
+    ],
+    "cardId": "ba",
+    "transcript": "Bosnia and Herzegovina",
+    "expected": "correct"
+  },
+  {
+    "name": "hedge guard skips an alias containing \"and\": salt and pepper said exactly",
+    "deck": [
+      {
+        "id": "salt",
+        "answer": "salt",
+        "aliases": [
+          "salt and pepper"
+        ]
+      },
+      {
+        "id": "sug",
+        "answer": "sugar"
+      },
+      {
+        "id": "vin",
+        "answer": "vinegar"
+      },
+      {
+        "id": "oil",
+        "answer": "olive oil"
+      }
+    ],
+    "cardId": "salt",
+    "transcript": "salt and pepper",
+    "expected": "correct"
+  },
+  {
+    "name": "fuzzy margin boundary: exactly 0.1 ahead (own 1/20 edits vs rival 3/20) is correct",
+    "deck": [
+      {
+        "id": "own",
+        "answer": "abcdefghijklmnopqrst"
+      },
+      {
+        "id": "riv",
+        "answer": "abcdefghijklmnopqxyz"
+      },
+      {
+        "id": "f1",
+        "answer": "osmosis"
+      },
+      {
+        "id": "f2",
+        "answer": "catalyst"
+      }
+    ],
+    "cardId": "own",
+    "transcript": "abcdefghijklmnopqrsx",
+    "expected": "correct"
+  },
+  {
+    "name": "fuzzy reject by prefix: fotosynthesis for photosynthesis passes ratio but is miss",
+    "deck": [
+      {
+        "id": "ps",
+        "answer": "photosynthesis"
+      },
+      {
+        "id": "ch",
+        "answer": "chlorophyll"
+      },
+      {
+        "id": "st",
+        "answer": "stomata"
+      },
+      {
+        "id": "xy",
+        "answer": "xylem"
+      }
+    ],
+    "cardId": "ps",
+    "transcript": "fotosynthesis",
+    "expected": "miss"
   }
 ]
