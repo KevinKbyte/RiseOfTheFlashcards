@@ -38,6 +38,7 @@ export async function runPersistenceProbe(): Promise<PremiseResult> {
   let persisted: boolean | null = null;
   let error = '';
   let extra = '';
+  let idbPrev: unknown;
   try {
     bootCount = incrementBootCount(localStorage);
     if (navigator.storage?.persist) persisted = await navigator.storage.persist();
@@ -45,10 +46,11 @@ export async function runPersistenceProbe(): Promise<PremiseResult> {
       const est = await navigator.storage.estimate();
       extra += `; usage ${mb(est.usage)}/${mb(est.quota)} MB`;
     }
-    extra += `; idb prev=${String(await idbRoundTrip(bootCount))}`;
+    idbPrev = await idbRoundTrip(bootCount);
+    extra += `; idb prev=${String(idbPrev)}`;
   } catch (e) {
     error = msg(e);
   }
-  const v = persistenceVerdict({ bootCount, persisted, error });
+  const v = persistenceVerdict({ bootCount, persisted, error, idbPrev });
   return makeResult('d', v.status, v.evidence + extra);
 }
