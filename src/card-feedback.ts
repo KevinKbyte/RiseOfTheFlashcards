@@ -55,7 +55,8 @@ export class CorrectFeedback {
       if (Ctor === undefined) return;
       this.audio = new Ctor();
     }
-    if (this.audio.state === 'suspended') void this.audio.resume();
+    // A refused resume just leaves the game silent; play() skips the tone until it is running.
+    if (this.audio.state === 'suspended') this.audio.resume().catch(() => undefined);
   }
 
   /** Flash + shards at a world position, tone, and a pulse on the answering gamepad if any. */
@@ -125,11 +126,13 @@ export class CorrectFeedback {
     const root = new Group();
     root.userData.iwsdkRuntimeOnly = true;
     const flash = new Mesh(this.flashGeo, this.material);
+    flash.userData.iwsdkRuntimeOnly = true;
     root.add(flash);
     const shards: Mesh[] = [];
     const dirs: Vector3[] = [];
     for (let i = 0; i < SHARDS; i++) {
       const shard = new Mesh(this.shardGeo, this.material);
+      shard.userData.iwsdkRuntimeOnly = true;
       root.add(shard);
       shards.push(shard);
       dirs.push(new Vector3());
@@ -140,7 +143,7 @@ export class CorrectFeedback {
 
   private tone(): void {
     const ctx = this.audio;
-    if (ctx === undefined) return;
+    if (ctx === undefined || ctx.state !== 'running') return;
     const t0 = ctx.currentTime;
     TONE_FREQS.forEach((freq, i) => {
       const start = t0 + i * NOTE_SECONDS;

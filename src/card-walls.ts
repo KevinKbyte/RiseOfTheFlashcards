@@ -15,6 +15,15 @@ const axisZ = new Vector3();
 const normal = new Vector3();
 const quat = new Quaternion();
 
+const MIN_EXTENT = 1e-3;
+const MAX_EXTENT = 50;
+const MAX_NORMAL_Y = 0.7;
+
+// NaN-safe: a non-finite extent fails both comparisons.
+function isSaneExtent(e: number): boolean {
+  return e >= MIN_EXTENT && e <= MAX_EXTENT;
+}
+
 /**
  * World-space wall for a vertical plane, or null for horizontal/degenerate planes. `object` is the
  * plane entity's object3D, posed at the plane origin by SceneUnderstandingSystem.
@@ -44,6 +53,11 @@ export function planeToWall(plane: PlaneLike, object: Object3D): Wall | null {
   const xIsUp = Math.abs(axisX.y) > Math.abs(axisZ.y);
   const extentX = maxX - minX;
   const extentZ = maxZ - minZ;
+  const vals = [center.x, center.y, center.z, normal.x, normal.y, normal.z];
+  if (!vals.every(Number.isFinite)) return null;
+  if (!isSaneExtent(extentX) || !isSaneExtent(extentZ)) return null;
+  // Labelled vertical but posed mostly facing up/down: bad runtime data, not a wall.
+  if (Math.abs(normal.y) > MAX_NORMAL_Y) return null;
   return {
     center: { x: center.x, y: center.y, z: center.z },
     normal: { x: normal.x, y: normal.y, z: normal.z },

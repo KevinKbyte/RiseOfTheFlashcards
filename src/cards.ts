@@ -79,6 +79,8 @@ interface EnemyView {
   age: number;
 }
 
+type TimedPlane = PlaneLike & { lastChangedTime?: number };
+
 function shuffled<T>(items: readonly T[]): T[] {
   const out = items.slice();
   for (let i = out.length - 1; i > 0; i--) {
@@ -110,6 +112,8 @@ export class CardsSystem extends createSystem({
   private readonly enemyIds = new Map<Entity, string>();
   private walls: Wall[] = [];
   private wallsDirty = true;
+  // lastChangedTime per XRPlane at the last rebuild: a grown or corrected plane must refresh walls.
+  private readonly planeTimes = new WeakMap<object, number | undefined>();
   // Built once and shared by every enemy; owned (and disposed) here, not by the enemy entities.
   private face: FaceParts | undefined;
   private anchor: Entity | undefined;
@@ -165,7 +169,7 @@ export class CardsSystem extends createSystem({
   update(delta: number): void {
     const dt = Number.isFinite(delta) ? Math.min(Math.max(delta, 0), MAX_DT) : 0;
     this.clock += dt;
-    if (this.wallsDirty) this.rebuildWalls();
+    if (this.wallsDirty || this.planesChanged()) this.rebuildWalls();
     this.applyReveal();
     this.applyOrb();
     this.feedback.update(dt);
@@ -203,12 +207,22 @@ export class CardsSystem extends createSystem({
     this.wallsDirty = false;
     this.walls = [];
     for (const entity of this.queries.planes.entities) {
-      const plane = entity.getValue(XRPlane, '_plane') as PlaneLike | undefined;
+      const plane = entity.getValue(XRPlane, '_plane') as TimedPlane | undefined;
       const obj = entity.object3D;
       if (plane === undefined || obj === undefined) continue;
+      this.planeTimes.set(plane, plane.lastChangedTime);
       const wall = planeToWall(plane, obj);
       if (wall !== null) this.walls.push(wall);
     }
+  }
+
+  // A few planes at most, one WeakMap lookup each per frame.
+  private planesChanged(): boolean {
+    for (const entity of this.queries.planes.entities) {
+      const plane = entity.getValue(XRPlane, '_plane') as TimedPlane | undefined;
+      if (plane !== undefined && this.planeTimes.get(plane) !== plane.lastChangedTime) return true;
+    }
+    return false;
   }
 
   // Selecting an enemy stands in for a slash; a real swing gesture is a later slice. revealEnemy()

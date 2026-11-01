@@ -35,6 +35,8 @@ export const RING_FALLBACK_DISTANCE = 2.5;
 const DEG = Math.PI / 180;
 // Candidate spacing along each wall; fine enough that a 15-degree gap is always resolvable.
 const SAMPLE_STEP = 0.05;
+// Backstop on samples per wall; the clipped span is at most 2 * SPAWN_MAX_DISTANCE (140 steps).
+const MAX_STEPS = 2000;
 const EPS = 1e-9;
 
 function wrap(a: number): number {
@@ -50,24 +52,33 @@ interface Candidate {
 }
 
 function wallCandidates(wall: Wall, head: HeadPose): Candidate[] {
-  const n = Math.hypot(wall.normal.x, wall.normal.z);
+  const { center, normal, width, height } = wall;
+  const fields = [center.x, center.y, center.z, normal.x, normal.y, normal.z, width, height];
+  if (!fields.every(Number.isFinite) || width < 0) return [];
+  const n = Math.hypot(normal.x, normal.z);
   // A horizontal-only or degenerate normal has no horizontal tangent; it is not a wall.
   if (!(n > EPS)) return [];
-  const tx = -wall.normal.z / n;
-  const tz = wall.normal.x / n;
-  const half = wall.height / 2;
+  const tx = -normal.z / n;
+  const tz = normal.x / n;
+  const half = height / 2;
   // Head height when the wall spans it, else the nearest edge of the wall.
-  const y = Math.min(Math.max(head.position.y, wall.center.y - half), wall.center.y + half);
-  const steps = Math.max(1, Math.ceil(wall.width / SAMPLE_STEP));
+  const y = Math.min(Math.max(head.position.y, center.y - half), center.y + half);
+  // Only the stretch of wall within SPAWN_MAX_DISTANCE of the head can qualify, so a huge wall
+  // costs no more than a normal one.
+  const headAlong = (head.position.x - center.x) * tx + (head.position.z - center.z) * tz;
+  const lo = Math.max(-width / 2, headAlong - SPAWN_MAX_DISTANCE);
+  const hi = Math.min(width / 2, headAlong + SPAWN_MAX_DISTANCE);
+  if (!(hi >= lo)) return [];
+  const steps = Math.min(MAX_STEPS, Math.max(1, Math.ceil((hi - lo) / SAMPLE_STEP)));
   const out: Candidate[] = [];
   for (let i = 0; i <= steps; i++) {
-    const along = -wall.width / 2 + (wall.width * i) / steps;
-    const position = { x: wall.center.x + tx * along, y, z: wall.center.z + tz * along };
+    const along = lo + ((hi - lo) * i) / steps;
+    const position = { x: center.x + tx * along, y, z: center.z + tz * along };
     const dx = position.x - head.position.x;
     const dz = position.z - head.position.z;
     const dist = Math.hypot(dx, dz);
     const bearing = wrap(Math.atan2(-dx, -dz) - head.yawRad);
-    if (dist < SPAWN_MIN_DISTANCE || dist > SPAWN_MAX_DISTANCE) continue;
+    if (!(dist >= SPAWN_MIN_DISTANCE && dist <= SPAWN_MAX_DISTANCE)) continue;
     if (Math.abs(bearing) > SPAWN_HALF_ARC_DEG * DEG) continue;
     out.push({ position, bearing });
   }
