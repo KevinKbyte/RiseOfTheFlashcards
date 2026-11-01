@@ -81,6 +81,12 @@ interface EnemyView {
 
 type TimedPlane = PlaneLike & { lastChangedTime?: number };
 
+// NaN never equals itself, so a NaN timestamp would force a wall rebuild every frame.
+function changedTime(plane: TimedPlane): number | undefined {
+  const t = plane.lastChangedTime;
+  return Number.isFinite(t) ? t : undefined;
+}
+
 function shuffled<T>(items: readonly T[]): T[] {
   const out = items.slice();
   for (let i = out.length - 1; i > 0; i--) {
@@ -210,7 +216,7 @@ export class CardsSystem extends createSystem({
       const plane = entity.getValue(XRPlane, '_plane') as TimedPlane | undefined;
       const obj = entity.object3D;
       if (plane === undefined || obj === undefined) continue;
-      this.planeTimes.set(plane, plane.lastChangedTime);
+      this.planeTimes.set(plane, changedTime(plane));
       const wall = planeToWall(plane, obj);
       if (wall !== null) this.walls.push(wall);
     }
@@ -220,7 +226,7 @@ export class CardsSystem extends createSystem({
   private planesChanged(): boolean {
     for (const entity of this.queries.planes.entities) {
       const plane = entity.getValue(XRPlane, '_plane') as TimedPlane | undefined;
-      if (plane !== undefined && this.planeTimes.get(plane) !== plane.lastChangedTime) return true;
+      if (plane !== undefined && this.planeTimes.get(plane) !== changedTime(plane)) return true;
     }
     return false;
   }
