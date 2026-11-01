@@ -3,7 +3,10 @@
 // along the floor, height up the wall) that the spawn picker can place enemies on; floor, ceiling,
 // unlabelled, empty, too-small (< 3 points) and non-finite polygons give no wall. The plane polygon
 // lies in plane-local x/z with local +Y as the normal, and the plane entity's pose places it in the
-// world.
+// world. Bad runtime data never becomes a wall: a pose giving a non-finite centre or normal, a
+// zero-area polygon (width or height under 1e-3 m), an extent over 50 m or non-finite (huge
+// coordinates overflow), or a 'vertical' label whose posed normal is mostly up/down (|normal.y| >
+// 0.7) all give null.
 //
 // API contract for src/card-walls.ts:
 //   export interface PlaneLike { orientation?: string; polygon: ReadonlyArray<{ x: number; z: number }> }
@@ -51,15 +54,6 @@ function expectVec(actual: Vec3, expected: Vec3): void {
 
 // Covers: CARDS-011
 describe('planeToWall: detected vertical planes become spawn walls', () => {
-  it('identity pose: centre at the polygon bbox centre, normal +Y, width along x and height along z', () => {
-    const wall = planeToWall(vertical(rect(-1, 1, -0.5, 0.5)), new Object3D());
-    expect(wall).not.toBeNull();
-    expectVec(wall!.center, { x: 0, y: 0, z: 0 });
-    expectVec(wall!.normal, { x: 0, y: 1, z: 0 });
-    expect(wall!.width).toBeCloseTo(2, 9);
-    expect(wall!.height).toBeCloseTo(1, 9);
-  });
-
   it('a wall tipped upright facing +Z: normal +Z, local z runs up the wall so it is the height', () => {
     const wall = planeToWall(
       vertical(rect(-1, 1, -0.75, 0.75)),
@@ -179,5 +173,70 @@ describe('planeToWall: planes that cannot host a wall give null', () => {
   it('a NaN point first in the polygon is still rejected (not masked by later finite points)', () => {
     const polygon = [{ x: Number.NaN, z: Number.NaN }, ...rect(-1, 1, -0.5, 0.5)];
     expect(planeToWall(vertical(polygon), pose())).toBeNull();
+  });
+});
+
+// Covers: CARDS-011
+describe('planeToWall: bad runtime data never becomes a wall', () => {
+  const upright = (): Object3D => wallPose(new Vector3(0, 1.5, -2), 0);
+
+  it('a pose with a NaN translation (non-finite centre) gives null', () => {
+    const obj = upright();
+    obj.matrix.elements[12] = Number.NaN;
+    expect(planeToWall(vertical(rect(-1, 1, -0.5, 0.5)), obj)).toBeNull();
+  });
+
+  it('a pose with a NaN rotation (non-finite normal) gives null', () => {
+    const obj = posed(new Vector3(0, 1.5, -2), new Euler(Number.NaN, 0, 0));
+    expect(planeToWall(vertical(rect(-1, 1, -0.5, 0.5)), obj)).toBeNull();
+  });
+
+  it('a pose with an infinite translation gives null', () => {
+    const obj = upright();
+    obj.matrix.elements[14] = Number.POSITIVE_INFINITY;
+    expect(planeToWall(vertical(rect(-1, 1, -0.5, 0.5)), obj)).toBeNull();
+  });
+
+  it('collinear points (zero height) give null', () => {
+    const polygon = [{ x: -1, z: 0 }, { x: 0, z: 0 }, { x: 1, z: 0 }];
+    expect(planeToWall(vertical(polygon), upright())).toBeNull();
+  });
+
+  it('coincident points (zero width and height) give null', () => {
+    const polygon = [{ x: 0.5, z: 0.5 }, { x: 0.5, z: 0.5 }, { x: 0.5, z: 0.5 }];
+    expect(planeToWall(vertical(polygon), upright())).toBeNull();
+  });
+
+  it('a sliver under 1e-3 m in either extent gives null; 1e-2 m is accepted', () => {
+    expect(planeToWall(vertical(rect(-1, 1, 0, 5e-4)), upright())).toBeNull();
+    expect(planeToWall(vertical(rect(0, 5e-4, -1, 1)), upright())).toBeNull();
+    expect(planeToWall(vertical(rect(-1, 1, 0, 1e-2)), upright())).not.toBeNull();
+  });
+
+  it('an extent over 50 m gives null; 49.9 m is accepted', () => {
+    expect(planeToWall(vertical(rect(-25.05, 25.05, -1, 1)), upright())).toBeNull();
+    expect(planeToWall(vertical(rect(-1, 1, -25.05, 25.05)), upright())).toBeNull();
+    expect(planeToWall(vertical(rect(-24.95, 24.95, -1, 1)), upright())).not.toBeNull();
+  });
+
+  it('coordinates at +/-1e300 (finite points, absurd extent) give null', () => {
+    expect(planeToWall(vertical(rect(-1e300, 1e300, -1, 1)), upright())).toBeNull();
+  });
+
+  it('coordinates at +/-1e308 whose extent overflows to Infinity give null', () => {
+    expect(planeToWall(vertical(rect(-1, 1, -1e308, 1e308)), upright())).toBeNull();
+  });
+
+  it('a vertical-labelled plane whose identity pose leaves the normal pointing up gives null', () => {
+    expect(planeToWall(vertical(rect(-1, 1, -0.5, 0.5)), new Object3D())).toBeNull();
+  });
+
+  it('a vertical-labelled plane tilted 50 deg off upright (|normal.y| ~0.77) gives null; 30 deg (0.5) is accepted', () => {
+    const tilted = (deg: number): Object3D =>
+      posed(new Vector3(0, 1.5, -2), new Euler(Math.PI / 2 - (deg * Math.PI) / 180, 0, 0));
+    expect(planeToWall(vertical(rect(-1, 1, -0.5, 0.5)), tilted(50))).toBeNull();
+    const ok = planeToWall(vertical(rect(-1, 1, -0.5, 0.5)), tilted(30));
+    expect(ok).not.toBeNull();
+    expect(Math.abs(ok!.normal.y)).toBeCloseTo(0.5, 9);
   });
 });

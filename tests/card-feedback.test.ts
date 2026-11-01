@@ -74,7 +74,9 @@ function stubAudioContext(state: 'running' | 'suspended' = 'running') {
     state = state;
     currentTime = 0;
     destination = { connect: vi.fn() };
+    // Like a real context, the state flips only once the resume promise settles, not synchronously.
     resume = vi.fn(async () => {
+      await Promise.resolve();
       this.state = 'running';
     });
     constructor() {
@@ -323,5 +325,64 @@ describe('CorrectFeedback destroy', () => {
     const fx = new CorrectFeedback(scene);
     expect(() => fx.destroy()).not.toThrow();
     expect(runtimeBursts(scene)).toHaveLength(0);
+  });
+});
+
+// Covers: CARDS-012
+describe('CorrectFeedback audio and runtime-only guards', () => {
+  it('while the context is still suspended at play time, no oscillator is scheduled', () => {
+    const audio = stubAudioContext('suspended');
+    const fx = new CorrectFeedback(new Object3D());
+    fx.unlockAudio(); // resume() is pending; the context still reports 'suspended'
+    expect(audio.contexts[0].state).toBe('suspended');
+    fx.play(new Vector3());
+    expect(audio.oscillators).toHaveLength(0);
+  });
+
+  it('once resume() has settled and the context is running, play schedules the tone', async () => {
+    const audio = stubAudioContext('suspended');
+    const fx = new CorrectFeedback(new Object3D());
+    fx.unlockAudio();
+    await audio.contexts[0].resume.mock.results[0].value;
+    expect(audio.contexts[0].state).toBe('running');
+    fx.play(new Vector3());
+    expect(audio.oscillators).toHaveLength(2);
+  });
+
+  it('every flash and shard mesh, not only the burst group, is runtime-only', () => {
+    const scene = new Object3D();
+    const fx = new CorrectFeedback(scene);
+    fx.play(new Vector3());
+    const meshes = meshesOf(runtimeBursts(scene)[0]);
+    expect(meshes).toHaveLength(7);
+    for (const m of meshes) expect(m.userData.iwsdkRuntimeOnly).toBe(true);
+  });
+
+  it('a rejected resume() does not surface as an unhandled rejection', async () => {
+    const audio = stubAudioContext('suspended');
+    const fx = new CorrectFeedback(new Object3D());
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown): void => {
+      unhandled.push(reason);
+    };
+    process.on('unhandledRejection', onUnhandled);
+    try {
+      fx.unlockAudio(); // creates the context; replace its resume before the call that rejects
+      // A plain function, not vi.fn: the spy observes promise results, which would mark the
+      // rejection as handled and hide the bug.
+      let rejectedCalls = 0;
+      const ctx = audio.contexts[0] as unknown as { resume: () => Promise<void> };
+      ctx.resume = () => {
+        rejectedCalls += 1;
+        return Promise.reject(new Error('resume blocked'));
+      };
+      fx.unlockAudio();
+      expect(rejectedCalls).toBe(1);
+      // One macrotask turn: Node reports unhandled rejections after the microtask queue drains.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+    }
+    expect(unhandled).toHaveLength(0);
   });
 });
