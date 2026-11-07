@@ -1,7 +1,7 @@
 // Duplicate-id resolver (M11): backs the dedupe UI shown when parseDeck returns kind 'duplicates'.
 // Pure state machine, never mutates. House rule for deletes: no single-click drop -- apply only
 // works from an explicit confirm step, and Undo restores the pre-apply deck and selections.
-import { findDuplicateGroups } from './deck-schema.js';
+import { MIN_DISTINCT_ANSWERS, distinctAnswerCount, findDuplicateGroups } from './deck-schema.js';
 import type { Deck, DuplicateGroup } from './deck-schema.js';
 
 export { findDuplicateGroups };
@@ -61,9 +61,20 @@ export function keepFirstInEveryGroup(state: ResolverState): ResolverState {
   return withChoices(state, edits);
 }
 
-/** True once every duplicate group has exactly one kept copy. */
+/** Why the kept cards cannot be applied (too few distinct answers for parseDeck), or null. */
+export function applyBlockReason(state: ResolverState): string | null {
+  const kept = state.deck.cards.filter((_, index) => choiceOf(state, index) === 'keep');
+  if (distinctAnswerCount(kept) >= MIN_DISTINCT_ANSWERS) return null;
+  return `Kept cards need at least ${MIN_DISTINCT_ANSWERS} distinct answers`;
+}
+
+/** True once every duplicate group has exactly one kept copy and the kept cards still parse. */
 export function canApply(state: ResolverState): boolean {
-  return state.groups.length > 0 && state.groups.every((group) => keptIn(state, group) === 1);
+  return (
+    state.groups.length > 0 &&
+    state.groups.every((group) => keptIn(state, group) === 1) &&
+    applyBlockReason(state) === null
+  );
 }
 
 export function requestConfirm(state: ResolverState): ResolverState {

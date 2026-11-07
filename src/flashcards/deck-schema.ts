@@ -86,11 +86,16 @@ function parseCards(raw: unknown): DeckCard[] {
   if (raw.length > MAX_CARDS) throw new DeckError(`deck exceeds ${MAX_CARDS} cards`);
   const cards = raw.map(parseCard);
   // Checked before duplicates: dropping copies never adds distinct answers, so this error wins.
-  const answers = new Set(cards.map((c) => c.answer.toLowerCase()));
-  if (answers.size < MIN_DISTINCT_ANSWERS) {
+  // Dropping copies CAN remove one, though, so the dedupe resolver re-checks its kept cards.
+  if (distinctAnswerCount(cards) < MIN_DISTINCT_ANSWERS) {
     throw new DeckError(`deck needs at least ${MIN_DISTINCT_ANSWERS} distinct answers`);
   }
   return cards;
+}
+
+/** Distinct answers after normalization, case-insensitive -- the rule MIN_DISTINCT_ANSWERS gates. */
+export function distinctAnswerCount(cards: readonly DeckCard[]): number {
+  return new Set(cards.map((c) => normalize(c.answer).toLowerCase())).size;
 }
 
 /** Cards sharing a normalized (trimmed, whitespace-collapsed, case-sensitive) id, in first-seen order. */
