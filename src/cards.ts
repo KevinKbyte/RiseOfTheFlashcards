@@ -40,7 +40,8 @@ import {
   type GameSession,
   type SessionStep,
 } from './flashcards/game-session.js';
-import { backToStart, deckOptions, openDeckSelect, selectDeck } from './flashcards/menu-flow.js';
+import { backToStart, deckOptions, openDeckSelect, openImport, selectDeck } from './flashcards/menu-flow.js';
+import { mountImportPanel } from './import-panel.js';
 import {
   answerTarget,
   createWave,
@@ -51,6 +52,10 @@ import {
 } from './flashcards/wave.js';
 
 const MAX_DT = 0.1;
+
+// Decks imported on the 2D page panel; every VR deck menu opening reads them from here.
+const pageMenu = openImport(openDeckSelect(browserSession().menu));
+let pageDecks = pageMenu.decks;
 
 export class CardsSystem extends createSystem({
   pressed: { required: [RayInteractable, Pressed] },
@@ -139,7 +144,7 @@ export class CardsSystem extends createSystem({
 
   /** Start screen and replay menu: one orb per deck on the question panel. */
   private openMenu(heading: string): void {
-    this.session = updateMenu(this.session, (m) => openDeckSelect(backToStart(m)));
+    this.session = updateMenu(this.session, (m) => openDeckSelect(backToStart({ ...m, decks: pageDecks })));
     this.panel.clear();
     this.menuOpen = true;
     this.menuHeading = heading;
@@ -311,6 +316,16 @@ export class CardsSystem extends createSystem({
 // starts a session (enemies then use the ring fallback). level/assets: undefined drop the probe
 // scene and its preload manifest; with no level there is no background, so the AR renderer's
 // transparent clear shows the room.
+const importRoot = document.getElementById('import-panel');
+if (importRoot) {
+  mountImportPanel(importRoot, {
+    state: pageMenu,
+    onChange: (s) => {
+      pageDecks = s.decks;
+    },
+  });
+}
+
 type XRConfig = Exclude<WorldOptions['xr'], false | undefined>;
 const baseXr: XRConfig = projectOptions.xr || {};
 
