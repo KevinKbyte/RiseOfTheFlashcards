@@ -29,6 +29,8 @@ import { QuestionPanel, showMessage } from './card-question-panel.js';
 import { browserSession, shuffled } from './card-session.js';
 import { CardSlash } from './card-slash.js';
 import { UltimateInput } from './card-ultimate.js';
+import { advanceInputClock } from './flashcards/input-clock.js';
+import { mergeOrbPick, type OrbPick } from './flashcards/orb-pick.js';
 import { resolveUltimate, ultimateOrb } from './flashcards/ultimate-input.js';
 import { WallTracker } from './card-wall-tracker.js';
 import { pickOrbs, type Card } from './flashcards/deck.js';
@@ -90,16 +92,18 @@ export class CardsSystem extends createSystem({
   private readonly walls = new WallTracker();
   private message: Entity | undefined;
   private clock = 0;
+  // Slash and palm-push timing need real elapsed time; `clock` is capped at MAX_DT per frame.
+  private inputClock = 0;
   private readonly eye = new Vector3();
   private readonly headQuat = new Quaternion();
   private readonly headEuler = new Euler(0, 0, 0, 'YXZ');
   // Presses are recorded in the query callback and applied in update(), so entities are never
   // disposed while the input system is still dispatching to them.
-  // One slot per kind per frame: of two same-frame presses only the last is kept; acceptable.
+  // One slot per kind per frame. Of two same-frame enemy presses only the last is kept (acceptable);
+  // the first orb hit wins (mergeOrbPick) so a second hand cannot overwrite an answer.
   private pendingEnemyId: string | null = null;
-  private pendingOrb: Entity | null = null;
-  // Captured in the press callback, while the answering trigger or pinch is still held.
-  private pendingGamepad: Gamepad | undefined;
+  // The gamepad is captured in the press callback, while the answering trigger or pinch is still held.
+  private pendingOrb: OrbPick<Entity, Gamepad> | null = null;
   private pendingUltimateOrb = false;
   private ultimate!: UltimateInput;
   private fxRoot!: Entity;
@@ -128,6 +132,7 @@ export class CardsSystem extends createSystem({
   update(delta: number): void {
     const dt = Number.isFinite(delta) ? Math.min(Math.max(delta, 0), MAX_DT) : 0;
     this.clock += dt;
+    this.inputClock = advanceInputClock(this.inputClock, delta);
     this.walls.refresh(this.queries.planes.entities);
     this.collectSlash();
     this.applyReveal();
@@ -251,10 +256,9 @@ export class CardsSystem extends createSystem({
     if (this.ultimate.isOrb(entity)) this.pendingUltimateOrb = true;
     else if (id !== undefined) this.pendingEnemyId = id;
     else if (this.panel.hasOrb(entity)) {
-      this.pendingOrb = entity;
       const { left, right } = this.input.xr.gamepads;
       const pad = left?.getSelecting() ? left : right?.getSelecting() ? right : undefined;
-      this.pendingGamepad = pad?.gamepad;
+      this.pendingOrb = mergeOrbPick(this.pendingOrb, { orb: entity, gamepad: pad?.gamepad });
     }
   }
 
@@ -262,15 +266,12 @@ export class CardsSystem extends createSystem({
   // target count once. Enemies are slash targets only while none is revealed.
   private collectSlash(): void {
     const enemyIds = this.wave.targetId === null ? this.wave.active.map((e) => e.id) : [];
-    const hits = this.slash.step(this.clock, this.panel.orbs(), enemyIds, (id, out) =>
+    const hits = this.slash.step(this.inputClock, this.panel.orbs(), enemyIds, (id, out) =>
       this.enemies.worldPosition(id, out),
     );
     for (const hit of hits) {
       if (hit.kind === 'enemy') this.pendingEnemyId = hit.id;
-      else if (hit.orb !== this.pendingOrb) {
-        this.pendingOrb = hit.orb;
-        this.pendingGamepad = undefined;
-      }
+      else this.pendingOrb = mergeOrbPick(this.pendingOrb, { orb: hit.orb, gamepad: undefined });
     }
   }
 
@@ -303,9 +304,10 @@ export class CardsSystem extends createSystem({
   }
 
   private applyOrb(): void {
-    const orb = this.pendingOrb;
-    if (orb === null) return;
+    const pick = this.pendingOrb;
+    if (pick === null) return;
     this.pendingOrb = null;
+    const { orb, gamepad } = pick;
     const label = this.panel.labelOf(orb);
     if (label === undefined) return;
     if (this.menuOpen) {
@@ -322,7 +324,7 @@ export class CardsSystem extends createSystem({
     const card = cardId === null ? undefined : this.cards.get(cardId);
     if (targetId === null || cardId === null || card === undefined) return;
     if (label !== card.answer) this.onWrongAnswer(orb, cardId, label);
-    else this.onCorrectAnswer(targetId, cardId);
+    else this.onCorrectAnswer(targetId, cardId, gamepad);
   }
 
   // Wrong orb: game-session costs a pip (once per encounter) and writes one Again rating.
@@ -334,13 +336,13 @@ export class CardsSystem extends createSystem({
 
   // Correct orb: game-session clears the card and writes its rating; the last card is the WIN.
   // A multi-card enemy stays the target after a peel; its next card is presented as a new encounter.
-  private onCorrectAnswer(targetId: string, cardId: string): void {
+  private onCorrectAnswer(targetId: string, cardId: string, gamepad: Gamepad | undefined): void {
     const step = correctOrb(this.session, cardId);
     const before = this.wave;
     this.wave = answerTarget(before, true);
     const outcome = correctOutcome(before, this.wave);
     if (!this.enemies.worldPosition(targetId, this.fxAt)) this.fxAt.copy(this.eye);
-    this.feedback.play(this.fxAt, this.pendingGamepad);
+    this.feedback.play(this.fxAt, gamepad);
     this.panel.clear();
     if (outcome.kind === 'defeated') this.enemies.remove(targetId);
     this.apply(step);
@@ -354,7 +356,7 @@ export class CardsSystem extends createSystem({
   private applyUltimate(dt: number): void {
     const orbSelected = this.pendingUltimateOrb;
     this.pendingUltimateOrb = false;
-    const requests = this.ultimate.collect(this.world.xrFrame, this.world.xrReferenceSpace, this.clock, orbSelected);
+    const requests = this.ultimate.collect(this.world.xrFrame, this.world.xrReferenceSpace, this.inputClock, orbSelected);
     const targetId = this.wave.targetId;
     const r = resolveUltimate(this.session, this.wave, requests, { spawnDistance: this.wave.cfg.spawnDistance });
     this.wave = r.wave;
