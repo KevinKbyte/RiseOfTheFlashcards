@@ -2,10 +2,15 @@
 // schema gate before play: a deck is {id, title, cards[{id, prompt, answer, aliases?}]}. parseDeck
 // never throws; it returns {ok: true, deck} with whitespace normalized (trim + collapse runs) and
 // unknown fields dropped, or {ok: false, error}. It rejects: non-object input, blank/non-string
-// fields, empty card lists, more than MAX_CARDS cards, duplicate card ids, strings over their caps
-// (measured after whitespace normalization), purely numeric answers (S2 deck-lint), non-string
-// aliases, and decks with fewer than MIN_DISTINCT_ANSWERS distinct answers (S2: >=4, so every card
-// can show 4 answer orbs). Caps mirror relay/lib/validate.mjs (RELAY-004/RELAY-010).
+// fields, empty card lists, more than MAX_CARDS cards, strings over their caps (measured after
+// whitespace normalization), purely numeric answers (S2 deck-lint), non-string aliases, and decks
+// with fewer than MIN_DISTINCT_ANSWERS distinct answers (S2: >=4, so every card can show 4 answer
+// orbs). Caps mirror relay/lib/validate.mjs (RELAY-004/RELAY-010).
+// Duplicate card ids (Kev's decision, 2026-11-07): no longer a plain rejection. parseDeck returns a
+// distinct non-fatal result {ok: false, kind: 'duplicates', error, deck, groups} carrying the
+// normalized deck (all copies, input order) and the duplicate groups (normalized id + each copy's
+// card index, prompt and answer) so the UI can let the user pick which copy to keep. Still ok:false,
+// so callers that only check .ok never load a deck with duplicate ids. Other card errors still win.
 // No spec-cache ID exists for the deck schema yet; plan IDs M11 (deck input) and S2 (deck parser +
 // lint gate) are cited instead.
 import { describe, expect, it } from 'vitest';
@@ -193,11 +198,6 @@ describe('parseDeck: rejected decks', () => {
     expectRejected(withCard(1, { [field]: { text: 'x' } }));
   });
 
-  it('rejects duplicate card ids, including ids that only differ by surrounding whitespace', () => {
-    expectRejected(withCard(2, { id: 'c1' }), /duplicate/i);
-    expectRejected(withCard(2, { id: ' c1 ' }), /duplicate/i);
-  });
-
   it('rejects strings one character over each cap (measured after whitespace normalization)', () => {
     expectRejected(rawDeck(undefined, { title: 't'.repeat(MAX_TITLE_CHARS + 1) }));
     expectRejected(rawDeck(undefined, { id: 'd'.repeat(MAX_ID_CHARS + 1) }));
@@ -251,5 +251,73 @@ describe('parseDeck: rejected decks', () => {
       expect(() => parseDeck(input)).not.toThrow();
       expect(parseDeck(input).ok).toBe(false);
     }
+  });
+});
+
+// Requirement: Kev's decision (2026-11-07) -- a deck with duplicate card ids is not plainly
+// rejected; parseDeck returns a non-fatal {ok: false, kind: 'duplicates'} result carrying the
+// normalized deck and the duplicate groups so the dedupe UI can resolve them. ADR-0004 blurb update.
+// Covers: M11
+describe('parseDeck: duplicate card ids are a non-fatal, resolvable result', () => {
+  function dupResult(input: unknown) {
+    const result = parseDeck(input);
+    expect(result.ok).toBe(false);
+    if (result.ok || !('kind' in result) || result.kind !== 'duplicates') {
+      throw new Error(`expected a duplicates result, got ${JSON.stringify(result)}`);
+    }
+    return result;
+  }
+
+  it('returns kind "duplicates" with the groups (card index + prompt + answer) instead of a plain rejection', () => {
+    const result = dupResult(rawDeck([card(1), card(2), card(3, { id: 'c1' }), card(4), card(5)]));
+    expect(result.error).toMatch(/duplicate/i);
+    expect(result.groups).toEqual([
+      {
+        id: 'c1',
+        copies: [
+          { index: 0, prompt: 'Prompt 1?', answer: 'Answer 1' },
+          { index: 2, prompt: 'Prompt 3?', answer: 'Answer 3' },
+        ],
+      },
+    ]);
+  });
+
+  it('carries the whole normalized deck, every copy kept in input order', () => {
+    const result = dupResult(rawDeck([card(1), card(2), card(3, { id: '  c1 ' }), card(4), card(5)]));
+    expect(result.deck.id).toBe('test-deck');
+    expect(result.deck.title).toBe('Test deck');
+    expect(result.deck.cards.map((c) => c.id)).toEqual(['c1', 'c2', 'c1', 'c4', 'c5']);
+  });
+
+  it('groups ids that only differ by surrounding/internal whitespace (same normalization as parseDeck)', () => {
+    const result = dupResult(rawDeck([card(1), card(2), card(3, { id: ' c1 ' }), card(4), card(5)]));
+    expect(result.groups).toHaveLength(1);
+    expect(result.groups[0].id).toBe('c1');
+    expect(result.groups[0].copies.map((c) => c.index)).toEqual([0, 2]);
+  });
+
+  it('treats ids differing only by case as distinct cards (parseDeck ids are case-sensitive)', () => {
+    const result = parseDeck(withCard(2, { id: 'C1' }));
+    expect(result.ok).toBe(true);
+  });
+
+  it('reports 3+ copies of one id as a single group, and separate ids as separate groups in first-seen order', () => {
+    const result = dupResult(
+      rawDeck([card(1), card(2), card(3, { id: 'c2' }), card(4, { id: 'c1' }), card(5, { id: 'c1' }), card(6)]),
+    );
+    expect(result.groups.map((g) => [g.id, g.copies.map((c) => c.index)])).toEqual([
+      ['c1', [0, 3, 4]],
+      ['c2', [1, 2]],
+    ]);
+  });
+
+  it('still plainly rejects a deck whose cards are otherwise invalid, even if ids repeat', () => {
+    const result = parseDeck(rawDeck([card(1), card(2), card(3, { id: 'c1', prompt: '  ' }), card(4)]));
+    expect(result.ok).toBe(false);
+    expect('kind' in result && result.kind === 'duplicates').toBe(false);
+  });
+
+  it('a deck without duplicate ids never yields a duplicates result', () => {
+    expect(parseDeck(rawDeck()).ok).toBe(true);
   });
 });
