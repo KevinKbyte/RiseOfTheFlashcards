@@ -4,8 +4,9 @@
  * Selecting any enemy at any distance (controller trigger, hand pinch ray, or mouse) reveals it as
  * the single target; its question pops out on a see-through panel with answer orbs below it.
  *
- * Composition root: wave state and answer outcomes live here; rendering is delegated to
- * EnemyField (enemies), QuestionPanel (panel, orbs, messages) and WallTracker (XR planes).
+ * Composition root: wave state lives here; menu, run and FSRS review rules live in the pure
+ * game-session, which this system feeds seam events and whose effects it renders. Rendering is
+ * delegated to EnemyField (enemies), QuestionPanel (panel, orbs, messages) and WallTracker (XR planes).
  */
 import {
   Euler,
@@ -25,8 +26,21 @@ import projectOptions from 'virtual:iwsdk-project';
 import { EnemyField } from './card-enemy-field.js';
 import { CorrectFeedback } from './card-feedback.js';
 import { QuestionPanel, showMessage } from './card-question-panel.js';
+import { browserSession, shuffled } from './card-session.js';
 import { WallTracker } from './card-wall-tracker.js';
-import { CAPITALS, pickOrbs, type Card } from './flashcards/deck.js';
+import { pickOrbs, type Card } from './flashcards/deck.js';
+import {
+  correctOrb,
+  masteryText,
+  presented,
+  startRun,
+  updateMenu,
+  waveCleared,
+  wrongOrb,
+  type GameSession,
+  type SessionStep,
+} from './flashcards/game-session.js';
+import { backToStart, deckOptions, openDeckSelect, selectDeck } from './flashcards/menu-flow.js';
 import {
   answerTarget,
   createWave,
@@ -38,21 +52,18 @@ import {
 
 const MAX_DT = 0.1;
 
-function shuffled<T>(items: readonly T[]): T[] {
-  const out = items.slice();
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
-
 export class CardsSystem extends createSystem({
   pressed: { required: [RayInteractable, Pressed] },
   planes: { required: [XRPlane] },
 }) {
-  private wave!: Wave;
+  private wave: Wave = createWave([]);
   private readonly cards = new Map<string, Card>();
+  private session!: GameSession;
+  /** The panel is showing the deck menu (orbs are deck titles), not a question. */
+  private menuOpen = false;
+  private pips = 0;
+  // Each reveal is one presentation; the counter makes its encounter id unique for the run-flow.
+  private encounterSeq = 0;
   private enemies!: EnemyField;
   private panel!: QuestionPanel;
   private readonly walls = new WallTracker();
@@ -77,7 +88,8 @@ export class CardsSystem extends createSystem({
     this.panel = new QuestionPanel(this.world);
     this.fxRoot = this.world.createTransformEntity(new Group());
     this.feedback = new CorrectFeedback(this.fxRoot.object3D!);
-    this.startRun();
+    this.session = browserSession();
+    this.openMenu('Flashcard Defense');
     this.cleanupFuncs.push(
       this.queries.pressed.subscribe('qualify', (entity) => this.onPress(entity)),
       this.queries.planes.subscribe('qualify', () => this.walls.markDirty()),
@@ -115,11 +127,54 @@ export class CardsSystem extends createSystem({
     super.destroy();
   }
 
-  // Seam: deck selection / scheduler queue / start screen decide what enters the wave.
-  private startRun(): void {
-    for (const card of CAPITALS) this.cards.set(card.id, card);
-    this.wave = createWave(shuffled(CAPITALS.map((c) => c.id)));
-    if (isWaveCleared(this.wave)) this.onWaveCleared();
+  /** Start screen and replay menu: one orb per deck on the question panel. */
+  private openMenu(heading: string): void {
+    this.session = updateMenu(this.session, (m) => openDeckSelect(backToStart(m)));
+    this.panel.clear();
+    this.menuOpen = true;
+    const titles = deckOptions(this.session.menu).map((o) => o.title);
+    this.panel.show(this.eye, this.readHead(), [heading, 'Pick a deck to start'], titles);
+  }
+
+  // The selected deck's FSRS queue (via game-session) decides what enters the wave.
+  private startRun(deckId: string): void {
+    const step = startRun(updateMenu(this.session, (m) => selectDeck(m, deckId)));
+    if (step.session.menu.screen !== 'playing') return;
+    this.menuOpen = false;
+    this.panel.clear();
+    this.message?.dispose();
+    this.message = undefined;
+    this.clearEnemies();
+    this.apply(step);
+  }
+
+  /** Renders the plain-data effects game-session returns for each seam event. */
+  private apply(step: SessionStep): void {
+    this.session = step.session;
+    for (const effect of step.effects) {
+      if (effect.type === 'spawnWave') {
+        this.cards.clear();
+        for (const card of effect.cards) this.cards.set(card.id, card);
+        this.wave = createWave(shuffled(effect.cards.map((c) => c.id)));
+      } else if (effect.type === 'pips') {
+        this.pips = effect.remaining;
+        if (this.panel.isOpen && !this.menuOpen) this.panel.flash(this.panelLines());
+      } else {
+        this.endRun(effect.text);
+      }
+    }
+  }
+
+  private endRun(text: string): void {
+    this.clearEnemies();
+    this.message?.dispose();
+    this.message = showMessage(this.world, this.eye, this.readHead(), [text, ...masteryText(this.session)]);
+    this.openMenu('Play again?');
+  }
+
+  private clearEnemies(): void {
+    for (const enemy of this.wave.active) this.enemies.remove(enemy.id);
+    this.wave = createWave([]);
   }
 
   private onPress(entity: Entity): void {
@@ -144,7 +199,10 @@ export class CardsSystem extends createSystem({
     if (next === this.wave) return;
     this.wave = next;
     const card = this.cards.get(id);
-    if (card !== undefined) this.showPanel(card);
+    if (card === undefined) return;
+    this.showPanel(card);
+    // Reported here, once per reveal; panel repaints (hit flash) never re-present the card.
+    this.apply(presented(this.session, id, `${id}#${++this.encounterSeq}`));
   }
 
   private applyOrb(): void {
@@ -152,31 +210,43 @@ export class CardsSystem extends createSystem({
     if (orb === null) return;
     this.pendingOrb = null;
     const label = this.panel.labelOf(orb);
+    if (label === undefined) return;
+    if (this.menuOpen) {
+      const deck = deckOptions(this.session.menu).find((o) => o.title === label);
+      if (deck !== undefined) this.startRun(deck.id);
+      return;
+    }
     const targetId = this.wave.targetId;
     const card = targetId === null ? undefined : this.cards.get(targetId);
-    if (label === undefined || targetId === null || card === undefined) return;
+    if (targetId === null || card === undefined) return;
     if (label !== card.answer) this.onWrongAnswer(orb);
     else this.onCorrectAnswer(targetId);
   }
 
-  // Seam: matcher / run-state (wrong orb = hit) / scheduler grading plug in here.
+  // Wrong orb: game-session costs a pip (once per encounter) and writes one Again rating.
   private onWrongAnswer(orb: Entity): void {
+    const targetId = this.wave.targetId;
+    const label = this.panel.labelOf(orb);
+    // Removed first: a losing hit's end screen clears the panel and opens the menu.
     this.panel.removeOrb(orb);
+    if (targetId === null || label === undefined) return;
+    this.apply(wrongOrb(this.session, targetId, label));
   }
 
-  // Seam: run-state / scheduler grading plug in here.
+  // Correct orb: game-session clears the card and writes its rating; the last card is the WIN.
   private onCorrectAnswer(targetId: string): void {
+    const step = correctOrb(this.session, targetId);
     this.wave = answerTarget(this.wave, true);
     if (!this.enemies.worldPosition(targetId, this.fxAt)) this.fxAt.copy(this.eye);
     this.feedback.play(this.fxAt, this.pendingGamepad);
     this.panel.clear();
     this.enemies.remove(targetId);
+    this.apply(step);
     if (isWaveCleared(this.wave)) this.onWaveCleared();
   }
 
-  // Seam: end screens / save plug in here.
   private onWaveCleared(): void {
-    this.message = showMessage(this.world, this.eye, this.readHead(), 'Deck cleared');
+    this.apply(waveCleared(this.session));
   }
 
   private targetHits(): number {
@@ -194,7 +264,8 @@ export class CardsSystem extends createSystem({
   private showPanel(card: Card): void {
     const headYaw = this.readHead();
     const lines = this.panelLines();
-    const labels = pickOrbs(card, CAPITALS, Math.random).map((orb) => orb.label);
+    const pool = this.session.deck?.cards ?? [card];
+    const labels = pickOrbs(card, pool, Math.random).map((orb) => orb.label);
     this.panel.show(this.eye, headYaw, lines, labels);
     this.updateAnchor();
   }
@@ -207,7 +278,7 @@ export class CardsSystem extends createSystem({
   private panelLines(): string[] {
     const id = this.wave.targetId;
     const prompt = id === null ? '' : (this.cards.get(id)?.prompt ?? '');
-    return [prompt, `Hits: ${this.targetHits()}`];
+    return [prompt, `Shields: ${this.pips}   Hits: ${this.targetHits()}`];
   }
 }
 

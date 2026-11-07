@@ -31,9 +31,11 @@ const PANEL_BG = '#0f172a';
 const PANEL_FLASH_BG = '#b91c1c';
 
 /** A text plane MESSAGE_DISTANCE ahead of the eye on the given yaw (0 when not finite). */
-export function showMessage(world: World, eye: Vector3, yaw: number, text: string): Entity {
+export function showMessage(world: World, eye: Vector3, yaw: number, text: string | readonly string[]): Entity {
   const safeYaw = Number.isFinite(yaw) ? yaw : 0;
-  const mesh = textPlane([text], 1.2, 0.25, '#1e293b');
+  const lines = typeof text === 'string' ? [text] : text;
+  // Grow with the line count so each row keeps a readable height.
+  const mesh = textPlane(lines, 1.2, Math.max(0.25, 0.1 * lines.length), '#1e293b');
   mesh.position.set(
     eye.x - Math.sin(safeYaw) * MESSAGE_DISTANCE,
     eye.y,
