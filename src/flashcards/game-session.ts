@@ -2,7 +2,7 @@
 // CardsSystem only forwards seam events and renders the plain-data effects. Never mutates input; an
 // event that does not apply returns the same session object and no effects.
 import type { Deck, DeckCard } from './deck-schema.js';
-import { createMenu, masterySummary, startPlaying, type MenuState } from './menu-flow.js';
+import { createMenu, masterySummary, startPlaying, type MasteryRow, type MenuState } from './menu-flow.js';
 import { loadReview, startEncounter, submitAnswer, type Attempt, type Encounter, type ReviewState } from './review-flow.js';
 import { startFlow, stepFlow, type RunFlowEffect, type RunFlowEvent, type RunFlowState } from './run-flow.js';
 import { readSave, type SaveStorage } from './save.js';
@@ -119,7 +119,11 @@ export function waveCleared(s: GameSession): SessionStep {
   return r ? { session: next(s, { run: r.run }), effects: r.effects } : same(s);
 }
 
-export function masteryText(s: GameSession): string[] {
+export function masteryRows(s: GameSession): MasteryRow[] {
   const save = s.review ? s.review.save : readSave(envOf(s).storage, s.menu.decks).save;
-  return masterySummary(s.menu.decks, save.decks).map((row) => row.text);
+  return masterySummary(s.menu.decks, save.decks);
+}
+
+export function masteryText(s: GameSession): string[] {
+  return masteryRows(s).map((row) => row.text);
 }
