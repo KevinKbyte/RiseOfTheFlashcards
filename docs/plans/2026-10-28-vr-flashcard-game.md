@@ -122,6 +122,7 @@ D3 Matcher (deterministic, no LLM). Normalize: NFKD, drop combining marks (Unico
 D3a Claude (Kev 2026-10-31, M12, ledgers C-1; contract spec GRADE-001..008, RELAY-013/014). Load-time: deck POST adds Claude aliases + rejects
   (starter decks once offline, committed); play stays deterministic + offline. Live: Settings toggle, upgrade-only (D4 Grading), free-form
   recognizer only, default OFF unless G1 picks Whisper; Haiku dev/test, Sonnet judged. Built: S10 ~0.5 slice-day; live S10+S4 ~1-1.5, Nov 16 buffer.
+  Ops: check Anthropic console usage weekly through ~Dec 11 against the GRADE-007 spend cap (read-only; not a D6 freeze-window op).
 D4 Answer outcomes (single table; "encounter" = one card-enemy's card until it is removed; one FSRS write per encounter, rated per D5):
 
 | Outcome | Classified when | Enemy | Player | FSRS rating (D5) |
