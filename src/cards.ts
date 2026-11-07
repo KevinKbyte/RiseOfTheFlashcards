@@ -30,6 +30,7 @@ import { browserSession, shuffled } from './card-session.js';
 import { WallTracker } from './card-wall-tracker.js';
 import { pickOrbs, type Card } from './flashcards/deck.js';
 import { currentCard } from './flashcards/pool.js';
+import { correctOutcome } from './flashcards/peel-present.js';
 import {
   correctOrb,
   enemyHit,
@@ -131,14 +132,17 @@ export class CardsSystem extends createSystem({
 
     const prevHits = this.targetHits();
     this.wave = tickWave(this.wave, dt);
-    const targetId = this.wave.targetId;
-    if (targetId !== null && this.targetHits() > prevHits) {
+    if (this.wave.targetId !== null && this.targetHits() > prevHits) {
       // A strike landed: game-session costs the pip (may end the run). apply() flashes on a pip
-      // change; flash here only when none came (pip cap), so one hit is one flash.
-      const step = enemyHit(this.session, this.currentCardId() ?? targetId);
-      this.apply(step);
-      const pipFlashed = step.effects.some((e) => e.type === 'pips');
-      if (!pipFlashed && this.panel.isOpen && !this.menuOpen) this.panel.flash(this.panelLines());
+      // change; flash here only when none came (pip cap), so one hit is one flash. A target with no
+      // current card has nothing to grade, so the hit is skipped rather than charged to the enemy id.
+      const cardId = this.currentCardId();
+      if (cardId !== null) {
+        const step = enemyHit(this.session, cardId);
+        this.apply(step);
+        const pipFlashed = step.effects.some((e) => e.type === 'pips');
+        if (!pipFlashed && this.panel.isOpen && !this.menuOpen) this.panel.flash(this.panelLines());
+      }
     } else this.panel.tickFlash(dt, () => this.panelLines());
     this.enemies.spawnMissing(this.wave, this.walls.walls, this.eye, () => this.readHead());
     this.enemies.update(this.wave, dt, this.clock);
@@ -304,14 +308,16 @@ export class CardsSystem extends createSystem({
   // A multi-card enemy stays the target after a peel; its next card is presented as a new encounter.
   private onCorrectAnswer(targetId: string, cardId: string): void {
     const step = correctOrb(this.session, cardId);
-    this.wave = answerTarget(this.wave, true);
+    const before = this.wave;
+    this.wave = answerTarget(before, true);
+    const outcome = correctOutcome(before, this.wave);
     if (!this.enemies.worldPosition(targetId, this.fxAt)) this.fxAt.copy(this.eye);
     this.feedback.play(this.fxAt, this.pendingGamepad);
     this.panel.clear();
-    const peeled = this.wave.targetId === targetId;
-    if (!peeled) this.enemies.remove(targetId);
+    if (outcome.kind === 'defeated') this.enemies.remove(targetId);
     this.apply(step);
-    if (peeled && this.wave.targetId === targetId) this.presentTarget();
+    // apply() may end the run and reset the wave, so the peeled target must still be the target.
+    if (outcome.kind === 'peeled' && this.wave.targetId === outcome.enemyId) this.presentTarget();
     else if (isWaveCleared(this.wave)) this.onWaveCleared();
   }
 
