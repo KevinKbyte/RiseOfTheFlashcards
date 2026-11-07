@@ -22,7 +22,8 @@ export interface Encounter {
   readonly answer: AnswerState;
 }
 
-export type Attempt = { kind: 'voice'; transcript: string } | { kind: 'orb'; label: string };
+/** 'hit': a landed enemy strike, graded as a wrong answer (Again, once per encounter). */
+export type Attempt = { kind: 'voice'; transcript: string } | { kind: 'orb'; label: string } | { kind: 'hit' };
 
 export interface ReviewEnv {
   deck: MatchCard[];
@@ -64,6 +65,7 @@ export function startEncounter(cardId: string): Encounter {
 }
 
 function classify(attempt: Attempt, cardId: string, deck: MatchCard[]): VoiceResult {
+  if (attempt.kind === 'hit') return 'wrong';
   if (attempt.kind === 'voice') return classifyTranscript({ deck, cardId, transcript: attempt.transcript });
   return deck.find((c) => c.id === cardId)?.answer === attempt.label ? 'correct' : 'wrong';
 }
