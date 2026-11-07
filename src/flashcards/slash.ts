@@ -97,12 +97,14 @@ export function classifySlash(
   for (let i = 1; i < path.length; i++) {
     const a = path[i - 1];
     const b = path[i];
-    if (dist(a.pos, b.pos) / (b.t - a.t) < SLASH_MIN_SPEED) continue;
+    // A zero-duration segment (shared timestamp) has NaN or Infinity speed: not a measurable crossing.
+    const speed = dist(a.pos, b.pos) / (b.t - a.t);
+    if (!(speed >= SLASH_MIN_SPEED) || !Number.isFinite(speed)) continue;
     let bestT = Infinity;
     let bestId: string | null = null;
     for (const tg of targets) {
       if (!finiteVec(tg.pos) || !Number.isFinite(tg.radius) || tg.radius <= 0) continue;
-      const t = segmentEntry(path[i - 1].pos, path[i].pos, tg.pos, tg.radius);
+      const t = segmentEntry(a.pos, b.pos, tg.pos, tg.radius);
       if (t !== null && t < bestT) {
         bestT = t;
         bestId = tg.id;
