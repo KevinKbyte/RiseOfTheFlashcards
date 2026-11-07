@@ -28,6 +28,8 @@ import { CorrectFeedback } from './card-feedback.js';
 import { QuestionPanel, showMessage } from './card-question-panel.js';
 import { browserSession, shuffled } from './card-session.js';
 import { CardSlash } from './card-slash.js';
+import { UltimateInput } from './card-ultimate.js';
+import { resolveUltimate, ultimateOrb } from './flashcards/ultimate-input.js';
 import { WallTracker } from './card-wall-tracker.js';
 import { pickOrbs, type Card } from './flashcards/deck.js';
 import { currentCard } from './flashcards/pool.js';
@@ -98,6 +100,8 @@ export class CardsSystem extends createSystem({
   private pendingOrb: Entity | null = null;
   // Captured in the press callback, while the answering trigger or pinch is still held.
   private pendingGamepad: Gamepad | undefined;
+  private pendingUltimateOrb = false;
+  private ultimate!: UltimateInput;
   private fxRoot!: Entity;
   private feedback!: CorrectFeedback;
   private readonly fxAt = new Vector3();
@@ -109,6 +113,7 @@ export class CardsSystem extends createSystem({
     this.panel = new QuestionPanel(this.world);
     this.fxRoot = this.world.createTransformEntity(new Group());
     this.feedback = new CorrectFeedback(this.fxRoot.object3D!);
+    this.ultimate = new UltimateInput(this.world);
     this.session = browserSession();
     this.openMenu('Flashcard Defense');
     this.cleanupFuncs.push(
@@ -127,6 +132,7 @@ export class CardsSystem extends createSystem({
     this.collectSlash();
     this.applyReveal();
     this.applyOrb();
+    this.applyUltimate(dt);
     this.feedback.update(dt);
     this.placeMenuForSession();
     if (this.message !== undefined) {
@@ -159,6 +165,7 @@ export class CardsSystem extends createSystem({
     this.message?.dispose();
     this.message = undefined;
     this.feedback.destroy();
+    this.ultimate.destroy();
     this.fxRoot.dispose();
     super.destroy();
   }
@@ -241,7 +248,8 @@ export class CardsSystem extends createSystem({
   private onPress(entity: Entity): void {
     this.feedback.unlockAudio();
     const id = this.enemies.idOf(entity);
-    if (id !== undefined) this.pendingEnemyId = id;
+    if (this.ultimate.isOrb(entity)) this.pendingUltimateOrb = true;
+    else if (id !== undefined) this.pendingEnemyId = id;
     else if (this.panel.hasOrb(entity)) {
       this.pendingOrb = entity;
       const { left, right } = this.input.xr.gamepads;
@@ -339,6 +347,24 @@ export class CardsSystem extends createSystem({
     // apply() may end the run and reset the wave, so the peeled target must still be the target.
     if (outcome.kind === 'peeled' && this.wave.targetId === outcome.enemyId) this.presentTarget();
     else if (isWaveCleared(this.wave)) this.onWaveCleared();
+  }
+
+  // Palm push, grip squeeze or orb select -> one fire per frame, only with a strike-slot target;
+  // the knockback sends it back to the wave's emerge distance (D7, H-2).
+  private applyUltimate(dt: number): void {
+    const orbSelected = this.pendingUltimateOrb;
+    this.pendingUltimateOrb = false;
+    const requests = this.ultimate.collect(this.world.xrFrame, this.world.xrReferenceSpace, this.clock, orbSelected);
+    const targetId = this.wave.targetId;
+    const r = resolveUltimate(this.session, this.wave, requests, { spawnDistance: this.wave.cfg.spawnDistance });
+    this.wave = r.wave;
+    this.apply({ session: r.session, effects: r.effects });
+    if (targetId !== null && r.effects.some((e) => e.type === 'ultimate')) {
+      if (!this.enemies.worldPosition(targetId, this.fxAt)) this.fxAt.copy(this.eye);
+      this.ultimate.pulse(this.fxAt);
+    }
+    this.ultimate.syncOrb(ultimateOrb(this.session.run?.run ?? null), this.eye, this.readHead(), this.clock);
+    this.ultimate.update(dt);
   }
 
   private onWaveCleared(): void {
