@@ -1,8 +1,12 @@
 // Versioned FSRS save. parseSave is an untrusted-input boundary (localStorage is user-editable):
 // it never throws. An invalid envelope yields an empty save; an invalid card drops only that card.
+// Progress is per deck (decks.<deckId>.<cardId>). Deck ids are untrusted and may be "__proto__", so
+// parsed deck maps are built on a null prototype and deck lookups are own-property checks only.
 import type { CardState, DailyCounters, FsrsState } from './scheduler.js';
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
+/** Flat format: cards keyed by card id alone, no deck. Still readable; migrated on load. */
+const FLAT_VERSION = 1;
 /** Hard cap on stored text; checked before JSON.parse so a huge value costs nothing to reject. */
 export const MAX_SAVE_CHARS = 1_000_000;
 /** Holds the first unreadable (corrupt or newer-version) live save, so a write never erases it. */
@@ -19,10 +23,20 @@ const MIN_YEAR = 1970;
 const MIN_DIFFICULTY = 1;
 const MAX_DIFFICULTY = 10;
 
+export type CardMap = Record<string, CardState>;
+
 export interface SaveData {
   version: typeof SAVE_VERSION;
-  cards: Record<string, CardState>;
+  decks: Record<string, CardMap>;
+  /** Flat-save progress for card ids no known deck contained yet; adopted by a later deck. */
+  orphans: CardMap;
   counters: DailyCounters | null;
+}
+
+/** Minimal deck shape needed to place flat progress (a Deck fits). */
+export interface KnownDeck {
+  id: string;
+  cards: readonly { id: string }[];
 }
 
 /** localStorage-shaped dependency, injectable for tests. */
@@ -32,7 +46,14 @@ export interface SaveStorage {
 }
 
 export function emptySave(): SaveData {
-  return { version: SAVE_VERSION, cards: {}, counters: null };
+  return { version: SAVE_VERSION, decks: Object.create(null), orphans: {}, counters: null };
+}
+
+const own = (o: object, k: string): boolean => Object.prototype.hasOwnProperty.call(o, k);
+
+/** One deck's card progress; {} when the deck has none. Own-property read only. */
+export function deckCards(save: SaveData, deckId: string): CardMap {
+  return own(save.decks, deckId) ? save.decks[deckId] : {};
 }
 
 export function serializeSave(data: SaveData): string {
@@ -71,6 +92,35 @@ function parseCards(v: unknown): Record<string, CardState> | null {
   return out;
 }
 
+/** Deck ids are not filtered by FORBIDDEN_KEYS: the null-prototype map stores "__proto__" as data. */
+function parseDecks(v: unknown): Record<string, CardMap> | null {
+  if (!isObj(v)) return null;
+  const out: Record<string, CardMap> = Object.create(null);
+  for (const [id, raw] of Object.entries(v)) {
+    if (id.length === 0 || id.length > MAX_ID_CHARS) continue;
+    const cards = parseCards(raw);
+    if (cards !== null) out[id] = cards;
+  }
+  return out;
+}
+
+/**
+ * Copy each orphan under every known deck containing its card id (a deck's own progress wins), and
+ * return the orphans no known deck claimed. Mutates `decks`, which the caller just built.
+ */
+function adoptOrphans(decks: Record<string, CardMap>, orphans: CardMap, known: readonly KnownDeck[]): CardMap {
+  const left: CardMap = { ...orphans };
+  for (const deck of known) {
+    for (const { id } of deck.cards) {
+      if (!own(orphans, id)) continue;
+      if (!own(decks, deck.id)) decks[deck.id] = {};
+      if (!own(decks[deck.id], id)) decks[deck.id][id] = orphans[id];
+      delete left[id];
+    }
+  }
+  return left;
+}
+
 /** undefined = invalid; null = no counters saved. */
 function parseCounters(v: unknown): DailyCounters | null | undefined {
   if (v === null) return null;
@@ -88,20 +138,34 @@ function parseJson(text: string): unknown {
   }
 }
 
-/** Valid save, or null when the envelope (JSON, version, cards map, counters) is unreadable. */
-function parseEnvelope(input: unknown): SaveData | null {
+/**
+ * Valid save, or null when the envelope (JSON, version, decks or flat cards map, counters) is
+ * unreadable. A flat save is a migration source: all its cards start as orphans, then known decks
+ * adopt them, so a card in no known deck is kept rather than dropped.
+ */
+function parseEnvelope(input: unknown, known: readonly KnownDeck[] = []): SaveData | null {
   if (typeof input !== 'string' || input.length > MAX_SAVE_CHARS) return null;
   const raw = parseJson(input);
-  if (!isObj(raw) || raw.version !== SAVE_VERSION) return null;
-  const cards = parseCards(raw.cards);
+  if (!isObj(raw)) return null;
+  let decks: Record<string, CardMap> | null;
+  let orphans: CardMap | null;
+  if (raw.version === SAVE_VERSION) {
+    decks = parseDecks(raw.decks);
+    orphans = parseCards(raw.orphans) ?? {};
+  } else if (raw.version === FLAT_VERSION) {
+    decks = Object.create(null) as Record<string, CardMap>;
+    orphans = parseCards(raw.cards);
+  } else {
+    return null;
+  }
   const counters = parseCounters(raw.counters);
-  if (cards === null || counters === undefined) return null;
-  return { version: SAVE_VERSION, cards, counters };
+  if (decks === null || orphans === null || counters === undefined) return null;
+  return { version: SAVE_VERSION, decks, orphans: adoptOrphans(decks, orphans, known), counters };
 }
 
 /** Parse untrusted save text; an unreadable envelope yields an empty save. Never throws. */
-export function parseSave(input: unknown): SaveData {
-  return parseEnvelope(input) ?? emptySave();
+export function parseSave(input: unknown, knownDecks?: readonly KnownDeck[]): SaveData {
+  return parseEnvelope(input, knownDecks) ?? emptySave();
 }
 
 /** Reading globalThis.localStorage itself can throw (e.g. blocked storage), so callers wrap this. */
@@ -116,18 +180,18 @@ export interface SaveRead {
 }
 
 /** Load the save, distinguishing a throwing read from a missing or unreadable save. Never throws. */
-export function readSave(storage?: SaveStorage): SaveRead {
+export function readSave(storage?: SaveStorage, knownDecks?: readonly KnownDeck[]): SaveRead {
   try {
     const s = storage ?? defaultStorage();
-    return { save: s ? parseSave(s.getItem(SAVE_KEY)) : emptySave(), readFailed: false };
+    return { save: s ? parseSave(s.getItem(SAVE_KEY), knownDecks) : emptySave(), readFailed: false };
   } catch {
     return { save: emptySave(), readFailed: true };
   }
 }
 
 /** Load the save; missing or failing storage degrades to an empty save. */
-export function loadSave(storage?: SaveStorage): SaveData {
-  return readSave(storage).save;
+export function loadSave(storage?: SaveStorage, knownDecks?: readonly KnownDeck[]): SaveData {
+  return readSave(storage, knownDecks).save;
 }
 
 /**

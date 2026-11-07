@@ -5,10 +5,12 @@ import { Rating as FsrsRating } from 'ts-fsrs';
 import { answerOutcome, classifyTranscript, type AnswerState, type VoiceResult } from './answer-outcome.js';
 import type { MatchCard } from './matcher.js';
 import { applyRating, buildQueue, bumpCounters, type Queue, type Rating } from './scheduler.js';
-import { readSave, writeSave, type SaveData, type SaveStorage } from './save.js';
+import { deckCards, readSave, writeSave, type KnownDeck, type SaveData, type SaveStorage } from './save.js';
 
 export interface ReviewState {
   readonly save: SaveData;
+  /** Deck whose progress this session reads and writes; other decks' progress is never touched. */
+  readonly deckId: string;
   readonly queue: Queue;
   readonly saveFailed: boolean;
   /** Storage threw on load: writing would clobber a save we never saw, so writes are skipped. */
@@ -41,11 +43,18 @@ const RATING: Partial<Record<FsrsRating, Rating>> = {
   [FsrsRating.Good]: 'good',
 };
 
+export interface ReviewKey {
+  deckId: string;
+  /** Decks used to place an old flat save's progress; omitted, that progress is kept as orphans. */
+  knownDecks?: readonly KnownDeck[];
+}
+
 /** Start-of-session load; a missing, corrupt or unreadable save degrades to fresh progress. */
-export function loadReview(storage: SaveStorage, deck: MatchCard[], now: Date): ReviewState {
-  const { save, readFailed } = readSave(storage);
-  const queue = buildQueue({ deck, cards: save.cards, counters: save.counters, now });
-  return { save, queue, saveFailed: readFailed, readFailed };
+export function loadReview(storage: SaveStorage, deck: MatchCard[], now: Date, key: ReviewKey): ReviewState {
+  const { deckId } = key;
+  const { save, readFailed } = readSave(storage, key.knownDecks);
+  const queue = buildQueue({ deck, cards: deckCards(save, deckId), counters: save.counters, now });
+  return { save, deckId, queue, saveFailed: readFailed, readFailed };
 }
 
 export function startEncounter(cardId: string): Encounter {
@@ -68,7 +77,8 @@ export function submitAnswer(state: ReviewState, encounter: Encounter, attempt: 
   const unchanged = { state, encounter: next, outcome: result.outcome, rating };
   if (rating === null) return unchanged;
 
-  const prev = Object.prototype.hasOwnProperty.call(state.save.cards, cardId) ? state.save.cards[cardId] : undefined;
+  const cards = deckCards(state.save, state.deckId);
+  const prev = Object.prototype.hasOwnProperty.call(cards, cardId) ? cards[cardId] : undefined;
   const card = applyRating(prev, rating, now);
   // applyRating returns prev itself when the card was already rated this study day: nothing to write.
   if (card === prev) return { ...unchanged, rating: null };
@@ -76,7 +86,8 @@ export function submitAnswer(state: ReviewState, encounter: Encounter, attempt: 
   const kind = prev === undefined || prev.state === 0 ? 'new' : 'review';
   const save: SaveData = {
     ...state.save,
-    cards: { ...state.save.cards, [cardId]: card },
+    // Computed keys define own properties, so a "__proto__" deck id is stored as data, not a prototype.
+    decks: { ...state.save.decks, [state.deckId]: { ...cards, [cardId]: card } },
     counters: bumpCounters(state.save.counters, kind, now),
   };
   const saveFailed = state.readFailed || !writeSave(save, storage);
