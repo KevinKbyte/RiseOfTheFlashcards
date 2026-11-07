@@ -299,3 +299,29 @@ describe('classifySlash coverage: ordering and exact boundaries', () => {
     });
   });
 });
+
+// Requirement: a slash cooldown starting exactly at the newest sample time is still cooling (the
+// cooldown window is inclusive of its start), and a fingertip segment with zero duration (two samples
+// sharing a timestamp) has no measurable speed, so it never counts as a fast crossing of a target.
+// Covers: M1, S3
+describe('classifySlash review fixes: cooldown start boundary and zero-duration segments', () => {
+  it('lastSlashAt equal to the newest sample time is still cooling: no slash', () => {
+    expect(FAST[FAST.length - 1].t).toBe(0.2);
+    expect(classifySlash(FAST, [target('a', 0)], 0.2)).toEqual({ kind: 'none' });
+    expect(classifySlash(FAST, [], 0.2)).toEqual({ kind: 'none' });
+  });
+
+  it('a zero-duration segment with travel (infinite speed) never crosses a target fast', () => {
+    // Fast segment -0.3..0 (3 m/s) misses the target at 0.09..0.11; only the duplicate-time segment
+    // 0..0.2 at t=0.1 reaches it. Overall path 0.5 m / 0.1 s is a slash, so the result is a miss.
+    const s = pts([-0.3, 0], [0, 0.1], [0.2, 0.1]);
+    expect(classifySlash(s, [target('t', 0.1, 0.01)])).toEqual({ kind: 'miss' });
+  });
+
+  it('a zero-duration, zero-length segment (NaN speed) starting inside a target never hits it', () => {
+    // -0.4..0.08 at 9.6 m/s stops short of the target (0.09..0.11); 0.08..0.1 at 0.4 m/s is slow;
+    // the repeated sample at x=0.1, t=0.1 sits inside the target with 0/0 speed.
+    const s = pts([-0.4, 0], [0.08, 0.05], [0.1, 0.1], [0.1, 0.1]);
+    expect(classifySlash(s, [target('t', 0.1, 0.01)])).toEqual({ kind: 'miss' });
+  });
+});

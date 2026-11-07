@@ -3,12 +3,11 @@
 // and each correct answer (voice or orb) strips exactly one card (D4 "-1 card"; D11 "one correct answer
 // strips one card"). The enemy is defeated when its last card is stripped. Damage never heals, a
 // defeated pool takes no more damage, and overkill stops at zero. Pool sizes for a run are planned
-// deterministically so every reserved card belongs to exactly one enemy: by default every third enemy
-// is a 2-card enemy and the rest carry one card (spec names no sizes; agent default, tunable).
+// deterministically so every reserved card belongs to exactly one enemy, per D19 wave packing: pools
+// carry 1-3 cards (D14), graded waves hold 3 cards each (12 -> 4 waves, 6 -> 2), pool size ramps
+// 1 -> 2 -> 3, and the last graded wave is one 3-card boss.
 //
 // API contract for src/flashcards/pool.ts (pure, immutable, no three.js/DOM):
-//   export const BIG_POOL_SIZE = 2;    // cards on a bigger enemy (default)
-//   export const BIG_POOL_EVERY = 3;   // every Nth spawned enemy is a bigger one (default)
 //   export interface Pool { readonly cards: readonly string[]; readonly maxHp: number }
 //     cards = remaining card ids, current card first; maxHp = initial card count.
 //   createPool(cards: readonly string[]): Pool       // RangeError on empty or duplicate ids
@@ -18,15 +17,13 @@
 //   damage(pool, amount = 1): Pool
 //     strips `amount` cards from the front; amount <= 0 or a defeated pool -> same object;
 //     overkill clamps to 0 cards; RangeError when amount is not a finite integer.
-//   planPoolSizes(cardCount: number, opts?: { bigSize?: number; bigEvery?: number }): number[]
-//     spawn-order sizes summing to cardCount; spawn index i (0-based) gets bigSize when
-//     (i + 1) % bigEvery === 0, else 1; the last enemy is truncated to the cards left.
-//     RangeError when cardCount is not an integer >= 0 or bigSize/bigEvery are not integers >= 1.
+//   planPoolSizes(cardCount: number): number[]
+//     spawn-order sizes summing to cardCount, each 1..3, non-decreasing (ramp); for a multiple of 3
+//     no pool straddles a 3-card wave; cardCount >= 3 ends in one 3-card pool (the boss).
+//     RangeError when cardCount is not an integer >= 0.
 // No input is ever mutated.
 import { describe, expect, it } from 'vitest';
 import {
-  BIG_POOL_EVERY,
-  BIG_POOL_SIZE,
   createPool,
   currentCard,
   damage,
@@ -117,44 +114,71 @@ describe('pool: multi-card health pool', () => {
   });
 });
 
-// Covers: M2
-describe('pool: planned pool sizes for a run', () => {
-  it('defaults: every third enemy is a 2-card enemy', () => {
-    expect(BIG_POOL_SIZE).toBe(2);
-    expect(BIG_POOL_EVERY).toBe(3);
-    expect(planPoolSizes(12)).toEqual([1, 1, 2, 1, 1, 2, 1, 1, 2]);
-  });
+// Covers: M2, D14, D19
+describe('pool: planned pool sizes for a run (D19 wave packing)', () => {
+  const RUN_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-  it('the sizes always sum to the card count so every card is on exactly one enemy', () => {
-    for (let n = 0; n <= 30; n++) {
-      const sizes = planPoolSizes(n);
-      expect(sizes.reduce((a, b) => a + b, 0), `n=${n}`).toBe(n);
-      for (const s of sizes) expect(s, `n=${n}`).toBeGreaterThanOrEqual(1);
+  function prefixSums(sizes: readonly number[]): number[] {
+    let acc = 0;
+    return sizes.map((x) => (acc += x));
+  }
+
+  it.each(RUN_SIZES)('n=%i: sizes sum to n and every pool carries 1-3 cards', (n) => {
+    const sizes = planPoolSizes(n);
+    expect(sizes.reduce((a, b) => a + b, 0)).toBe(n);
+    for (const x of sizes) {
+      expect(Number.isInteger(x)).toBe(true);
+      expect(x).toBeGreaterThanOrEqual(1);
+      expect(x).toBeLessThanOrEqual(3);
     }
   });
 
-  it('the last enemy is truncated to the cards left', () => {
-    expect(planPoolSizes(3)).toEqual([1, 1, 1]);
-    expect(planPoolSizes(4)).toEqual([1, 1, 2]);
-    expect(planPoolSizes(6)).toEqual([1, 1, 2, 1, 1]);
+  it.each(RUN_SIZES)('n=%i: pool size never shrinks along spawn order (ramp 1 -> 2 -> 3)', (n) => {
+    const sizes = planPoolSizes(n);
+    for (let i = 1; i < sizes.length; i++) expect(sizes[i], `index ${i} of ${sizes}`).toBeGreaterThanOrEqual(sizes[i - 1]);
+  });
+
+  it.each(RUN_SIZES.filter((n) => n >= 3))('n=%i: the last graded wave is one 3-card boss pool', (n) => {
+    expect(planPoolSizes(n).at(-1)).toBe(3);
+  });
+
+  it.each(RUN_SIZES.filter((n) => n >= 4))('n=%i: the ramp starts with a 1-card enemy', (n) => {
+    expect(planPoolSizes(n)[0]).toBe(1);
+  });
+
+  it.each([
+    [3, 1],
+    [6, 2],
+    [9, 3],
+    [12, 4],
+  ])('n=%i packs into %i waves of 3: no pool straddles a wave boundary', (n, waves) => {
+    const sums = prefixSums(planPoolSizes(n));
+    const boundaries = Array.from({ length: waves }, (_, w) => 3 * (w + 1));
+    for (const b of boundaries) expect(sums, `wave boundary ${b}`).toContain(b);
+  });
+
+  it('6 cards = 2 waves ramping 1 -> 2 -> 3: [1, 2] then the 3-card boss', () => {
+    expect(planPoolSizes(6)).toEqual([1, 2, 3]);
+  });
+
+  it('12 cards ramp through every tier: a 1-card, a 2-card and a 3-card enemy', () => {
+    const sizes = planPoolSizes(12);
+    expect(sizes).toContain(1);
+    expect(sizes).toContain(2);
+    expect(sizes.at(-1)).toBe(3);
+  });
+
+  it('the smallest runs: 1 card is one 1-card enemy, 3 cards are one 3-card boss, 4 cards are [1, 3]', () => {
+    expect(planPoolSizes(1)).toEqual([1]);
+    expect(planPoolSizes(3)).toEqual([3]);
+    expect(planPoolSizes(4)).toEqual([1, 3]);
   });
 
   it('zero cards plan zero enemies', () => {
     expect(planPoolSizes(0)).toEqual([]);
   });
 
-  it('honours custom bigSize and bigEvery', () => {
-    expect(planPoolSizes(10, { bigSize: 3, bigEvery: 2 })).toEqual([1, 3, 1, 3, 1, 1]);
-    expect(planPoolSizes(4, { bigEvery: 1 })).toEqual([2, 2]);
-    expect(planPoolSizes(4, { bigSize: 1 })).toEqual([1, 1, 1, 1]);
-  });
-
   it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])('rejects cardCount %s with a RangeError', (n) => {
     expect(() => planPoolSizes(n)).toThrow(RangeError);
-  });
-
-  it.each([0, -2, 1.5, Number.NaN])('rejects bigSize or bigEvery %s with a RangeError', (v) => {
-    expect(() => planPoolSizes(6, { bigSize: v })).toThrow(RangeError);
-    expect(() => planPoolSizes(6, { bigEvery: v })).toThrow(RangeError);
   });
 });

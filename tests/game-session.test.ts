@@ -51,6 +51,7 @@ import {
 } from '../src/flashcards/game-session.js';
 import * as gameSession from '../src/flashcards/game-session.js';
 import { openDeckSelect, selectDeck } from '../src/flashcards/menu-flow.js';
+import { planPoolSizes } from '../src/flashcards/pool.js';
 import type { Deck } from '../src/flashcards/deck-schema.js';
 import { applyRating } from '../src/flashcards/scheduler.js';
 import { deckCards, emptySave, loadSave, writeSave, type SaveStorage } from '../src/flashcards/save.js';
@@ -438,10 +439,11 @@ describe('game-session: enemyHit seam for a landed strike', () => {
 
 // Requirement: bigger enemies are multi-card health pools (M2). The spawnWave effect tells the scene
 // how many cards each spawned enemy carries, in spawn order, so it can build the wave with pools:
-// poolSizes sums to the spawned card count (every reserved card is on exactly one enemy) and by
-// default every third enemy is a 2-card enemy. The card list itself is unchanged.
+// poolSizes sums to the spawned card count (every reserved card is on exactly one enemy) and follows
+// D19 wave packing (pools of 1-3, ramp 1 -> 2 -> 3, last graded wave one 3-card boss). The card list
+// itself is unchanged.
 // Contract addition: SessionEffect spawnWave gains `poolSizes: readonly number[]` (= planPoolSizes).
-// Covers: M2, CARDS-010
+// Covers: M2, D19, CARDS-010
 describe('game-session: spawnWave carries health-pool sizes', () => {
   function waveOf(effects: readonly SessionEffect[]) {
     const w = effects.find((e): e is Extract<SessionEffect, { type: 'spawnWave' }> => e.type === 'spawnWave');
@@ -449,17 +451,19 @@ describe('game-session: spawnWave carries health-pool sizes', () => {
     return w as typeof w & { poolSizes?: readonly number[] };
   }
 
-  it('a 12-card run spawns pools of 1,1,2 repeating, summing to the card count', () => {
+  it('a 12-card run spawns the D19 packing for 12, summing to the card count and ending in the boss', () => {
     const { step, ids } = started(memoryStorage());
     const w = waveOf(step.effects);
     expect(ids).toHaveLength(12);
-    expect(w.poolSizes).toEqual([1, 1, 2, 1, 1, 2, 1, 1, 2]);
+    expect(w.poolSizes).toEqual(planPoolSizes(12));
+    expect(w.poolSizes?.reduce((a, b) => a + b, 0)).toBe(12);
+    expect(w.poolSizes?.at(-1)).toBe(3);
   });
 
-  it('a 4-card deck truncates the last enemy so every card is used once', () => {
+  it('a 4-card deck spawns a 1-card enemy then the 3-card boss, every card used once', () => {
     const { step, ids } = started(memoryStorage(), SMALL.id);
     const w = waveOf(step.effects);
     expect(ids).toHaveLength(4);
-    expect(w.poolSizes).toEqual([1, 1, 2]);
+    expect(w.poolSizes).toEqual([1, 3]);
   });
 });
