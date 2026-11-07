@@ -10,6 +10,7 @@ import {
   type EncounterConfig,
 } from './encounter.js';
 import { createPool, damage, isDefeated, type Pool } from './pool.js';
+import { RING_FALLBACK_DISTANCE } from './spawn.js';
 
 export const DEFAULT_MAX_ACTIVE = 3;
 
@@ -113,6 +114,29 @@ export function answerTarget(wave: Wave, correct: boolean): Wave {
     queueSizes: refill.queueSizes,
     targetId: null,
   };
+}
+
+/**
+ * Ultimate: pushes the revealed target back toward its spawn (never pulled forward) and cancels its
+ * in-flight attack. It stays the target with its hits and pool, so creep resumes from there.
+ * @throws {RangeError} when `opts.spawnDistance` is not finite and > 0.
+ */
+export function ultimateKnockback(wave: Wave, opts: { spawnDistance?: number } = {}): Wave {
+  const spawnDistance = opts.spawnDistance ?? RING_FALLBACK_DISTANCE;
+  if (!Number.isFinite(spawnDistance) || spawnDistance <= 0) {
+    throw new RangeError(`spawnDistance must be finite and > 0, got ${spawnDistance}`);
+  }
+  const idx = wave.targetId === null ? -1 : wave.active.findIndex((e) => e.id === wave.targetId);
+  if (idx < 0) return wave;
+  const target = wave.active[idx];
+  const enc: Encounter = {
+    ...target.enc,
+    phase: 'answering',
+    telegraphLeft: 0,
+    distance: Math.max(target.enc.distance, spawnDistance),
+  };
+  const active = wave.active.map((e, i) => (i === idx ? { ...e, enc } : e));
+  return { ...wave, active };
 }
 
 export function isWaveCleared(wave: Wave): boolean {

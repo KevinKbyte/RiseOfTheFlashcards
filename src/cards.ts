@@ -215,7 +215,7 @@ export class CardsSystem extends createSystem({
       } else if (effect.type === 'pips') {
         this.pips = effect.remaining;
         if (this.panel.isOpen && !this.menuOpen) this.panel.flash(this.panelLines());
-      } else {
+      } else if (effect.type === 'endScreen') {
         this.endRun(effect.text);
       }
     }
