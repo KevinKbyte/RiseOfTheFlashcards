@@ -57,6 +57,11 @@ export function resolveDodge(
   if (!(impactTime > telegraphStart)) {
     throw new RangeError('impactTime must be after telegraphStart');
   }
+  const fwd = strike.forward ?? { x: 0, z: -1 };
+  const len = Math.hypot(fwd.x, fwd.z);
+  if (!Number.isFinite(len) || len === 0) {
+    throw new RangeError('forward must be a finite, non-zero vector');
+  }
   const pending = now < impactTime;
   const evalTime = pending ? now : impactTime;
   const undecided: DodgeResult = { outcome: pending ? 'pending' : 'hit', displacement: null };
@@ -70,8 +75,6 @@ export function resolveDodge(
   }
   if (!frame || evalTime - frame.t > HIT_FRAME_MAX_AGE_S + TIME_EPS) return undecided;
 
-  const fwd = strike.forward ?? { x: 0, z: -1 };
-  const len = Math.hypot(fwd.x, fwd.z);
   const dx = frame.x - baseline.x;
   const dz = frame.z - baseline.z;
   // Horizontal component perpendicular to forward (2D cross product with the unit forward).

@@ -57,7 +57,8 @@ function recentPath(samples: SlashSample[]): SlashSample[] {
   while (i > 0) {
     const prev = samples[i - 1];
     const dt = samples[i].t - prev.t;
-    if (prev.t < start || dt < 0 || dt > SLASH_MAX_SAMPLE_GAP_S) break;
+    // Negated form so a NaN time also cuts the path.
+    if (!(prev.t >= start) || !(dt >= 0 && dt <= SLASH_MAX_SAMPLE_GAP_S)) break;
     i--;
   }
   return samples.slice(i);
@@ -69,13 +70,21 @@ export function classifySlash(
   lastSlashAt: number | null = null,
 ): SlashResult {
   if (samples.length < 2) return NONE;
-  if (!samples.every((s) => Number.isFinite(s.t) && finiteVec(s.pos))) return NONE;
-
-  const latest = samples[samples.length - 1].t;
-  if (lastSlashAt !== null && latest - lastSlashAt < SLASH_COOLDOWN_S) return NONE;
-
+  // Only the in-window path is validated: stale bad samples outside it never block a slash.
   const path = recentPath(samples);
   if (path.length < 2) return NONE;
+  if (!path.every((s) => Number.isFinite(s.t) && finiteVec(s.pos))) return NONE;
+
+  // A last-slash time after the newest sample (clock reset) or NaN applies no cooldown.
+  const latest = path[path.length - 1].t;
+  if (
+    lastSlashAt !== null &&
+    lastSlashAt <= latest &&
+    latest - lastSlashAt < SLASH_COOLDOWN_S
+  ) {
+    return NONE;
+  }
+
   const duration = path[path.length - 1].t - path[0].t;
   if (!(duration > 0)) return NONE;
 
@@ -84,11 +93,15 @@ export function classifySlash(
   if (length < SLASH_MIN_DISTANCE || length / duration < SLASH_MIN_SPEED) return NONE;
 
   // Segments are walked in path order, so the first segment with any entry holds the winner.
+  // A slowly crossing segment cannot hit, even inside an otherwise fast window.
   for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1];
+    const b = path[i];
+    if (dist(a.pos, b.pos) / (b.t - a.t) < SLASH_MIN_SPEED) continue;
     let bestT = Infinity;
     let bestId: string | null = null;
     for (const tg of targets) {
-      if (!finiteVec(tg.pos) || !Number.isFinite(tg.radius)) continue;
+      if (!finiteVec(tg.pos) || !Number.isFinite(tg.radius) || tg.radius <= 0) continue;
       const t = segmentEntry(path[i - 1].pos, path[i].pos, tg.pos, tg.radius);
       if (t !== null && t < bestT) {
         bestT = t;
