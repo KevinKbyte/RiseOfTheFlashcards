@@ -97,7 +97,8 @@ Deferred to relay integration:
   anything else -> miss. Card + transcript in delimited data tags, labeled untrusted. Model ID pinned in server env:
   claude-haiku-5-5 dev/test, claude-sonnet-5-5 judged/demo. ANTHROPIC_API_KEY server-side only (as RELAY-008); logs never hold
   transcripts (as RELAY-007).
-- GRADE-007: Cost caps: global daily Upstash counter over GRADE-001 + GRADE-003 calls fails closed (miss / unaugmented deck);
+- GRADE-007: Cost caps: global daily Upstash counter over GRADE-001 + GRADE-003 calls fails closed (miss / unaugmented deck;
+  daily request cap: TBD (Kev));
   Anthropic console spend cap below the $200 credit, auto-reload off; GRADER_ENABLED flip is a freeze-window op (plan D6).
 - GRADE-008: Grading sits behind an injectable grader interface; a stub (fixture map transcript -> verdict, unknown -> miss, timeout
   and error modes) serves every gating unit/E2E test (plan M23), which never hit the network. A live golden set (>=40 miss-bucket
