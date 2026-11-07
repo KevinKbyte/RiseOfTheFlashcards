@@ -51,7 +51,8 @@ export class UltimateInput {
   private prevGrip: GripState = { left: false, right: false };
   private orb: Entity | undefined;
   private orbMaterial: MeshBasicMaterial | undefined;
-  private wave: { entity: Entity; material: MeshBasicMaterial; age: number } | undefined;
+  private wave: { entity: Entity; material: MeshBasicMaterial; geometry: SphereGeometry; age: number } | undefined;
+  private orbGeometry: SphereGeometry | undefined;
   private readonly q = new Quaternion();
   private readonly v = new Vector3();
 
@@ -61,7 +62,7 @@ export class UltimateInput {
     return entity === this.orb;
   }
 
-  /** This frame's fire requests; `t` is the scene clock in seconds. */
+  /** This frame's fire requests; `t` is the uncapped input clock in seconds. */
   collect(frame: XRFrame | null, space: XRReferenceSpace | null, t: number, orbSelected: boolean): UltimateRequest[] {
     const requests: UltimateRequest[] = orbSelected ? ['orb'] : [];
     if (frame === null || space === null) {
@@ -118,9 +119,10 @@ export class UltimateInput {
       blending: AdditiveBlending,
       depthWrite: false,
     });
-    const mesh = new Mesh(new SphereGeometry(WAVE_RADIUS, 24, 16), material);
+    const geometry = new SphereGeometry(WAVE_RADIUS, 24, 16);
+    const mesh = new Mesh(geometry, material);
     mesh.position.copy(at);
-    this.wave = { entity: this.world.createTransformEntity(mesh), material, age: 0 };
+    this.wave = { entity: this.world.createTransformEntity(mesh), material, geometry, age: 0 };
   }
 
   update(dt: number): void {
@@ -168,7 +170,8 @@ export class UltimateInput {
     const c = Math.cos(yaw);
     const s = Math.sin(yaw);
     this.orbMaterial = new MeshBasicMaterial({ color: ORB_GLOW });
-    const sphere = new Mesh(new SphereGeometry(ORB_RADIUS, 24, 16), this.orbMaterial);
+    this.orbGeometry = new SphereGeometry(ORB_RADIUS, 24, 16);
+    const sphere = new Mesh(this.orbGeometry, this.orbMaterial);
     sphere.position.set(eye.x + x * c + z * s, eye.y + y, eye.z - x * s + z * c);
     this.orb = this.world.createTransformEntity(sphere);
     this.orb.addComponent(RayInteractable);
@@ -179,11 +182,15 @@ export class UltimateInput {
     this.orb = undefined;
     this.orbMaterial?.dispose();
     this.orbMaterial = undefined;
+    // Entity disposal does not free GPU buffers; without this every charge/fire cycle leaks one.
+    this.orbGeometry?.dispose();
+    this.orbGeometry = undefined;
   }
 
   private disposeWave(): void {
     this.wave?.entity.dispose();
     this.wave?.material.dispose();
+    this.wave?.geometry.dispose();
     this.wave = undefined;
   }
 }
