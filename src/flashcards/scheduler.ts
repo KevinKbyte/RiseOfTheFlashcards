@@ -84,6 +84,11 @@ function reviewedToday(s: CardState, now: Date): boolean {
   return studyDay(new Date(s.lastReview)) === studyDay(now);
 }
 
+/** Own-property lookup: ids like "toString" must not resolve to Object.prototype members. */
+function cardFor(cards: QueueInput['cards'], id: string): CardState | undefined {
+  return Object.prototype.hasOwnProperty.call(cards, id) ? cards[id] : undefined;
+}
+
 function isNew(s: CardState | undefined): boolean {
   return s === undefined || s.state === 0;
 }
@@ -100,10 +105,11 @@ function todaysCounters(counters: DailyCounters | null, now: Date): DailyCounter
 
 function dueReviewIds(input: QueueInput, limit: number): string[] {
   const end = studyDayEnd(input.now);
-  const due = input.deck
-    .map((c) => ({ id: c.id, s: input.cards[c.id] }))
-    .filter(({ s }) => !isNew(s) && Date.parse(s.due) < end && !reviewedToday(s, input.now))
-    .map(({ id, s }) => ({ id, r: forgettingRatio(s, input.now) }));
+  const due = input.deck.flatMap((c) => {
+    const s = cardFor(input.cards, c.id);
+    const isDue = s !== undefined && !isNew(s) && Date.parse(s.due) < end && !reviewedToday(s, input.now);
+    return isDue ? [{ id: c.id, r: forgettingRatio(s, input.now) }] : [];
+  });
   due.sort((a, b) => b.r - a.r);
   return due.slice(0, Math.max(0, limit)).map((d) => d.id);
 }
@@ -115,7 +121,7 @@ export function buildQueue(input: QueueInput): Queue {
   const reviewIds = dueReviewIds(input, reviewLeft);
   const newLeft = reviewIds.length < reviewLeft ? DAILY_NEW_LIMIT - used.newCount : 0;
   const newIds = input.deck
-    .filter((c) => isNew(input.cards[c.id]))
+    .filter((c) => isNew(cardFor(input.cards, c.id)))
     .slice(0, Math.max(0, newLeft))
     .map((c) => c.id);
   return { day: used.day, reviewIds, newIds, ids: [...reviewIds, ...newIds] };
