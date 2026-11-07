@@ -287,14 +287,20 @@ export function dedupeView(state: MenuState): DedupeView {
 }
 
 /** New = no state or FSRS 0; Mastered = Review (2) at >= MASTERED_STABILITY_DAYS; else Learning. */
-export function masterySummary(decks: readonly Deck[], cards: Readonly<Record<string, CardState>>): MasteryRow[] {
+export function masterySummary(
+  decks: readonly Deck[],
+  progress: Readonly<Record<string, Readonly<Record<string, CardState>>>>,
+): MasteryRow[] {
+  const own = (o: object, k: string): boolean => Object.prototype.hasOwnProperty.call(o, k);
   return decks.map((deck) => {
+    // Each deck counts only its own progress map; a deck id like "toString" must not hit a prototype.
+    const cards = own(progress, deck.id) ? progress[deck.id] : {};
     let newCount = 0;
     let learningCount = 0;
     let masteredCount = 0;
     for (const card of deck.cards) {
       // Own-property lookup only: a card id like "toString" must not hit Object.prototype.
-      const st = Object.prototype.hasOwnProperty.call(cards, card.id) ? cards[card.id] : undefined;
+      const st = own(cards, card.id) ? cards[card.id] : undefined;
       if (!st || st.state === 0) newCount += 1;
       else if (st.state === 2 && st.stability >= MASTERED_STABILITY_DAYS) masteredCount += 1;
       else learningCount += 1;

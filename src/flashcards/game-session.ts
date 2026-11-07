@@ -66,7 +66,7 @@ export function startRun(s: GameSession): SessionStep {
   const menu = startPlaying(s.menu);
   if (!deck || menu === s.menu) return same(s);
   const env = envOf(s);
-  const review = loadReview(env.storage, deck.cards, env.clock());
+  const review = loadReview(env.storage, deck.cards, env.clock(), { deckId: deck.id, knownDecks: s.menu.decks });
   const flow = startFlow({ cardIds: review.queue.ids });
   const byId = new Map(deck.cards.map((c) => [c.id, c]));
   const cards = flow.state.run.cards.flatMap((id) => byId.get(id) ?? []);
@@ -120,6 +120,6 @@ export function waveCleared(s: GameSession): SessionStep {
 }
 
 export function masteryText(s: GameSession): string[] {
-  const save = s.review ? s.review.save : readSave(envOf(s).storage).save;
-  return masterySummary(s.menu.decks, save.cards).map((row) => row.text);
+  const save = s.review ? s.review.save : readSave(envOf(s).storage, s.menu.decks).save;
+  return masterySummary(s.menu.decks, save.decks).map((row) => row.text);
 }
