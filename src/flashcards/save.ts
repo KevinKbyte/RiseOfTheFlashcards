@@ -1,7 +1,7 @@
 // Versioned FSRS save. parseSave is an untrusted-input boundary (localStorage is user-editable):
 // it never throws. An invalid envelope yields an empty save; an invalid card drops only that card.
-// Progress is per deck (decks.<deckId>.<cardId>). Deck ids are untrusted and may be "__proto__", so
-// parsed deck maps are built on a null prototype and deck lookups are own-property checks only.
+// Progress is per deck (decks.<deckId>.<cardId>). Deck and card ids are untrusted and may be
+// "__proto__", so every id-keyed map is built on a null prototype and lookups are own-property only.
 import type { CardState, DailyCounters, FsrsState } from './scheduler.js';
 
 export const SAVE_VERSION = 2;
@@ -15,7 +15,6 @@ export const SAVE_BACKUP_KEY = 'flashcards.fsrs.save.backup';
 export const MAX_STABILITY = 36_500;
 const SAVE_KEY = 'flashcards.fsrs.save';
 const MAX_ID_CHARS = 200;
-const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 // Full ISO-8601 date-time only; Date.parse alone accepts "1", "2020", free text, and +YYYYYY years.
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;
@@ -46,14 +45,26 @@ export interface SaveStorage {
 }
 
 export function emptySave(): SaveData {
-  return { version: SAVE_VERSION, decks: Object.create(null), orphans: {}, counters: null };
+  return { version: SAVE_VERSION, decks: idMap(), orphans: idMap(), counters: null };
 }
 
 const own = (o: object, k: string): boolean => Object.prototype.hasOwnProperty.call(o, k);
 
-/** One deck's card progress; {} when the deck has none. Own-property read only. */
+/** Null-prototype map: assigning "__proto__" stores data instead of swapping the prototype. */
+function idMap<T>(): Record<string, T> {
+  return Object.create(null) as Record<string, T>;
+}
+
+/** Null-prototype copy of `map` with `key` set to `value`; the input is not mutated. */
+export function withEntry<T>(map: Record<string, T>, key: string, value: T): Record<string, T> {
+  const out = Object.assign(idMap<T>(), map);
+  out[key] = value;
+  return out;
+}
+
+/** One deck's card progress; empty when the deck has none. Own-property read only. */
 export function deckCards(save: SaveData, deckId: string): CardMap {
-  return own(save.decks, deckId) ? save.decks[deckId] : {};
+  return own(save.decks, deckId) ? save.decks[deckId] : idMap();
 }
 
 export function serializeSave(data: SaveData): string {
@@ -82,24 +93,25 @@ function parseCard(v: unknown): CardState | null {
 /** Invalid cards are skipped individually so one defect never discards the rest of the progress. */
 function parseCards(v: unknown): Record<string, CardState> | null {
   if (!isObj(v)) return null;
-  const out: Record<string, CardState> = {};
+  const out = idMap<CardState>();
   for (const [id, raw] of Object.entries(v)) {
-    // Skip prototype-bearing keys: assigning `out['__proto__']` would swap out's prototype.
-    if (FORBIDDEN_KEYS.has(id) || id.length === 0 || id.length > MAX_ID_CHARS) continue;
+    if (!validId(id)) continue;
     const card = parseCard(raw);
     if (card !== null) out[id] = card;
   }
   return out;
 }
 
-/** Deck ids are not filtered by FORBIDDEN_KEYS: the null-prototype map stores "__proto__" as data. */
+const validId = (id: string): boolean => id.length > 0 && id.length <= MAX_ID_CHARS;
+
+/** A bad deck entry (id or card map) fails the whole save, so its text is backed up, never dropped. */
 function parseDecks(v: unknown): Record<string, CardMap> | null {
   if (!isObj(v)) return null;
-  const out: Record<string, CardMap> = Object.create(null);
+  const out = idMap<CardMap>();
   for (const [id, raw] of Object.entries(v)) {
-    if (id.length === 0 || id.length > MAX_ID_CHARS) continue;
-    const cards = parseCards(raw);
-    if (cards !== null) out[id] = cards;
+    const cards = validId(id) ? parseCards(raw) : null;
+    if (cards === null) return null;
+    out[id] = cards;
   }
   return out;
 }
@@ -109,11 +121,11 @@ function parseDecks(v: unknown): Record<string, CardMap> | null {
  * return the orphans no known deck claimed. Mutates `decks`, which the caller just built.
  */
 function adoptOrphans(decks: Record<string, CardMap>, orphans: CardMap, known: readonly KnownDeck[]): CardMap {
-  const left: CardMap = { ...orphans };
+  const left: CardMap = Object.assign(idMap<CardState>(), orphans);
   for (const deck of known) {
     for (const { id } of deck.cards) {
       if (!own(orphans, id)) continue;
-      if (!own(decks, deck.id)) decks[deck.id] = {};
+      if (!own(decks, deck.id)) decks[deck.id] = idMap();
       if (!own(decks[deck.id], id)) decks[deck.id][id] = orphans[id];
       delete left[id];
     }
@@ -151,9 +163,10 @@ function parseEnvelope(input: unknown, known: readonly KnownDeck[] = []): SaveDa
   let orphans: CardMap | null;
   if (raw.version === SAVE_VERSION) {
     decks = parseDecks(raw.decks);
-    orphans = parseCards(raw.orphans) ?? {};
+    // Absent orphans is a valid empty map; present but malformed fails the save (backed up).
+    orphans = own(raw, 'orphans') ? parseCards(raw.orphans) : idMap();
   } else if (raw.version === FLAT_VERSION) {
-    decks = Object.create(null) as Record<string, CardMap>;
+    decks = idMap();
     orphans = parseCards(raw.cards);
   } else {
     return null;
@@ -197,22 +210,33 @@ export function loadSave(storage?: SaveStorage, knownDecks?: readonly KnownDeck[
 /**
  * Copy an unreadable live save to SAVE_BACKUP_KEY before it is overwritten. Returns false when a
  * backup already holds an earlier unreadable save: the live text then has nowhere safe to go, so
- * the caller must not overwrite it. A throwing setItem propagates so the caller aborts.
+ * the caller must not overwrite it. A readable flat (v1) save is also copied when the backup is
+ * empty, as a rollback point for the migration. A throwing setItem propagates so the caller aborts.
  */
 function backupUnreadable(s: SaveStorage): boolean {
   const live = s.getItem(SAVE_KEY);
-  if (live === null || parseEnvelope(live) !== null) return true;
-  if (s.getItem(SAVE_BACKUP_KEY) !== null) return false;
+  if (live === null) return true;
+  const readable = parseEnvelope(live) !== null;
+  if (readable && !isFlatText(live)) return true;
+  if (s.getItem(SAVE_BACKUP_KEY) !== null) return readable;
   s.setItem(SAVE_BACKUP_KEY, live);
   return true;
+}
+
+/** Only called on text parseEnvelope already accepted, so the JSON parses to an object. */
+function isFlatText(text: string): boolean {
+  return (parseJson(text) as Obj).version === FLAT_VERSION;
 }
 
 /** Persist the save; returns false (never throws) when storage is missing or rejects the write. */
 export function writeSave(data: SaveData, storage?: SaveStorage): boolean {
   try {
+    const text = serializeSave(data);
+    // A later load rejects text over the cap, so writing it would turn progress into "unreadable".
+    if (text.length > MAX_SAVE_CHARS) return false;
     const s = storage ?? defaultStorage();
     if (!s || !backupUnreadable(s)) return false;
-    s.setItem(SAVE_KEY, serializeSave(data));
+    s.setItem(SAVE_KEY, text);
     return true;
   } catch {
     return false;

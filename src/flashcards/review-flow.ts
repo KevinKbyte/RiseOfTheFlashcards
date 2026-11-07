@@ -5,7 +5,7 @@ import { Rating as FsrsRating } from 'ts-fsrs';
 import { answerOutcome, classifyTranscript, type AnswerState, type VoiceResult } from './answer-outcome.js';
 import type { MatchCard } from './matcher.js';
 import { applyRating, buildQueue, bumpCounters, type Queue, type Rating } from './scheduler.js';
-import { deckCards, readSave, writeSave, type KnownDeck, type SaveData, type SaveStorage } from './save.js';
+import { deckCards, readSave, withEntry, writeSave, type KnownDeck, type SaveData, type SaveStorage } from './save.js';
 
 export interface ReviewState {
   readonly save: SaveData;
@@ -45,14 +45,16 @@ const RATING: Partial<Record<FsrsRating, Rating>> = {
 
 export interface ReviewKey {
   deckId: string;
-  /** Decks used to place an old flat save's progress; omitted, that progress is kept as orphans. */
+  /** Other decks used to place an old flat save's progress; the played deck is always included. */
   knownDecks?: readonly KnownDeck[];
 }
 
 /** Start-of-session load; a missing, corrupt or unreadable save degrades to fresh progress. */
 export function loadReview(storage: SaveStorage, deck: MatchCard[], now: Date, key: ReviewKey): ReviewState {
   const { deckId } = key;
-  const { save, readFailed } = readSave(storage, key.knownDecks);
+  // The played deck always adopts flat-save progress for its cards, even with knownDecks omitted.
+  const known: KnownDeck[] = [...(key.knownDecks ?? []), { id: deckId, cards: deck }];
+  const { save, readFailed } = readSave(storage, known);
   const queue = buildQueue({ deck, cards: deckCards(save, deckId), counters: save.counters, now });
   return { save, deckId, queue, saveFailed: readFailed, readFailed };
 }
@@ -86,8 +88,8 @@ export function submitAnswer(state: ReviewState, encounter: Encounter, attempt: 
   const kind = prev === undefined || prev.state === 0 ? 'new' : 'review';
   const save: SaveData = {
     ...state.save,
-    // Computed keys define own properties, so a "__proto__" deck id is stored as data, not a prototype.
-    decks: { ...state.save.decks, [state.deckId]: { ...cards, [cardId]: card } },
+    // Null-prototype copies: a "__proto__" deck or card id is stored as data, not a prototype.
+    decks: withEntry(state.save.decks, state.deckId, withEntry(cards, cardId, card)),
     counters: bumpCounters(state.save.counters, kind, now),
   };
   const saveFailed = state.readFailed || !writeSave(save, storage);
