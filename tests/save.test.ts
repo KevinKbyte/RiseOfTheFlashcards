@@ -1,7 +1,11 @@
 // Requirement: FSRS progress persists across sessions as one versioned JSON save holding per-card
 // FSRS state and the global daily counters. Loading must never crash the game: malformed JSON,
-// wrong version/shape, non-finite or out-of-range numbers, invalid dates, or oversized input all
-// yield an empty save instead of throwing (and never pollute Object.prototype). Storage sits
+// wrong version/shape, or oversized input yield an empty save instead of throwing (and never
+// pollute Object.prototype). A defect inside ONE card (non-finite or out-of-range numbers,
+// non-ISO-8601 dates, stability above a sane cap, difficulty outside [1,10]) drops only that card;
+// every other card and the counters are kept. Progress is never lost silently: stored text that
+// is corrupt or from a newer save version is copied to a backup storage key before any write
+// replaces it. Storage sits
 // behind an injected localStorage-shaped interface; the default (globalThis.localStorage) is
 // guarded so a missing or throwing storage (private mode, quota) degrades to "no save" silently.
 // No spec-cache ID exists yet for save persistence; Covers tags cite plan IDs
@@ -94,15 +98,6 @@ describe('parseSave rejects bad input safely (empty save, never throws)', () => 
     ['wrong version', JSON.stringify({ ...sample(), version: 999 })],
     ['missing cards', JSON.stringify({ version: SAVE_VERSION, counters: null })],
     ['cards is an array', JSON.stringify({ version: SAVE_VERSION, cards: [], counters: null })],
-    ['non-finite stability (1e999)', withCardField('stability', '1e999')],
-    ['negative stability', withCardField('stability', '-1')],
-    ['stability as string', withCardField('stability', '"12"')],
-    ['null difficulty', withCardField('difficulty', 'null')],
-    ['negative reps', withCardField('reps', '-1')],
-    ['fractional lapses', withCardField('lapses', '1.5')],
-    ['unknown FSRS state', withCardField('state', '7')],
-    ['unparseable due date', withCardField('due', '"not a date"')],
-    ['missing lastReview', withCardField('lastReview', 'null')],
     [
       'non-finite counter',
       JSON.stringify({ ...sample(), counters: { day: '2026-11-07', newCount: 0, reviewCount: 0 } }).replace(
@@ -138,6 +133,24 @@ describe('parseSave rejects bad input safely (empty save, never throws)', () => 
     expect(text.length).toBeLessThanOrEqual(MAX_SAVE_CHARS);
     expect(parseSave(text)).toEqual(sample());
   });
+
+  // Card-level defects drop only that card (see 'one bad card is skipped' below).
+  const badCard: [string, string][] = [
+    ['non-finite stability (1e999)', withCardField('stability', '1e999')],
+    ['negative stability', withCardField('stability', '-1')],
+    ['stability as string', withCardField('stability', '"12"')],
+    ['null difficulty', withCardField('difficulty', 'null')],
+    ['negative reps', withCardField('reps', '-1')],
+    ['fractional lapses', withCardField('lapses', '1.5')],
+    ['unknown FSRS state', withCardField('state', '7')],
+    ['unparseable due date', withCardField('due', '"not a date"')],
+    ['missing lastReview', withCardField('lastReview', 'null')],
+  ];
+  for (const [label, input] of badCard) {
+    it(`${label} -> that card dropped, counters kept`, () => {
+      expect(parseSave(input)).toEqual({ ...sample(), cards: {} });
+    });
+  }
 
   it('a __proto__ card key does not pollute Object.prototype', () => {
     const text = `{"version":${SAVE_VERSION},"cards":{"__proto__":${JSON.stringify({ ...card, polluted: true })}},"counters":null}`;
@@ -197,5 +210,110 @@ describe('loadSave / writeSave via injected storage', () => {
     vi.stubGlobal('localStorage', throwingStorage);
     expect(loadSave()).toEqual(emptySave());
     expect(writeSave(sample())).toBe(false);
+  });
+});
+
+/** Two-card save where card `bad` has one field replaced by raw JSON text. */
+function twoCardsWithBad(field: string, rawValue: string): string {
+  const base = JSON.parse(serializeSave(sample()));
+  base.cards.bad = { ...card, [field]: '__RAW__' };
+  return JSON.stringify(base).replace('"__RAW__"', rawValue);
+}
+
+// Covers: D5, S6a
+describe('parseSave: one bad card is skipped, the rest of the save survives', () => {
+  it('invalid card among valid ones -> only that card dropped', () => {
+    expect(parseSave(twoCardsWithBad('stability', '-1'))).toEqual(sample());
+  });
+
+  it('card that is not an object -> only that card dropped', () => {
+    const base = JSON.parse(serializeSave(sample()));
+    base.cards.bad = 'oops';
+    expect(parseSave(JSON.stringify(base))).toEqual(sample());
+  });
+
+  it('load then write keeps the valid cards (no progress erased)', () => {
+    const storage = memoryStorage();
+    writeSave(sample(), storage);
+    const [key] = [...storage.data.keys()];
+    storage.data.set(key, twoCardsWithBad('difficulty', 'null'));
+    expect(writeSave(loadSave(storage), storage)).toBe(true);
+    expect(loadSave(storage).cards).toEqual(sample().cards);
+  });
+});
+
+// Covers: D5, S6a
+describe('parseSave: strict per-card dates and number ranges', () => {
+  const rejected: [string, string, string][] = [
+    ['due "1"', 'due', '"1"'],
+    ['due "2020"', 'due', '"2020"'],
+    ['due expanded-year +275760', 'due', '"+275760-09-13T00:00:00.000Z"'],
+    ['due free text Date.parse accepts', 'due', '"March 7, 2026"'],
+    ['lastReview "1"', 'lastReview', '"1"'],
+    ['lastReview "2020"', 'lastReview', '"2020"'],
+    ['lastReview expanded-year +275760', 'lastReview', '"+275760-09-13T00:00:00.000Z"'],
+    ['stability far above any sane cap (1e12)', 'stability', '1e12'],
+    ['stability 1e300', 'stability', '1e300'],
+    ['difficulty below 1', 'difficulty', '0.5'],
+    ['difficulty above 10', 'difficulty', '10.5'],
+    ['negative difficulty', 'difficulty', '-3'],
+  ];
+  for (const [label, field, raw] of rejected) {
+    it(`${label} -> that card rejected, other card kept`, () => {
+      expect(parseSave(twoCardsWithBad(field, raw))).toEqual(sample());
+    });
+  }
+
+  const accepted: [string, string, unknown][] = [
+    ['difficulty exactly 1', 'difficulty', 1],
+    ['difficulty exactly 10', 'difficulty', 10],
+    ['full ISO-8601 with offset', 'due', '2026-11-20T09:00:00+02:00'],
+    ['stability of one year', 'stability', 365],
+  ];
+  for (const [label, field, value] of accepted) {
+    it(`${label} -> card kept`, () => {
+      const data = sample();
+      data.cards.abc123 = { ...card, [field]: value };
+      expect(parseSave(serializeSave(data))).toEqual(data);
+    });
+  }
+});
+
+/** True when some storage entry other than the live save key holds exactly `raw`. */
+function backedUp(storage: ReturnType<typeof memoryStorage>, liveKey: string, raw: string): boolean {
+  return [...storage.data.entries()].some(([k, v]) => k !== liveKey && v === raw);
+}
+
+function storageHolding(raw: string): { storage: ReturnType<typeof memoryStorage>; key: string } {
+  const storage = memoryStorage();
+  writeSave(emptySave(), storage);
+  const [key] = [...storage.data.keys()];
+  storage.data.set(key, raw);
+  return { storage, key };
+}
+
+// Covers: D5, S6a
+describe('loadSave/writeSave never silently erase unreadable progress (backup key)', () => {
+  it('newer save version: raw text survives under a backup key after load + write', () => {
+    const future = JSON.stringify({ ...sample(), version: SAVE_VERSION + 1, extra: { x: 1 } });
+    const { storage, key } = storageHolding(future);
+    writeSave(loadSave(storage), storage);
+    expect(backedUp(storage, key, future)).toBe(true);
+  });
+
+  it('unparseable text: raw text survives under a backup key after load + write', () => {
+    const corrupt = '{"version":1,"cards":{"abc123":{"stability":12.5,';
+    const { storage, key } = storageHolding(corrupt);
+    writeSave(loadSave(storage), storage);
+    expect(backedUp(storage, key, corrupt)).toBe(true);
+  });
+
+  it('backup is not clobbered by a later write of the fresh save', () => {
+    const corrupt = 'not json at all';
+    const { storage, key } = storageHolding(corrupt);
+    writeSave(loadSave(storage), storage);
+    writeSave(sample(), storage);
+    expect(backedUp(storage, key, corrupt)).toBe(true);
+    expect(loadSave(storage)).toEqual(sample());
   });
 });

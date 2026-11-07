@@ -316,3 +316,13 @@ describe('bumpCounters: global daily counters', () => {
     expect(bumpCounters(c, 'new', at(2026, 11, 7, 3, 59))).toEqual({ day: '2026-11-06', newCount: 3, reviewCount: 0 });
   });
 });
+
+// Covers: D5, M14
+describe('buildQueue: card id lookups are own-property only', () => {
+  it('deck ids shadowing Object.prototype members with no save entry are NEW and queued', () => {
+    const deck = [{ id: 'toString' }, { id: 'constructor' }, { id: 'hasOwnProperty' }];
+    const q = buildQueue({ deck, cards: {}, counters: null, now: NOW });
+    expect(q.newIds).toEqual(['toString', 'constructor', 'hasOwnProperty']);
+    expect(q.reviewIds).toEqual([]);
+  });
+});
