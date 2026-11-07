@@ -116,6 +116,19 @@ describe('flashcards emulator playthrough (IWER Quest 3, real controller input)'
     expect(g.errors).toEqual([]);
   });
 
+  // RED until run-flow/game-session handle a landed enemy strike (enemyHit) and the scene forwards it.
+  it('an unanswered card costs one pip when the enemy strike lands', async () => {
+    const g = await open();
+    await pickDeck(g);
+    const shown = await revealNext(g);
+    expect(shown.pips).toBe(START_PIPS);
+    // Creep (8 s) + telegraph (2 s) from the reveal; no answer is given meanwhile.
+    const struck = await g.until((x) => x.pips < START_PIPS, 'enemy strike lands', 30_000);
+    expect(struck.pips).toBe(START_PIPS - 1);
+    expect(struck.targetId).toBe(shown.targetId);
+    expect(g.errors).toEqual([]);
+  }, 120_000);
+
   it('clearing all 12 cards shows the win message', async () => {
     const g = await open();
     await pickDeck(g);
