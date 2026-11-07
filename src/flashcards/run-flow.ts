@@ -12,8 +12,11 @@ import {
 
 export interface RunFlowState {
   readonly run: RunState;
-  /** (cardId, encounterId) pairs already presented: a re-render never starts a new encounter. */
-  readonly seen: readonly string[];
+  /**
+   * Latest encounterId presented per card id. Only the latest matters for encounter identity, so
+   * this stays bounded by the deck size however long the run: a re-render never starts a new encounter.
+   */
+  readonly latest: Readonly<Record<string, string>>;
 }
 
 export type RunFlowEvent =
@@ -40,17 +43,19 @@ const TEXT = {
   practice: 'Practice done. No cards due today.',
 } as const;
 
+/** @throws {RangeError} when `opts.cardIds` contains a duplicate card id (via startRun). */
 export function startFlow(opts: RunOptions): RunFlowStep {
   const run = startRun(opts);
   const effects: RunFlowEffect[] =
     run.status === 'practice'
       ? [{ type: 'endScreen', kind: 'practice-done', text: TEXT.practice }]
       : [{ type: 'pips', remaining: run.pips }];
-  return { state: { run, seen: [] }, effects };
+  return { state: { run, latest: {} }, effects };
 }
 
-// JSON keeps the pair unambiguous whatever characters the ids contain.
-const pairKey = (cardId: string, encounterId: string): string => JSON.stringify([cardId, encounterId]);
+// Own-property check: a card id like "constructor" must not hit Object.prototype.
+const latestOf = (latest: Readonly<Record<string, string>>, cardId: string): string | undefined =>
+  Object.prototype.hasOwnProperty.call(latest, cardId) ? latest[cardId] : undefined;
 
 export function stepFlow(state: RunFlowState, event: RunFlowEvent): RunFlowStep {
   const noop: RunFlowStep = { state, effects: [] };
@@ -59,11 +64,11 @@ export function stepFlow(state: RunFlowState, event: RunFlowEvent): RunFlowStep 
 
   switch (event.type) {
     case 'presented': {
-      const key = pairKey(event.cardId, event.encounterId);
-      if (state.seen.includes(key)) return noop;
+      if (latestOf(state.latest, event.cardId) === event.encounterId) return noop;
       const next = beginEncounter(run, event.cardId);
       if (next === run) return noop;
-      return { state: { run: next, seen: [...state.seen, key] }, effects: [] };
+      const latest = { ...state.latest, [event.cardId]: event.encounterId };
+      return { state: { run: next, latest }, effects: [] };
     }
     case 'wrongOrb': {
       const next = recordWrong(run, event.cardId);
