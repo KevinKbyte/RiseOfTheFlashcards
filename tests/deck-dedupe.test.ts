@@ -11,6 +11,7 @@
 // Covers: M11
 import { describe, expect, it } from 'vitest';
 import {
+  applyBlockReason,
   applyResolution,
   cancelConfirm,
   canApply,
@@ -24,7 +25,7 @@ import {
   undoResolution,
 } from '../src/flashcards/deck-dedupe.js';
 import type { ResolverState } from '../src/flashcards/deck-dedupe.js';
-import { parseDeck } from '../src/flashcards/deck-schema.js';
+import { MIN_DISTINCT_ANSWERS, parseDeck } from '../src/flashcards/deck-schema.js';
 import type { Deck, DeckCard } from '../src/flashcards/deck-schema.js';
 
 function c(id: string, n: number): DeckCard {
@@ -255,5 +256,127 @@ describe('dedupe resolver: confirm, apply, undo', () => {
     const state = applyResolution(requestConfirm(keepFirstInEveryGroup(createResolver(result.deck))));
     expect(ids(state)).toEqual(['a', 'b', 'c', 'd']);
     expect(parseDeck(state.deck).ok).toBe(true);
+  });
+});
+
+// Requirement: dropping a duplicate copy must never leave a deck that fails parseDeck. Copies that
+// share an id can carry different answers, so dropping one can remove a distinct answer: e.g. cards
+// a:"A", a:"B", c:"C", d:"D" have 4 distinct answers (parseDeck reports kind 'duplicates'), but
+// whichever `a` is kept leaves only 3, below MIN_DISTINCT_ANSWERS (4). The resolver must refuse to
+// confirm/apply such a selection, and expose `applyBlockReason(state): string | null` so the dedupe
+// UI can say why: null when the kept cards satisfy the distinct-answers minimum, otherwise a short
+// message naming the minimum ("4") and "distinct answers". Distinct answers are counted exactly as
+// parseDeck counts them (whitespace-normalized, case-insensitive). A selection whose kept copies
+// still give >= 4 distinct answers applies as before and the applied deck passes parseDeck.
+// Covers: M11
+describe('dedupe resolver: kept copies must keep the distinct-answers minimum', () => {
+  function card(id: string, answer: string, n: number): DeckCard {
+    return { id, prompt: `Prompt ${n}?`, answer };
+  }
+
+  // Indices: 0 a:"A", 1 a:"B", 2 c:"C", 3 d:"D" -> group a:[0,1]; 4 distinct answers total.
+  function lossyDeck(): Deck {
+    return deckOf([card('a', 'A', 0), card('a', 'B', 1), card('c', 'C', 2), card('d', 'D', 3)]);
+  }
+
+  function keptDeck(state: ResolverState): Deck {
+    return { ...state.deck, cards: state.deck.cards.filter((_, i) => choiceOf(state, i) === 'keep') };
+  }
+
+  it('fixture sanity: parseDeck reports the lossy deck as duplicates, not a distinct-answers error', () => {
+    const result = parseDeck(lossyDeck());
+    expect(result.ok).toBe(false);
+    expect('kind' in result && result.kind).toBe('duplicates');
+  });
+
+  it('keep-first in every group on the lossy deck cannot apply; confirm stays in selecting', () => {
+    const state = keepFirstInEveryGroup(createResolver(lossyDeck()));
+    expect(parseDeck(keptDeck(state)).ok).toBe(false);
+    expect(canApply(state)).toBe(false);
+    expect(requestConfirm(state).phase).toBe('selecting');
+  });
+
+  it('keeping the other copy instead is equally blocked', () => {
+    const state = setChoice(createResolver(lossyDeck()), 0, 'drop');
+    expect(choiceOf(state, 0)).toBe('drop');
+    expect(canApply(state)).toBe(false);
+    const after = applyResolution(requestConfirm(state));
+    expect(after.phase).toBe('selecting');
+    expect(after.deck.cards).toHaveLength(4);
+  });
+
+  it('applyBlockReason names the distinct-answers minimum when the kept cards fall short', () => {
+    const state = keepFirstInEveryGroup(createResolver(lossyDeck()));
+    const reason = applyBlockReason(state);
+    expect(typeof reason).toBe('string');
+    expect(reason).toMatch(/distinct answers/i);
+    expect(reason).toContain(String(MIN_DISTINCT_ANSWERS));
+  });
+
+  it('applyBlockReason is null for a resolved selection that keeps enough distinct answers', () => {
+    const state = keepFirstInEveryGroup(createResolver(twoGroupDeck()));
+    expect(canApply(state)).toBe(true);
+    expect(applyBlockReason(state)).toBeNull();
+  });
+
+  it('regression guard: copies with differing answers still apply when >= 4 distinct answers remain', () => {
+    // 0 a:"A", 1 a:"B", 2 c:"C", 3 d:"D", 4 e:"E" -> 5 distinct; any kept `a` leaves 4.
+    const deck = deckOf([
+      card('a', 'A', 0),
+      card('a', 'B', 1),
+      card('c', 'C', 2),
+      card('d', 'D', 3),
+      card('e', 'E', 4),
+    ]);
+    for (const drop of [0, 1]) {
+      const state = setChoice(createResolver(deck), drop, 'drop');
+      expect(canApply(state)).toBe(true);
+      expect(applyBlockReason(state)).toBeNull();
+      const applied = applyResolution(requestConfirm(state));
+      expect(applied.phase).toBe('applied');
+      expect(applied.deck.cards).toHaveLength(4);
+      expect(parseDeck(applied.deck).ok).toBe(true);
+    }
+  });
+
+  it('counts distinct answers case-insensitively, as parseDeck does', () => {
+    // 0 a:"Delta", 1 a:"Epsilon", 2 b:"Alpha", 3 c:"Beta", 4 d:"delta"
+    // keep 0 -> Delta/Alpha/Beta/delta = 3 case-insensitive (blocked); keep 1 -> 4 (applies).
+    const deck = deckOf([
+      card('a', 'Delta', 0),
+      card('a', 'Epsilon', 1),
+      card('b', 'Alpha', 2),
+      card('c', 'Beta', 3),
+      card('d', 'delta', 4),
+    ]);
+    const keepFirst = keepFirstInEveryGroup(createResolver(deck));
+    expect(parseDeck(keptDeck(keepFirst)).ok).toBe(false);
+    expect(canApply(keepFirst)).toBe(false);
+    expect(applyBlockReason(keepFirst)).toMatch(/distinct answers/i);
+
+    const keepSecond = setChoice(createResolver(deck), 0, 'drop');
+    expect(canApply(keepSecond)).toBe(true);
+    expect(applyBlockReason(keepSecond)).toBeNull();
+    expect(parseDeck(applyResolution(requestConfirm(keepSecond)).deck).ok).toBe(true);
+  });
+
+  it('counts distinct answers after parseDeck whitespace normalization', () => {
+    // Unnormalized deck handed straight to the resolver: " Alpha " and "Alpha" are one answer.
+    const deck = deckOf([
+      card('a', 'Gamma', 0),
+      card('a', 'Delta', 1),
+      card('b', '  alpha ', 2),
+      card('c', 'Alpha', 3),
+      card('d', 'Beta', 4),
+      card('e', 'gamma\t', 5),
+    ]);
+    // keep 0 -> Gamma/alpha/Alpha/Beta/gamma = 3 normalized (blocked); keep 1 -> 4 (applies).
+    const keepFirst = keepFirstInEveryGroup(createResolver(deck));
+    expect(parseDeck(keptDeck(keepFirst)).ok).toBe(false);
+    expect(canApply(keepFirst)).toBe(false);
+
+    const keepSecond = setChoice(createResolver(deck), 0, 'drop');
+    expect(canApply(keepSecond)).toBe(true);
+    expect(parseDeck(keptDeck(keepSecond)).ok).toBe(true);
   });
 });
