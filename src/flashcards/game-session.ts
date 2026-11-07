@@ -108,6 +108,12 @@ export function wrongOrb(s: GameSession, cardId: string, label: string): Session
   return orb(s, { type: 'wrongOrb', cardId }, { kind: 'orb', label });
 }
 
+/** A landed strike costs a pip via run-flow only: it is not an answer, so FSRS is not written. */
+export function enemyHit(s: GameSession, cardId: string): SessionStep {
+  const r = step(s, { type: 'enemyHit', cardId });
+  return r ? { session: next(s, { run: r.run }), effects: r.effects } : same(s);
+}
+
 export function correctOrb(s: GameSession, cardId: string): SessionStep {
   const card = s.deck?.cards.find((c) => c.id === cardId);
   if (!card) return same(s);

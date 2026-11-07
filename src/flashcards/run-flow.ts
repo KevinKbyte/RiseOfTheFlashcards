@@ -4,6 +4,7 @@
 import {
   beginEncounter,
   recordCorrect,
+  recordEnemyHit,
   recordWrong,
   startRun,
   type RunOptions,
@@ -23,6 +24,8 @@ export type RunFlowEvent =
   | { type: 'presented'; cardId: string; encounterId: string }
   | { type: 'wrongOrb'; cardId: string }
   | { type: 'correctOrb'; cardId: string }
+  /** The enemy's strike landed on the player for this card (not answered in time). */
+  | { type: 'enemyHit'; cardId: string }
   | { type: 'waveCleared' };
 
 export type EndScreenKind = 'win' | 'lose' | 'practice-done';
@@ -57,6 +60,14 @@ export function startFlow(opts: RunOptions): RunFlowStep {
 const latestOf = (latest: Readonly<Record<string, string>>, cardId: string): string | undefined =>
   Object.prototype.hasOwnProperty.call(latest, cardId) ? latest[cardId] : undefined;
 
+// Shared by the wrong orb and a landed strike: both go through run-state's per-encounter pip cap.
+function hitEffects(run: RunState, next: RunState): RunFlowEffect[] {
+  const effects: RunFlowEffect[] = [];
+  if (next.pips !== run.pips) effects.push({ type: 'pips', remaining: next.pips });
+  if (next.status === 'lost') effects.push({ type: 'endScreen', kind: 'lose', text: TEXT.lose });
+  return effects;
+}
+
 export function stepFlow(state: RunFlowState, event: RunFlowEvent): RunFlowStep {
   const noop: RunFlowStep = { state, effects: [] };
   const { run } = state;
@@ -73,10 +84,14 @@ export function stepFlow(state: RunFlowState, event: RunFlowEvent): RunFlowStep 
     case 'wrongOrb': {
       const next = recordWrong(run, event.cardId);
       if (next === run) return noop;
-      const effects: RunFlowEffect[] = [];
-      if (next.pips !== run.pips) effects.push({ type: 'pips', remaining: next.pips });
-      if (next.status === 'lost') effects.push({ type: 'endScreen', kind: 'lose', text: TEXT.lose });
-      return { state: { ...state, run: next }, effects };
+      return { state: { ...state, run: next }, effects: hitEffects(run, next) };
+    }
+    case 'enemyHit': {
+      // Only a presented card is in an encounter, so only it can strike.
+      if (latestOf(state.latest, event.cardId) === undefined) return noop;
+      const next = recordEnemyHit(run, event.cardId);
+      if (next === run) return noop;
+      return { state: { ...state, run: next }, effects: hitEffects(run, next) };
     }
     case 'correctOrb': {
       const next = recordCorrect(run, event.cardId);

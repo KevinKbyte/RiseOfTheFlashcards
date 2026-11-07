@@ -31,6 +31,7 @@ import { WallTracker } from './card-wall-tracker.js';
 import { pickOrbs, type Card } from './flashcards/deck.js';
 import {
   correctOrb,
+  enemyHit,
   masteryText,
   presented,
   startRun,
@@ -120,8 +121,12 @@ export class CardsSystem extends createSystem({
 
     const prevHits = this.targetHits();
     this.wave = tickWave(this.wave, dt);
-    if (this.targetHits() > prevHits) this.panel.flash(this.panelLines());
-    else this.panel.tickFlash(dt, () => this.panelLines());
+    const targetId = this.wave.targetId;
+    if (targetId !== null && this.targetHits() > prevHits) {
+      // A strike landed: flash the hit, then let game-session cost the pip (may end the run).
+      this.panel.flash(this.panelLines());
+      this.apply(enemyHit(this.session, targetId));
+    } else this.panel.tickFlash(dt, () => this.panelLines());
     this.enemies.spawnMissing(this.wave, this.walls.walls, this.eye, () => this.readHead());
     this.enemies.update(this.wave, dt, this.clock);
     this.updateAnchor();
