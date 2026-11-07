@@ -49,6 +49,7 @@ import {
   type SessionEffect,
   type SessionStep,
 } from '../src/flashcards/game-session.js';
+import * as gameSession from '../src/flashcards/game-session.js';
 import { openDeckSelect, selectDeck } from '../src/flashcards/menu-flow.js';
 import type { Deck } from '../src/flashcards/deck-schema.js';
 import { applyRating } from '../src/flashcards/scheduler.js';
@@ -354,5 +355,83 @@ describe('game-session: menu -> run -> review glue for the cards scene', () => {
     correctOrb(s1.session, ids[0]);
     wrongOrb(s1.session, ids[0], answerOf(BIG, ids[1]));
     expect(JSON.stringify(s1.session)).toBe(mid);
+  });
+});
+
+// Requirement: the scene reports a landed enemy strike (the player did not answer in time) through
+// game-session's enemyHit(s, cardId) seam, which returns a SessionStep carrying the same run-flow
+// effects: one pip lost for a presented card, capped once per encounter and shared with the wrong
+// orb, a new presentation of the card can cost a pip again, the strike that takes the last pip
+// shows the lose screen, and an enemy hit before a run, for a card not presented, or after the run
+// is over returns the same session object and no effects.
+// API contract addition: export function enemyHit(s: GameSession, cardId: string): SessionStep;
+// Covers: D4, D14, S6
+describe('game-session: enemyHit seam for a landed strike', () => {
+  function enemyHit(s: GameSession, cardId: string): SessionStep {
+    const fn = (gameSession as unknown as Record<string, unknown>).enemyHit;
+    if (typeof fn !== 'function') throw new Error('game-session does not export enemyHit(s, cardId)');
+    return (fn as (s: GameSession, cardId: string) => SessionStep)(s, cardId);
+  }
+
+  it('an enemy hit on a presented card costs one pip', () => {
+    const { step, ids } = started(memoryStorage());
+    const s = presented(step.session, ids[0], 'e1').session;
+    const hit = enemyHit(s, ids[0]);
+    expect(pips(hit.effects)).toEqual([4]);
+    expect(endScreens(hit.effects)).toEqual([]);
+    expect(hit.session.run?.run.pips).toBe(4);
+  });
+
+  it('a wrong orb then an enemy hit in the same encounter cost one pip total', () => {
+    const { step, ids } = started(memoryStorage());
+    const id = ids[0];
+    let s = presented(step.session, id, 'e1').session;
+    s = wrongOrb(s, id, wrongLabel(BIG, id)).session;
+    const hit = enemyHit(s, id);
+    expect(pips(hit.effects)).toEqual([]);
+    expect(hit.session.run?.run.pips).toBe(4);
+  });
+
+  it('two enemy hits in one encounter cost one pip; a new presentation can cost another', () => {
+    const { step, ids } = started(memoryStorage());
+    const id = ids[0];
+    let s = presented(step.session, id, 'e1').session;
+    s = enemyHit(s, id).session;
+    const again = enemyHit(s, id);
+    expect(pips(again.effects)).toEqual([]);
+    s = presented(again.session, id, 'e2').session;
+    const next = enemyHit(s, id);
+    expect(pips(next.effects)).toEqual([3]);
+  });
+
+  it('the enemy hit that takes the last pip shows the lose screen, then enemy hits change nothing', () => {
+    const { step, ids } = started(memoryStorage());
+    let s = step.session;
+    for (const [i, id] of ids.slice(0, 4).entries()) {
+      s = presented(s, id, `e${i}`).session;
+      s = wrongOrb(s, id, wrongLabel(BIG, id)).session;
+    }
+    s = presented(s, ids[4], 'e4').session;
+    const last = enemyHit(s, ids[4]);
+    expect(pips(last.effects)).toEqual([0]);
+    expect(endScreens(last.effects).map((e) => e.kind)).toEqual(['lose']);
+    const after = enemyHit(last.session, ids[5]);
+    expect(after.session).toBe(last.session);
+    expect(after.effects).toEqual([]);
+  });
+
+  it('an enemy hit before a run, for a card not presented, or for an unknown card changes nothing', () => {
+    const pre = ready(memoryStorage());
+    const before = enemyHit(pre, BIG.cards[0].id);
+    expect(before.session).toBe(pre);
+    expect(before.effects).toEqual([]);
+
+    const { step, ids } = started(memoryStorage());
+    const s = presented(step.session, ids[0], 'e1').session;
+    for (const id of [ids[1], 'stranger']) {
+      const r = enemyHit(s, id);
+      expect(r.session, id).toBe(s);
+      expect(r.effects, id).toEqual([]);
+    }
   });
 });

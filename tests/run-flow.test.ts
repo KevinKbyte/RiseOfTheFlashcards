@@ -373,3 +373,106 @@ describe('presented: state stays bounded over a long run', () => {
     expect(s.run.pips).toBe(3);
   });
 });
+
+// Requirement: when an enemy's strike lands because the player did not answer in time, the player
+// loses one shield pip. The scene reports it as { type: 'enemyHit', cardId } for the card being
+// presented. The one-pip-per-encounter cap (D14/Q8) is shared with the wrong orb: a wrong orb and an
+// enemy hit in the same encounter cost one pip total, and repeated strikes in one encounter cost one
+// pip; a new presentation (new encounterId) of the same card can cost a pip again. The strike that
+// takes the last pip ends the run exactly like the wrong-orb lose path (effects [pips 0, endScreen
+// lose]). An enemy hit for a card that was never presented, is unknown, or was already cleared, or
+// any enemy hit after the run is over, returns the same state object and no effects.
+// Covers: D4, D14, S6
+describe('enemyHit: a landed strike costs a pip, capped once per encounter', () => {
+  const enemyHit = (cardId: string): RunFlowEvent => ({ type: 'enemyHit', cardId }) as unknown as RunFlowEvent;
+
+  it('an enemy hit on a presented card costs one pip and tells the scene', () => {
+    const s = step(startFlow({ cardIds: deck(3) }).state, presented('card-1', 'e-1'));
+    const r = stepFlow(s, enemyHit('card-1'));
+    expect(r.state.run.pips).toBe(4);
+    expect(r.state.run.status).toBe('active');
+    expect(r.effects).toEqual([{ type: 'pips', remaining: 4 }]);
+  });
+
+  it('a wrong orb then an enemy hit in the same encounter cost one pip total', () => {
+    const s = step(startFlow({ cardIds: deck(3) }).state, presented('card-1', 'e-1'), wrongOrb('card-1'));
+    expect(s.run.pips).toBe(4);
+    const r = stepFlow(s, enemyHit('card-1'));
+    expect(r.state.run.pips).toBe(4);
+    expect(r.effects).toEqual([]);
+  });
+
+  it('an enemy hit then a wrong orb in the same encounter cost one pip total', () => {
+    const s = step(startFlow({ cardIds: deck(3) }).state, presented('card-1', 'e-1'), enemyHit('card-1'));
+    expect(s.run.pips).toBe(4);
+    const r = stepFlow(s, wrongOrb('card-1'));
+    expect(r.state.run.pips).toBe(4);
+    expect(r.effects.filter((e) => e.type === 'pips')).toEqual([]);
+  });
+
+  it('two enemy hits in the same encounter cost one pip', () => {
+    const s = step(startFlow({ cardIds: deck(3) }).state, presented('card-1', 'e-1'), enemyHit('card-1'));
+    const r = stepFlow(s, enemyHit('card-1'));
+    expect(r.state.run.pips).toBe(4);
+    expect(r.effects).toEqual([]);
+  });
+
+  it('a re-render of the same presentation does not reset the cap for enemy hits', () => {
+    const s = step(startFlow({ cardIds: deck(3) }).state, presented('card-1', 'e-1'), enemyHit('card-1'), presented('card-1', 'e-1'), enemyHit('card-1'));
+    expect(s.run.pips).toBe(4);
+  });
+
+  it('a new presentation of the same card can cost a pip again', () => {
+    let s = step(startFlow({ cardIds: deck(3) }).state, presented('card-1', 'e-1'), enemyHit('card-1'));
+    expect(s.run.pips).toBe(4);
+    s = step(s, presented('card-1', 'e-2'));
+    const r = stepFlow(s, enemyHit('card-1'));
+    expect(r.state.run.pips).toBe(3);
+    expect(r.effects).toEqual([{ type: 'pips', remaining: 3 }]);
+  });
+
+  it('the enemy hit that takes the last pip shows the lose screen, same as the wrong-orb path', () => {
+    const ids = deck(6);
+    const s = step(hitN(startFlow({ cardIds: ids }).state, ids, 4), presented(ids[4], 'e-4'));
+    expect(s.run.pips).toBe(1);
+    const r = stepFlow(s, enemyHit(ids[4]));
+    expect(r.state.run.status).toBe('lost');
+    expect(r.state.run.pips).toBe(0);
+    expect(r.effects).toEqual([
+      { type: 'pips', remaining: 0 },
+      { type: 'endScreen', kind: 'lose', text: 'Shields down. Try again.' },
+    ]);
+    expectPlainWords(endScreens(r.effects)[0].text, ids);
+  });
+
+  it('enemy hits after the run is over change nothing', () => {
+    const ids = deck(6);
+    const lost = step(hitN(startFlow({ cardIds: ids }).state, ids, 4), presented(ids[4], 'e-4'), enemyHit(ids[4]));
+    expect(lost.run.status).toBe('lost');
+    const r = stepFlow(lost, enemyHit(ids[5]));
+    expect(r.state).toBe(lost);
+    expect(r.effects).toEqual([]);
+
+    const won = step(startFlow({ cardIds: deck(1) }).state, presented('card-1', 'e-1'), correctOrb('card-1'));
+    expect(won.run.status).toBe('won');
+    const w = stepFlow(won, enemyHit('card-1'));
+    expect(w.state).toBe(won);
+    expect(w.effects).toEqual([]);
+  });
+
+  it('an enemy hit for a card never presented, unknown, or already cleared changes nothing', () => {
+    const s = step(startFlow({ cardIds: deck(3) }).state, presented('card-1', 'e-1'), correctOrb('card-1'), presented('card-2', 'e-2'));
+    for (const id of ['card-3', 'stranger', 'constructor', 'card-1']) {
+      const r = stepFlow(s, enemyHit(id));
+      expect(r.state, id).toBe(s);
+      expect(r.effects, id).toEqual([]);
+    }
+  });
+
+  it('never mutates the state or event it is given', () => {
+    const s = deepFreeze(step(startFlow({ cardIds: deck(3) }).state, presented('card-1', 'e-1')));
+    const r = stepFlow(s, deepFreeze(enemyHit('card-1')));
+    expect(s.run.pips).toBe(5);
+    expect(r.state.run.pips).toBe(4);
+  });
+});
