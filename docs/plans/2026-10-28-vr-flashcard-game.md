@@ -132,13 +132,15 @@ D4 Answer outcomes (single table; "encounter" = one card-enemy's card until it i
 | Voice miss | non-empty, not correct/wrong (ratio, margin, prefix, length fails) | none | none | none; caps a later correct at Hard; counts toward 2-attempt orb trigger |
 | Grading (D3a toggle ON) | D3 miss on a free-form transcript, never empty/[unk] | advance/creep (D13) + attack timer frozen | none | Claude correct -> Voice correct row; wrong/error/2 s timeout/offline -> Voice miss row (orb trigger unchanged) |
 | Didn't catch | empty transcript or 6 s cap | none | none | none; counts toward 2-attempt orb trigger |
-| Arrived unanswered (D13) | creeping enemy reaches the strike slot with no correct answer yet | 2 s telegraph, then knockback + creep repeat | hit (dodgeable, D7; 1-hit cap, D14) | none; the window's own row rates it; arrival adds no orb-trigger attempt |
+| Arrived unanswered (D13) | creeping enemy reaches the strike slot with no correct answer yet | 2 s telegraph, then knockback + creep repeat | hit (dodgeable, D7; 1-hit cap, D14) | Again (written at once) unless an Again was already written; max one Again per encounter, shared with Voice wrong / Orb wrong; arrival adds no orb-trigger attempt |
 | Hard STT error | error callback or no final transcript 3 s after end of speech | none | none | none (a Hard-STT-only encounter writes nothing; card stays due/uncovered); orbs immediately for THIS card only; next card tries voice again |
 | Orb correct (voice mode, after misses/errors) | slash correct orb | -1 card | none | Hard if a miss or Didn't catch preceded and no Again was written; else none |
 | Orb correct (silent mode, first pick) | slash correct orb | -1 card | none | Good (Q3) |
 | Orb wrong | slash distractor | none | hit | Again if first scored attempt; picked orb removed |
 | Ultimate (knockback) | ultimate fires (D7 input) | strike-slot enemy pushed back toward its wall spawn (max to wall/ring); its in-flight attack cancelled (the only allowed cancel), telegraph reset; 0 cards removed; a creeping (D13) enemy is pushed the same way, panel kept, creep resumes from there | none | none; encounter state kept (hit cap, attempt + orb counters, strike-slot reservation); an open mic window is left alone |
 
+D4 Amended 2026-11-07 (Kev): Arrived unanswered writes FSRS Again (row above), once per encounter, shared with a wrong answer. Was:
+  "none; the window's own row rates it".
 D4 EN-2 (2026-10-31): Arrived unanswered applies only to a revealed enemy (D13); its knockback goes to 2 m. An unrevealed enemy halts at
   the reach line and never telegraphs. Voice outcomes classify in any revealed phase (creep, telegraph, after knockback).
 Orbs = 1 correct + 3 distractors drawn from distinct normalized answers not owned by this card (deck validation guarantees >=4 distinct answers). Silent mode: user toggle any time; latches automatically ONLY on mic permission denial.
@@ -482,6 +484,8 @@ Resolved 2026-10-28 (Kev): ENGINE, Q1-Q12, D15, D19, G0a, G0b in
   distance (D13).
 - Resolved 2026-10-31 (Kev, EN-3): multi-enemy wave + choose target, feedback on every correct answer (D13); prototype passthrough
   wall spawns via immersive-ar + plane detection (D8).
+- Open (2026-11-07): D7 says dodge = "lateral or downward" displacement but measures Euclidean distance in the lateral/vertical
+  plane, so >=20 cm upward also passes. Does upward head movement count as a dodge? Undecided.
 
 ## Adversarial cheat sheet
 - Primary technical risk: big decks and one-correct WINs; grades or WINs given for nothing (deck-switch budget, empty queue, paused window).

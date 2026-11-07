@@ -18,6 +18,11 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 - BUILD-001..003: strictly increasing Android versionCode counter (`scripts/version-code.mjs next --state <file> [--ini
   <DefaultEngine.ini>]`); optionally sets Unreal StoreVersion; a failed run never advances the state. Tests included.
 
+### Changed
+
+- Plan/spec (Kev 2026-11-07): an enemy arriving unanswered now writes FSRS Again, max one Again per encounter (D4, ENC-005);
+  D7 upward-dodge question logged as open.
+
 ## [0.1.0] - 2026-10-28
 
 ### Added

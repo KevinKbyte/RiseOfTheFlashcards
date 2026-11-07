@@ -119,8 +119,9 @@ Deferred to relay integration:
 - ENC-004: Creep speed fixed = (2.0 - 0.5) m / 8 s = 0.1875 m/s, so reveal -> strike slot >= 8 s (>= 6 s no-speech cap + 2 s
   grading timeout); earlier reveal = more time; the pacing knob. Grading (GRADE-004) freezes it. EN-1 "creep time, default 8 s"
   **Superseded by** EN-2.
-- ENC-005: Arrived unanswered -> 2 s telegraph -> hit (dodgeable; 1 hit per encounter); no FSRS write and no orb-trigger attempt of
-  its own; then knockback to 2 m + creep repeat.
+- ENC-005: Arrived unanswered -> 2 s telegraph -> hit (dodgeable; 1 hit per encounter); writes FSRS Again unless already written
+  (max one Again per encounter, shared with a wrong voice/orb answer; plan D4); no orb-trigger attempt of its own; then knockback to
+  2 m + creep repeat. "no FSRS write" **Superseded by** Again-on-arrival (Kev 2026-11-07).
 - ENC-006: Correct answer in any revealed phase (creep, telegraph, after knockback) shatters the panel and peels a card; a
   multi-card enemy is knocked back per card by the ENC-002 rule. Ultimate on a creeping enemy pushes it back further, panel kept,
   creep resumes from there. EN-1 "also during the telegraph" scope **Superseded by** EN-2. Sound + haptic: CARDS-012.
