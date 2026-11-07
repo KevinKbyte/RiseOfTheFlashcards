@@ -333,3 +333,43 @@ describe('purity', () => {
     expect(stepFlow(s0, wrongOrb('card-1'))).toEqual(stepFlow(s0, wrongOrb('card-1')));
   });
 });
+
+// Requirement: a long or endless run never grows the controller's state without bound. Only the
+// latest presentation of each card in play matters for encounter identity, so whatever the
+// controller remembers about presentations stays bounded by the number of distinct cards (at most
+// 12), however many times cards are presented. Re-render rules are unchanged: a repeat of a card's
+// latest presentation still starts no new encounter and never resets the pip cap.
+// Covers: D14
+describe('presented: state stays bounded over a long run', () => {
+  // Fixed-width ids so serialized size reflects entry count, not id length.
+  const eid = (i: number): string => `e-${String(i).padStart(4, '0')}`;
+
+  function presentMany(s: RunFlowState, n: number): RunFlowState {
+    let out = s;
+    for (let i = 0; i < n; i++) {
+      out = step(out, presented(i % 2 === 0 ? 'card-1' : 'card-2', eid(i)), wrongOrb('stranger'), waveCleared);
+    }
+    return out;
+  }
+
+  it('500 presentations of the same 2 cards leave the state no larger than after 10', () => {
+    const s0 = startFlow({ cardIds: deck(3) }).state;
+    const after10 = presentMany(s0, 10);
+    const after500 = presentMany(s0, 500);
+    expect(after500.run).toEqual(after10.run);
+    expect(JSON.stringify(after500).length).toBeLessThanOrEqual(JSON.stringify(after10).length);
+  });
+
+  it('after 500 presentations a re-render of the latest presentation still does not reset the pip cap', () => {
+    let s = presentMany(startFlow({ cardIds: deck(3) }).state, 500);
+    s = step(s, presented('card-1', eid(500)), wrongOrb('card-1'));
+    expect(s.run.pips).toBe(4);
+    const rerender = stepFlow(s, presented('card-1', eid(500)));
+    expect(rerender.state).toBe(s);
+    expect(rerender.effects).toEqual([]);
+    s = step(s, presented('card-2', eid(501)), presented('card-1', eid(500)), wrongOrb('card-1'));
+    expect(s.run.pips).toBe(4);
+    s = step(s, presented('card-1', eid(502)), wrongOrb('card-1'));
+    expect(s.run.pips).toBe(3);
+  });
+});
