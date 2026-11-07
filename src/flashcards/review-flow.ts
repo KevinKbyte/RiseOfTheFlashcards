@@ -5,12 +5,14 @@ import { Rating as FsrsRating } from 'ts-fsrs';
 import { answerOutcome, classifyTranscript, type AnswerState, type VoiceResult } from './answer-outcome.js';
 import type { MatchCard } from './matcher.js';
 import { applyRating, buildQueue, bumpCounters, type Queue, type Rating } from './scheduler.js';
-import { loadSave, writeSave, type SaveData, type SaveStorage } from './save.js';
+import { readSave, writeSave, type SaveData, type SaveStorage } from './save.js';
 
 export interface ReviewState {
   readonly save: SaveData;
   readonly queue: Queue;
   readonly saveFailed: boolean;
+  /** Storage threw on load: writing would clobber a save we never saw, so writes are skipped. */
+  readonly readFailed: boolean;
 }
 
 export interface Encounter {
@@ -41,8 +43,9 @@ const RATING: Partial<Record<FsrsRating, Rating>> = {
 
 /** Start-of-session load; a missing, corrupt or unreadable save degrades to fresh progress. */
 export function loadReview(storage: SaveStorage, deck: MatchCard[], now: Date): ReviewState {
-  const save = loadSave(storage);
-  return { save, queue: buildQueue({ deck, cards: save.cards, counters: save.counters, now }), saveFailed: false };
+  const { save, readFailed } = readSave(storage);
+  const queue = buildQueue({ deck, cards: save.cards, counters: save.counters, now });
+  return { save, queue, saveFailed: readFailed, readFailed };
 }
 
 export function startEncounter(cardId: string): Encounter {
@@ -57,6 +60,8 @@ function classify(attempt: Attempt, cardId: string, deck: MatchCard[]): VoiceRes
 export function submitAnswer(state: ReviewState, encounter: Encounter, attempt: Attempt, env: ReviewEnv): SubmitResult {
   const { deck, storage, now } = env;
   const { cardId } = encounter;
+  // An id outside the deck (stale save, UI bug) must not grade, write, or bump counters.
+  if (!deck.some((c) => c.id === cardId)) return { state, encounter, outcome: 'wrong', rating: null };
   const result = answerOutcome(classify(attempt, cardId, deck), encounter.answer);
   const next = { ...encounter, answer: result.state };
   const rating = result.rating === null ? null : (RATING[result.rating] ?? null);
@@ -74,6 +79,6 @@ export function submitAnswer(state: ReviewState, encounter: Encounter, attempt: 
     cards: { ...state.save.cards, [cardId]: card },
     counters: bumpCounters(state.save.counters, kind, now),
   };
-  const saveFailed = !writeSave(save, storage);
+  const saveFailed = state.readFailed || !writeSave(save, storage);
   return { ...unchanged, state: { ...state, save, saveFailed } };
 }

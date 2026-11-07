@@ -109,32 +109,45 @@ function defaultStorage(): SaveStorage | undefined {
   return (globalThis as { localStorage?: SaveStorage }).localStorage ?? undefined;
 }
 
-/** Load the save; missing or failing storage degrades to an empty save. */
-export function loadSave(storage?: SaveStorage): SaveData {
+export interface SaveRead {
+  save: SaveData;
+  /** True when storage threw on read: the stored save may hold progress we could not see. */
+  readFailed: boolean;
+}
+
+/** Load the save, distinguishing a throwing read from a missing or unreadable save. Never throws. */
+export function readSave(storage?: SaveStorage): SaveRead {
   try {
     const s = storage ?? defaultStorage();
-    return s ? parseSave(s.getItem(SAVE_KEY)) : emptySave();
+    return { save: s ? parseSave(s.getItem(SAVE_KEY)) : emptySave(), readFailed: false };
   } catch {
-    return emptySave();
+    return { save: emptySave(), readFailed: true };
   }
 }
 
+/** Load the save; missing or failing storage degrades to an empty save. */
+export function loadSave(storage?: SaveStorage): SaveData {
+  return readSave(storage).save;
+}
+
 /**
- * Copy an unreadable live save to SAVE_BACKUP_KEY before it is overwritten. An existing backup is
- * kept; a throwing setItem propagates so the caller aborts rather than erasing the live text.
+ * Copy an unreadable live save to SAVE_BACKUP_KEY before it is overwritten. Returns false when a
+ * backup already holds an earlier unreadable save: the live text then has nowhere safe to go, so
+ * the caller must not overwrite it. A throwing setItem propagates so the caller aborts.
  */
-function backupUnreadable(s: SaveStorage): void {
+function backupUnreadable(s: SaveStorage): boolean {
   const live = s.getItem(SAVE_KEY);
-  if (live === null || parseEnvelope(live) !== null || s.getItem(SAVE_BACKUP_KEY) !== null) return;
+  if (live === null || parseEnvelope(live) !== null) return true;
+  if (s.getItem(SAVE_BACKUP_KEY) !== null) return false;
   s.setItem(SAVE_BACKUP_KEY, live);
+  return true;
 }
 
 /** Persist the save; returns false (never throws) when storage is missing or rejects the write. */
 export function writeSave(data: SaveData, storage?: SaveStorage): boolean {
   try {
     const s = storage ?? defaultStorage();
-    if (!s) return false;
-    backupUnreadable(s);
+    if (!s || !backupUnreadable(s)) return false;
     s.setItem(SAVE_KEY, serializeSave(data));
     return true;
   } catch {
