@@ -13,6 +13,7 @@ import {
   dedupeKeepFirst,
   dedupeRequestConfirm,
   MAX_IMPORT_CHARS,
+  MAX_IMPORTED_DECKS,
   openDeckSelect,
   openImport,
   replaceView,
@@ -22,7 +23,7 @@ import {
   undoReplace,
 } from '../src/flashcards/menu-flow.js';
 import type { MenuState } from '../src/flashcards/menu-flow.js';
-import type { DeckCard } from '../src/flashcards/deck-schema.js';
+import type { Deck, DeckCard } from '../src/flashcards/deck-schema.js';
 import { MAX_SAVE_CHARS } from '../src/flashcards/save.js';
 import { STARTER_DECKS } from '../src/flashcards/starter-decks.js';
 
@@ -171,5 +172,75 @@ describe('menu-flow import replace confirm', () => {
     expect(s.screen).toBe('ready');
     expect(s.selectedDeck?.id).toBe('brand-new');
     expect(s.decks).toHaveLength(STARTER_DECKS.length + 1);
+  });
+});
+
+// Requirement: the number of imported decks is capped at a low named limit (MAX_IMPORTED_DECKS,
+// a small positive integer) so a player cannot grow the deck list without bound. Importing a deck
+// with a NEW id when the cap is already reached is refused: no deck is added, nothing is selected,
+// and importError says in plain words that the deck limit was reached, naming the number. Starter
+// decks do not count toward the cap. Replacing an existing deck (same id) at the cap is still
+// allowed because it does not grow the list. The dedupe Continue path obeys the same cap.
+// Covers: M11, A10
+describe('menu-flow import deck count cap', () => {
+  function imported(n: number): Deck[] {
+    return Array.from({ length: n }, (_, i) => ({
+      id: `imp-${i}`,
+      title: `Imported ${i}`,
+      cards: [c('w', 10), c('x', 11), c('y', 12), c('z', 13)],
+    }));
+  }
+  function importingWith(extra: readonly Deck[], text: string): MenuState {
+    const base: MenuState = { ...createMenu(), decks: [...STARTER_DECKS, ...extra] };
+    return setImportText(openImport(openDeckSelect(base)), text);
+  }
+
+  it('MAX_IMPORTED_DECKS is a low positive integer', () => {
+    expect(Number.isInteger(MAX_IMPORTED_DECKS)).toBe(true);
+    expect(MAX_IMPORTED_DECKS).toBeGreaterThan(0);
+    expect(MAX_IMPORTED_DECKS).toBeLessThanOrEqual(20);
+  });
+
+  it('one below the cap a new deck still imports', () => {
+    const s = submitImport(importingWith(imported(MAX_IMPORTED_DECKS - 1), deckJson('brand-new', 'Brand New')));
+    expect(s.screen).toBe('ready');
+    expect(s.decks).toHaveLength(STARTER_DECKS.length + MAX_IMPORTED_DECKS);
+  });
+
+  it('at the cap a new deck is refused with a clear reason naming the limit', () => {
+    const before = importingWith(imported(MAX_IMPORTED_DECKS), deckJson('brand-new', 'Brand New'));
+    const s = submitImport(before);
+    expect(s.screen).toBe('import');
+    expect(s.decks).toEqual(before.decks);
+    expect(s.selectedDeck).toBeNull();
+    expect(s.importError).toMatch(/limit|maximum|too many/i);
+    expect(s.importError).toContain(String(MAX_IMPORTED_DECKS));
+  });
+
+  it('starter decks do not count toward the cap', () => {
+    expect(STARTER_DECKS.length).toBeGreaterThan(0);
+    const s = submitImport(importingWith([], deckJson('brand-new', 'Brand New')));
+    expect(s.screen).toBe('ready');
+  });
+
+  it('at the cap replacing an existing imported deck is still allowed', () => {
+    const s = submitImport(importingWith(imported(MAX_IMPORTED_DECKS), deckJson('imp-0', 'Imported 0 v2')));
+    expect(s.screen).toBe('confirm-replace');
+    expect(confirmReplace(s).decks).toHaveLength(STARTER_DECKS.length + MAX_IMPORTED_DECKS);
+  });
+
+  it('at the cap the dedupe Continue path refuses a new deck too', () => {
+    const json = JSON.stringify({
+      id: 'brand-new',
+      title: 'Dup Deck',
+      cards: [c('a', 0), c('b', 1), c('a', 2), c('c', 3), c('d', 4), c('b', 5), c('e', 6)],
+    });
+    const before = importingWith(imported(MAX_IMPORTED_DECKS), json);
+    const applied = dedupeConfirm(dedupeRequestConfirm(dedupeKeepFirst(submitImport(before))));
+    expect(applied.screen).toBe('dedupe');
+    const s = dedupeContinue(applied);
+    expect(s.screen).not.toBe('ready');
+    expect(s.decks).toEqual(before.decks);
+    expect(s.importError).toContain(String(MAX_IMPORTED_DECKS));
   });
 });

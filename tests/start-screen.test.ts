@@ -197,3 +197,20 @@ describe('start screen with a bad save', () => {
     expect(pressStart(s).menu.screen).toBe('deck-select');
   });
 });
+
+// Requirement: the Mastery action only applies on the start screen. Pressed from any other menu
+// screen (deck select, mastery itself, ready, playing) it returns the very same session object,
+// so a stray press can never yank the player off a deck pick or out of a run.
+// Covers: M11
+describe('pressMastery screen guard', () => {
+  it('returns the same session from every non-start screen', () => {
+    const decks = pressStart(fresh());
+    const mastery = pressMastery(fresh());
+    const ready = updateMenu(decks, (m) => selectDeck(m, SPANISH.id));
+    const playing = startRun(ready).session;
+    for (const s of [decks, mastery, ready, playing]) {
+      expect(s.menu.screen).not.toBe('start');
+      expect(pressMastery(s)).toBe(s);
+    }
+  });
+});
