@@ -49,7 +49,7 @@ prototype (see below).
 tracking, passthrough and scene understanding. Enemies emerge from detected walls; a small play area keeps every move within a seated
 reach. Head gaze drives the fight: an enemy reveals its card and starts its attack only while you are looking toward it. Spoken answers
 go through `<RECOGNIZER per ADR 0002>` and a deterministic fuzzy matcher with per-card aliases; Claude (Anthropic API) suggests extra aliases when you import a deck, and an
-optional Live AI grading setting asks Claude about answers the matcher could not place. A Leitner
+optional Live AI grading setting asks Claude about answers the matcher could not place. An FSRS-6
 spaced-repetition scheduler picks which cards return. A small serverless relay lets you paste your own deck on a laptop and pair it to
 the headset with a 6-character code.
 
