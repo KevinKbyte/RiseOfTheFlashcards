@@ -13,6 +13,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   MAX_SAVE_CHARS,
+  SAVE_BACKUP_KEY,
   SAVE_VERSION,
   emptySave,
   loadSave,
@@ -314,6 +315,34 @@ describe('loadSave/writeSave never silently erase unreadable progress (backup ke
     writeSave(loadSave(storage), storage);
     writeSave(sample(), storage);
     expect(backedUp(storage, key, corrupt)).toBe(true);
+    expect(loadSave(storage)).toEqual(sample());
+  });
+});
+
+// Covers: D5, S6a
+describe('writeSave never overwrites an existing backup or an unbacked unreadable save', () => {
+  it('backup exists and live save is unreadable -> returns false, backup and live text unchanged', () => {
+    const { storage, key } = storageHolding('second unreadable save');
+    storage.data.set(SAVE_BACKUP_KEY, 'first unreadable save');
+    expect(writeSave(sample(), storage)).toBe(false);
+    expect(storage.data.get(SAVE_BACKUP_KEY)).toBe('first unreadable save');
+    expect(storage.data.get(key)).toBe('second unreadable save');
+  });
+
+  it('backup exists and live save is valid -> normal write succeeds, backup unchanged', () => {
+    const storage = memoryStorage();
+    writeSave(emptySave(), storage);
+    storage.data.set(SAVE_BACKUP_KEY, 'old unreadable save');
+    expect(writeSave(sample(), storage)).toBe(true);
+    expect(storage.data.get(SAVE_BACKUP_KEY)).toBe('old unreadable save');
+    expect(loadSave(storage)).toEqual(sample());
+  });
+
+  it('backup exists and no live save -> normal write succeeds, backup unchanged', () => {
+    const storage = memoryStorage();
+    storage.data.set(SAVE_BACKUP_KEY, 'old unreadable save');
+    expect(writeSave(sample(), storage)).toBe(true);
+    expect(storage.data.get(SAVE_BACKUP_KEY)).toBe('old unreadable save');
     expect(loadSave(storage)).toEqual(sample());
   });
 });
