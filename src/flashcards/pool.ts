@@ -2,10 +2,8 @@
 // front card is the one being answered, and each correct answer strips one card. No three.js/DOM;
 // every function returns a new pool (or the same object when nothing changes) and never mutates.
 
-/** Cards on a bigger enemy (spec names no size; agent default, tunable). */
-export const BIG_POOL_SIZE = 2;
-/** Every Nth spawned enemy is a bigger one. */
-export const BIG_POOL_EVERY = 3;
+/** D19: the last graded wave is one boss pool of this many cards (also the D14 max pool size). */
+export const BOSS_POOL_SIZE = 3;
 
 export interface Pool {
   /** Remaining card ids, current card first. */
@@ -38,25 +36,21 @@ export function damage(pool: Pool, amount = 1): Pool {
   return { cards: pool.cards.slice(amount), maxHp: pool.maxHp };
 }
 
-function requirePositiveInt(name: string, v: number): void {
-  if (!Number.isInteger(v) || v < 1) throw new RangeError(`${name} must be an integer >= 1, got ${v}`);
-}
-
-/** Spawn-order pool sizes summing to cardCount, so every card belongs to exactly one enemy. */
-export function planPoolSizes(cardCount: number, opts: { bigSize?: number; bigEvery?: number } = {}): number[] {
-  const bigSize = opts.bigSize ?? BIG_POOL_SIZE;
-  const bigEvery = opts.bigEvery ?? BIG_POOL_EVERY;
+/**
+ * Spawn-order pool sizes summing to cardCount (D19 wave packing): pools of 1-3, non-decreasing,
+ * ending in one 3-card boss once cardCount >= 3. The pre-boss cards open with a [1, 2] wave and
+ * continue in 3s, so a multiple of 3 packs into whole 3-card waves; a remainder of 1 or 2 widens the
+ * opening ramp ([1, 1, 2] / [1, 2, 2]) instead of breaking the ramp.
+ */
+export function planPoolSizes(cardCount: number): number[] {
   if (!Number.isInteger(cardCount) || cardCount < 0) {
     throw new RangeError(`cardCount must be an integer >= 0, got ${cardCount}`);
   }
-  requirePositiveInt('bigSize', bigSize);
-  requirePositiveInt('bigEvery', bigEvery);
-  const sizes: number[] = [];
-  let left = cardCount;
-  while (left > 0) {
-    const size = Math.min((sizes.length + 1) % bigEvery === 0 ? bigSize : 1, left);
-    sizes.push(size);
-    left -= size;
-  }
-  return sizes;
+  const boss = cardCount >= BOSS_POOL_SIZE ? [BOSS_POOL_SIZE] : [];
+  const rest = cardCount - boss.length * BOSS_POOL_SIZE;
+  const fullWaves = Math.floor(rest / 3);
+  const extra = rest % 3;
+  if (fullWaves === 0) return [...Array<number>(extra).fill(1), ...boss];
+  const ramp = extra === 0 ? [1, 2] : extra === 1 ? [1, 1, 2] : [1, 2, 2];
+  return [...ramp, ...Array<number>(fullWaves - 1).fill(3), ...boss];
 }
