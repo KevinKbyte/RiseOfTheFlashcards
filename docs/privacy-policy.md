@@ -1,6 +1,6 @@
 # Privacy policy (draft)
 
-Last updated: 2026-10-31. Applies to the game Rise of the Flashcards for Meta Quest and its companion deck-paste page.
+Last updated: 2026-11-07. Applies to the game Rise of the Flashcards for Meta Quest and its companion deck-paste page.
 
 The game has no accounts. This page lists everything it sends off your headset, how long it is kept, and how to have it deleted.
 
@@ -27,6 +27,10 @@ The game has no accounts. This page lists everything it sends off your headset, 
    to suggest extra accepted answers.
 
 Audio never leaves the headset; text transcripts leave it only as item 1 describes.
+
+Text sent to Anthropic (answer transcripts and card text in item 1, deck card text in item 5) goes to Anthropic's API, and
+Anthropic's API data-retention terms apply: how long Anthropic keeps it follows Anthropic's API policy, not ours. See
+https://www.anthropic.com/legal/privacy and Anthropic's commercial terms (https://www.anthropic.com/legal/commercial-terms).
 
 ## What stays on the headset
 
