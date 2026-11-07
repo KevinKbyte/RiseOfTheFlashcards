@@ -17,13 +17,30 @@ import {
   undoResolution,
 } from './deck-dedupe.js';
 import type { Choice, ResolverState } from './deck-dedupe.js';
+import { MAX_SAVE_CHARS } from './save.js';
 import type { CardState } from './scheduler.js';
 import { STARTER_DECKS } from './starter-decks.js';
 
 /** FSRS stability (days) at which a Review card counts as mastered: the usual "mature card" interval. */
 export const MASTERED_STABILITY_DAYS = 21;
 
-export type Screen = 'start' | 'deck-select' | 'import' | 'dedupe' | 'ready' | 'playing' | 'mastery';
+/** Import text shares the save-data cap so a pasted deck can never exceed what a save can hold. */
+export const MAX_IMPORT_CHARS = MAX_SAVE_CHARS;
+
+export type Screen =
+  | 'start'
+  | 'deck-select'
+  | 'import'
+  | 'dedupe'
+  | 'confirm-replace'
+  | 'ready'
+  | 'playing'
+  | 'mastery';
+
+export interface ReplaceUndo {
+  decks: readonly Deck[];
+  selectedDeck: Deck | null;
+}
 
 export interface MenuState {
   screen: Screen;
@@ -32,6 +49,15 @@ export interface MenuState {
   importText: string;
   importError: string | null;
   resolver: ResolverState | null;
+  /** Imported deck whose id clashes with an existing deck, awaiting confirm/cancel. */
+  pendingReplace?: Deck | null;
+  /** Snapshot taken by confirmReplace so undoReplace can restore it exactly. */
+  replaceUndo?: ReplaceUndo | null;
+}
+
+export interface ReplaceView {
+  existingTitle: string;
+  newTitle: string;
 }
 
 export interface DeckOption {
@@ -76,7 +102,16 @@ export function createMenu(): MenuState {
 }
 
 export function backToStart(state: MenuState): MenuState {
-  return { ...state, screen: 'start', selectedDeck: null, importText: '', importError: null, resolver: null };
+  return {
+    ...state,
+    screen: 'start',
+    selectedDeck: null,
+    importText: '',
+    importError: null,
+    resolver: null,
+    pendingReplace: null,
+    replaceUndo: null,
+  };
 }
 
 export function openDeckSelect(state: MenuState): MenuState {
@@ -118,11 +153,62 @@ export function setImportText(state: MenuState, text: string): MenuState {
 /** Adds (or replaces, by id) an imported deck, selects it, and goes to ready. */
 function addAndSelect(state: MenuState, deck: Deck): MenuState {
   const decks = [...state.decks.filter((d) => d.id !== deck.id), deck];
-  return { ...state, screen: 'ready', decks, selectedDeck: deck, importText: '', importError: null, resolver: null };
+  return {
+    ...state,
+    screen: 'ready',
+    decks,
+    selectedDeck: deck,
+    importText: '',
+    importError: null,
+    resolver: null,
+    pendingReplace: null,
+    replaceUndo: null,
+  };
+}
+
+/** An id clash never replaces silently: it asks first via the confirm-replace screen. */
+function addOrAskReplace(state: MenuState, deck: Deck): MenuState {
+  if (!state.decks.some((d) => d.id === deck.id)) return addAndSelect(state, deck);
+  return { ...state, screen: 'confirm-replace', pendingReplace: deck, resolver: null };
+}
+
+export function replaceView(state: MenuState): ReplaceView | null {
+  const pending = state.pendingReplace;
+  if (state.screen !== 'confirm-replace' || !pending) return null;
+  const existing = state.decks.find((d) => d.id === pending.id);
+  if (!existing) return null;
+  return { existingTitle: existing.title, newTitle: pending.title };
+}
+
+export function confirmReplace(state: MenuState): MenuState {
+  if (state.screen !== 'confirm-replace' || !state.pendingReplace) return state;
+  const replaceUndo: ReplaceUndo = { decks: state.decks, selectedDeck: state.selectedDeck };
+  return { ...addAndSelect(state, state.pendingReplace), replaceUndo };
+}
+
+export function cancelReplace(state: MenuState): MenuState {
+  if (state.screen !== 'confirm-replace') return state;
+  return { ...state, screen: 'import', pendingReplace: null };
+}
+
+export function undoReplace(state: MenuState): MenuState {
+  const undo = state.replaceUndo;
+  if (state.screen !== 'ready' || !undo) return state;
+  return {
+    ...state,
+    screen: 'deck-select',
+    decks: undo.decks,
+    selectedDeck: undo.selectedDeck,
+    replaceUndo: null,
+  };
 }
 
 export function submitImport(state: MenuState): MenuState {
   if (state.screen !== 'import') return state;
+  // Checked before JSON.parse so oversized paste never costs a full parse.
+  if (state.importText.length > MAX_IMPORT_CHARS) {
+    return { ...state, importError: `deck text is too large (over ${MAX_IMPORT_CHARS} characters)` };
+  }
   let raw: unknown;
   try {
     raw = JSON.parse(state.importText);
@@ -130,7 +216,7 @@ export function submitImport(state: MenuState): MenuState {
     return { ...state, importError: 'deck text is not valid JSON' };
   }
   const result = parseDeck(raw);
-  if (result.ok) return addAndSelect(state, result.deck);
+  if (result.ok) return addOrAskReplace(state, result.deck);
   if ('kind' in result) return { ...state, screen: 'dedupe', resolver: createResolver(result.deck) };
   return { ...state, importError: result.error };
 }
@@ -167,7 +253,7 @@ export function dedupeUndo(state: MenuState): MenuState {
 
 export function dedupeContinue(state: MenuState): MenuState {
   if (state.screen !== 'dedupe' || state.resolver?.phase !== 'applied') return state;
-  return addAndSelect(state, state.resolver.deck);
+  return addOrAskReplace(state, state.resolver.deck);
 }
 
 const EMPTY_VIEW: DedupeView = {
