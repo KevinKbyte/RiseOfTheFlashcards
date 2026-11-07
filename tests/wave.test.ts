@@ -297,3 +297,131 @@ describe('wave: maxActive 1 behaves like the single-enemy loop', () => {
     expect(isWaveCleared(w)).toBe(true);
   });
 });
+
+// Requirement: bigger enemies are multi-card health pools (M2). Each spawned enemy carries a pool of
+// consecutive deck cards (its id is its first card); the front card is the one answered. A correct
+// answer peels one card: a multi-card target stays the revealed target until all its cards are
+// peeled (D13 EN-3 follow-up), and per peel it is knocked back by the reveal rule (to
+// knockbackDistance only if closer; any pending telegraph is cancelled) and starts the next card as a
+// fresh encounter (hit cap per encounter, D4). Only peeling the last card defeats it, which refills
+// the wave. maxActive counts enemies, not cards. Default pool size is 1, so the single-card wave
+// above is unchanged.
+// Contract addition: WaveEnemy gains `readonly pool: Pool` (src/flashcards/pool.ts);
+//   createWave opts gain `poolSizes?: readonly number[]` indexed by spawn order (missing -> 1; the last
+//   enemy is truncated to the cards left); RangeError when an entry is not an integer >= 1.
+// Covers: M2, D13, CARDS-010
+describe('wave: multi-card health pools', () => {
+  type PoolView = { cards: readonly string[]; maxHp: number };
+  const poolOf = (w: Wave, id: string): PoolView => {
+    const e = w.active.find((x) => x.id === id) as unknown as { pool?: PoolView } | undefined;
+    if (!e?.pool) throw new Error(`no pool on enemy ${id}`);
+    return e.pool;
+  };
+
+  it('every enemy carries a 1-card pool by default', () => {
+    const w = createWave(['a', 'b', 'c', 'd']);
+    expect(poolOf(w, 'a').cards).toEqual(['a']);
+    expect(poolOf(w, 'a').maxHp).toBe(1);
+    expect(poolOf(w, 'c').cards).toEqual(['c']);
+    expect(w.queue).toEqual(['d']);
+  });
+
+  it('poolSizes groups consecutive deck cards per enemy; maxActive counts enemies', () => {
+    const w = createWave(['a', 'b', 'c', 'd', 'e', 'f', 'g'], { poolSizes: [1, 3, 2], maxActive: 2 });
+    expect(ids(w)).toEqual(['a', 'b']);
+    expect(poolOf(w, 'a').cards).toEqual(['a']);
+    expect(poolOf(w, 'b').cards).toEqual(['b', 'c', 'd']);
+    expect(poolOf(w, 'b').maxHp).toBe(3);
+    expect(w.queue).toEqual(['e', 'f', 'g']);
+  });
+
+  it('the last enemy is truncated to the cards left in the deck', () => {
+    const w = createWave(['a', 'b', 'c'], { poolSizes: [2, 3] });
+    expect(ids(w)).toEqual(['a', 'c']);
+    expect(poolOf(w, 'c').cards).toEqual(['c']);
+    expect(w.queue).toEqual([]);
+  });
+
+  it.each([0, -1, 1.5, Number.NaN])('rejects a pool size %s with a RangeError', (size) => {
+    expect(() => createWave(['a', 'b'], { poolSizes: [1, size] })).toThrow(RangeError);
+  });
+
+  it('a correct answer peels one card; the target stays revealed with the next card', () => {
+    let w = revealEnemy(createWave(['a', 'b', 'c', 'd'], { poolSizes: [3], maxActive: 1 }), 'a');
+    w = answerTarget(w, true);
+    expect(w.targetId).toBe('a');
+    expect(ids(w)).toEqual(['a']);
+    expect(poolOf(w, 'a').cards).toEqual(['b', 'c']);
+    expect(enemy(w, 'a').phase).toBe('answering');
+    expect(w.queue).toEqual(['d']);
+  });
+
+  it('a wrong answer peels nothing (same object)', () => {
+    const w = revealEnemy(createWave(['a', 'b'], { poolSizes: [2] }), 'a');
+    expect(answerTarget(w, false)).toBe(w);
+  });
+
+  it('peeling the last card defeats the enemy and refills from the queue with the next pool size', () => {
+    let w = createWave(['a', 'b', 'c', 'd', 'e', 'f'], { poolSizes: [2, 1, 3], maxActive: 1 });
+    w = answerTarget(revealEnemy(w, 'a'), true);
+    expect(ids(w)).toEqual(['a']);
+    w = answerTarget(w, true);
+    expect(w.targetId).toBeNull();
+    expect(ids(w)).toEqual(['c']);
+    expect(poolOf(w, 'c').cards).toEqual(['c']);
+    w = answerTarget(revealEnemy(w, 'c'), true);
+    expect(ids(w)).toEqual(['d']);
+    expect(poolOf(w, 'd').cards).toEqual(['d', 'e', 'f']);
+    expect(enemy(w, 'd').distance).toBe(D.spawnDistance);
+    expect(w.queue).toEqual([]);
+  });
+
+  it('other enemies cannot be revealed until the multi-card target is defeated', () => {
+    let w = revealEnemy(createWave(['a', 'b', 'c'], { poolSizes: [2, 1] }), 'a');
+    w = answerTarget(w, true);
+    expect(revealEnemy(w, 'c')).toBe(w);
+  });
+
+  it('a peel inside knockbackDistance knocks the target back to it; farther away it keeps its distance', () => {
+    let near = revealEnemy(tickWave(createWave(['a', 'b'], { poolSizes: [2] }), 100), 'a');
+    near = tickWave(near, 4);
+    expect(enemy(near, 'a').distance).toBeLessThan(D.knockbackDistance);
+    near = answerTarget(near, true);
+    expect(enemy(near, 'a').distance).toBe(D.knockbackDistance);
+
+    let far = revealEnemy(createWave(['a', 'b'], { poolSizes: [2] }), 'a');
+    far = answerTarget(far, true);
+    expect(enemy(far, 'a').distance).toBe(D.spawnDistance);
+  });
+
+  it('a peel during the telegraph cancels the pending hit and starts the next card fresh', () => {
+    let w = revealEnemy(tickWave(createWave(['a', 'b', 'c'], { poolSizes: [3] }), 100), 'a');
+    w = tickWave(w, D.creepSeconds + 0.01);
+    w = tickWave(w, D.telegraphSeconds + 0.01);
+    expect(enemy(w, 'a').hits).toBe(1);
+    w = tickWave(w, D.creepSeconds + 0.01);
+    expect(enemy(w, 'a').phase).toBe('telegraph');
+    w = answerTarget(w, true);
+    expect(enemy(w, 'a').phase).toBe('answering');
+    expect(enemy(w, 'a').telegraphLeft).toBe(0);
+    expect(enemy(w, 'a').distance).toBe(D.knockbackDistance);
+    expect(enemy(w, 'a').hits).toBe(0);
+    expect(poolOf(w, 'a').cards).toEqual(['b', 'c']);
+  });
+
+  it('the wave clears only after every card of every pool is peeled', () => {
+    let w = createWave(['a', 'b', 'c'], { poolSizes: [3] });
+    w = revealEnemy(w, 'a');
+    w = answerTarget(answerTarget(w, true), true);
+    expect(isWaveCleared(w)).toBe(false);
+    w = answerTarget(w, true);
+    expect(isWaveCleared(w)).toBe(true);
+  });
+
+  it('does not mutate the input wave on a peel', () => {
+    const w = revealEnemy(createWave(['a', 'b', 'c'], { poolSizes: [2] }), 'a');
+    const before = structuredClone(w);
+    answerTarget(w, true);
+    expect(w).toEqual(before);
+  });
+});

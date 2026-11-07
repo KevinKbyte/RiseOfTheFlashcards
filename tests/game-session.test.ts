@@ -435,3 +435,31 @@ describe('game-session: enemyHit seam for a landed strike', () => {
     }
   });
 });
+
+// Requirement: bigger enemies are multi-card health pools (M2). The spawnWave effect tells the scene
+// how many cards each spawned enemy carries, in spawn order, so it can build the wave with pools:
+// poolSizes sums to the spawned card count (every reserved card is on exactly one enemy) and by
+// default every third enemy is a 2-card enemy. The card list itself is unchanged.
+// Contract addition: SessionEffect spawnWave gains `poolSizes: readonly number[]` (= planPoolSizes).
+// Covers: M2, CARDS-010
+describe('game-session: spawnWave carries health-pool sizes', () => {
+  function waveOf(effects: readonly SessionEffect[]) {
+    const w = effects.find((e): e is Extract<SessionEffect, { type: 'spawnWave' }> => e.type === 'spawnWave');
+    if (!w) throw new Error('no spawnWave effect');
+    return w as typeof w & { poolSizes?: readonly number[] };
+  }
+
+  it('a 12-card run spawns pools of 1,1,2 repeating, summing to the card count', () => {
+    const { step, ids } = started(memoryStorage());
+    const w = waveOf(step.effects);
+    expect(ids).toHaveLength(12);
+    expect(w.poolSizes).toEqual([1, 1, 2, 1, 1, 2, 1, 1, 2]);
+  });
+
+  it('a 4-card deck truncates the last enemy so every card is used once', () => {
+    const { step, ids } = started(memoryStorage(), SMALL.id);
+    const w = waveOf(step.effects);
+    expect(ids).toHaveLength(4);
+    expect(w.poolSizes).toEqual([1, 1, 2]);
+  });
+});
