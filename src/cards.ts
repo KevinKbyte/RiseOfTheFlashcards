@@ -27,6 +27,7 @@ import { EnemyField } from './card-enemy-field.js';
 import { CorrectFeedback } from './card-feedback.js';
 import { QuestionPanel, showMessage } from './card-question-panel.js';
 import { browserSession, shuffled } from './card-session.js';
+import { CardSlash } from './card-slash.js';
 import { WallTracker } from './card-wall-tracker.js';
 import { pickOrbs, type Card } from './flashcards/deck.js';
 import { currentCard } from './flashcards/pool.js';
@@ -100,9 +101,11 @@ export class CardsSystem extends createSystem({
   private fxRoot!: Entity;
   private feedback!: CorrectFeedback;
   private readonly fxAt = new Vector3();
+  private slash!: CardSlash;
 
   init(): void {
     this.enemies = new EnemyField(this.world);
+    this.slash = new CardSlash(this.world);
     this.panel = new QuestionPanel(this.world);
     this.fxRoot = this.world.createTransformEntity(new Group());
     this.feedback = new CorrectFeedback(this.fxRoot.object3D!);
@@ -121,6 +124,7 @@ export class CardsSystem extends createSystem({
     const dt = Number.isFinite(delta) ? Math.min(Math.max(delta, 0), MAX_DT) : 0;
     this.clock += dt;
     this.walls.refresh(this.queries.planes.entities);
+    this.collectSlash();
     this.applyReveal();
     this.applyOrb();
     this.feedback.update(dt);
@@ -246,7 +250,23 @@ export class CardsSystem extends createSystem({
     }
   }
 
-  // Selecting an enemy stands in for a slash; a real swing gesture is a later slice. revealEnemy()
+  // Slashes fill the same pending slots as trigger select, so a same-frame slash and select on one
+  // target count once. Enemies are slash targets only while none is revealed.
+  private collectSlash(): void {
+    const enemyIds = this.wave.targetId === null ? this.wave.active.map((e) => e.id) : [];
+    const hits = this.slash.step(this.clock, this.panel.orbs(), enemyIds, (id, out) =>
+      this.enemies.worldPosition(id, out),
+    );
+    for (const hit of hits) {
+      if (hit.kind === 'enemy') this.pendingEnemyId = hit.id;
+      else if (hit.orb !== this.pendingOrb) {
+        this.pendingOrb = hit.orb;
+        this.pendingGamepad = undefined;
+      }
+    }
+  }
+
+  // Selecting an enemy (or slashing it, see collectSlash) reveals it. revealEnemy()
   // returns the same wave when another enemy is already the target or the phase does not allow it.
   private applyReveal(): void {
     const id = this.pendingEnemyId;

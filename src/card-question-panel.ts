@@ -69,6 +69,10 @@ export class QuestionPanel {
     return this.orbLabels.has(entity);
   }
 
+  orbs(): Iterable<Entity> {
+    return this.orbLabels.keys();
+  }
+
   labelOf(orb: Entity): string | undefined {
     return this.orbLabels.get(orb);
   }
