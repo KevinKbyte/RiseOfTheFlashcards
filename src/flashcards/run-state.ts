@@ -103,6 +103,12 @@ export function recordEnemyHit(s: RunState, cardId: string): RunState {
   return takeHit(s, cardId);
 }
 
+/** Card (re)presented: starts a new encounter, so it may cost a pip again (cap is per encounter). */
+export function beginEncounter(s: RunState, cardId: string): RunState {
+  if (!inPlay(s, cardId)) return s;
+  return { ...s, hitCards: s.hitCards.filter((id) => id !== cardId) };
+}
+
 export function pipsRemaining(s: RunState): number {
   return s.pips;
 }
