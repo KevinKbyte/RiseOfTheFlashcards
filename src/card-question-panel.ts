@@ -73,8 +73,8 @@ export class QuestionPanel {
 
   // The anchor is a world-space, yaw-only frame placed once at the eye when the panel pops out
   // (never parented to the camera, never following head position); the pitched panel and the orbs
-  // hang off it so one yaw update turns them together.
-  show(eye: Vector3, headYaw: number, lines: readonly string[], labels: readonly string[]): void {
+  // hang off it so one yaw update turns them together. Returns the orbs in label order.
+  show(eye: Vector3, headYaw: number, lines: readonly string[], labels: readonly string[]): Entity[] {
     this.anchorYaw = Number.isFinite(headYaw) ? headYaw : 0;
     const root = new Group();
     const pitch = (PANEL.pitchBelowDeg * Math.PI) / 180;
@@ -90,7 +90,7 @@ export class QuestionPanel {
     root.rotation.set(0, this.anchorYaw, 0);
     this.anchor = this.world.createTransformEntity(root);
 
-    labels.forEach((text, i) => {
+    return labels.map((text, i) => {
       const sphere = new Mesh(
         new SphereGeometry(ORB_RADIUS, 24, 16),
         new MeshBasicMaterial({ color: 0x38bdf8 }),
@@ -102,6 +102,7 @@ export class QuestionPanel {
       const entity = this.world.createTransformEntity(sphere, { parent: this.anchor });
       entity.addComponent(RayInteractable);
       this.orbLabels.set(entity, text);
+      return entity;
     });
   }
 

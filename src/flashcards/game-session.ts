@@ -68,7 +68,8 @@ export function startRun(s: GameSession): SessionStep {
   const env = envOf(s);
   const review = loadReview(env.storage, deck.cards, env.clock());
   const flow = startFlow({ cardIds: review.queue.ids });
-  const cards = flow.state.run.cards.flatMap((id) => deck.cards.filter((c) => c.id === id));
+  const byId = new Map(deck.cards.map((c) => [c.id, c]));
+  const cards = flow.state.run.cards.flatMap((id) => byId.get(id) ?? []);
   return {
     session: next(s, { menu, run: flow.state, review, deck, encounters: {} }),
     effects: [{ type: 'spawnWave', cards }, ...flow.effects],

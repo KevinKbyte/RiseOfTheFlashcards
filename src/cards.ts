@@ -61,6 +61,8 @@ export class CardsSystem extends createSystem({
   private session!: GameSession;
   /** The panel is showing the deck menu (orbs are deck titles), not a question. */
   private menuOpen = false;
+  // Menu orb -> deck id, so duplicate deck titles still start the deck that was picked.
+  private readonly menuDecks = new Map<Entity, string>();
   private pips = 0;
   // Each reveal is one presentation; the counter makes its encounter id unique for the run-flow.
   private encounterSeq = 0;
@@ -106,7 +108,10 @@ export class CardsSystem extends createSystem({
     this.applyReveal();
     this.applyOrb();
     this.feedback.update(dt);
-    if (this.message !== undefined) return;
+    if (this.message !== undefined) {
+      this.updateAnchor();
+      return;
+    }
 
     const prevHits = this.targetHits();
     this.wave = tickWave(this.wave, dt);
@@ -132,8 +137,11 @@ export class CardsSystem extends createSystem({
     this.session = updateMenu(this.session, (m) => openDeckSelect(backToStart(m)));
     this.panel.clear();
     this.menuOpen = true;
-    const titles = deckOptions(this.session.menu).map((o) => o.title);
-    this.panel.show(this.eye, this.readHead(), [heading, 'Pick a deck to start'], titles);
+    const options = deckOptions(this.session.menu);
+    const titles = options.map((o) => o.title);
+    const orbs = this.panel.show(this.eye, this.readHead(), [heading, 'Pick a deck to start'], titles);
+    this.menuDecks.clear();
+    orbs.forEach((orb, i) => this.menuDecks.set(orb, options[i].id));
   }
 
   // The selected deck's FSRS queue (via game-session) decides what enters the wave.
@@ -212,24 +220,21 @@ export class CardsSystem extends createSystem({
     const label = this.panel.labelOf(orb);
     if (label === undefined) return;
     if (this.menuOpen) {
-      const deck = deckOptions(this.session.menu).find((o) => o.title === label);
-      if (deck !== undefined) this.startRun(deck.id);
+      const deckId = this.menuDecks.get(orb);
+      if (deckId !== undefined) this.startRun(deckId);
       return;
     }
     const targetId = this.wave.targetId;
     const card = targetId === null ? undefined : this.cards.get(targetId);
     if (targetId === null || card === undefined) return;
-    if (label !== card.answer) this.onWrongAnswer(orb);
+    if (label !== card.answer) this.onWrongAnswer(orb, targetId, label);
     else this.onCorrectAnswer(targetId);
   }
 
   // Wrong orb: game-session costs a pip (once per encounter) and writes one Again rating.
-  private onWrongAnswer(orb: Entity): void {
-    const targetId = this.wave.targetId;
-    const label = this.panel.labelOf(orb);
+  private onWrongAnswer(orb: Entity, targetId: string, label: string): void {
     // Removed first: a losing hit's end screen clears the panel and opens the menu.
     this.panel.removeOrb(orb);
-    if (targetId === null || label === undefined) return;
     this.apply(wrongOrb(this.session, targetId, label));
   }
 
