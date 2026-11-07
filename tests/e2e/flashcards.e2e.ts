@@ -1,6 +1,6 @@
 // Requirement: the flashcard game is playable end to end on an emulated Quest 3 with real controller
 // input: the page loads without console errors and enters XR with the deck menu in front of the
-// player; pointing the ray at a deck orb and pulling the trigger starts a wave of card enemies;
+// player behind a start screen whose 'Start' orb leads to deck select; pointing the ray at a deck orb and pulling the trigger starts a wave of card enemies;
 // selecting an enemy reveals its question panel; a wrong orb costs one shield pip and is removed, the
 // right orb clears the card (with feedback); clearing all 12 cards shows the win message and losing
 // all 5 shields shows "Shields down. Try again."; progress is saved per deck to localStorage under
@@ -17,6 +17,7 @@ const DECK = 'World Capitals';
 const DECK_ID = 'world-capitals';
 const RUN_CARDS = 12;
 const START_PIPS = 5;
+const START = 'Start';
 const LOSE_TEXT = 'Shields down. Try again.';
 const WIN_TEXTS = ['Day cleared! Well done.', 'Deck conquered! Every card mastered.'];
 const SHOTS = process.env.E2E_SCREENSHOT_DIR ?? join(tmpdir(), 'flashcards-e2e');
@@ -32,8 +33,16 @@ afterEach(async () => {
 async function open(): Promise<Game> {
   game = await Game.launch(inject('baseUrl'));
   await game.enterXR();
-  await game.until((s) => s.menuOpen && s.orbs.length > 0, 'deck menu');
+  await pressStart(game);
   return game;
+}
+
+/** From the start screen, presses the 'Start' orb; resolves once the deck orbs show. */
+async function pressStart(g: Game): Promise<GameState> {
+  await g.until((s) => s.menuOpen && s.orbs.some((o) => o.label === START), 'start screen');
+  const deckShown = (s: GameState) => s.menuOpen && s.orbs.some((o) => o.label === DECK);
+  await g.aimAndSelect({ kind: 'orb', label: START }, deckShown);
+  return g.until(deckShown, 'deck menu');
 }
 
 async function pickDeck(g: Game, title = DECK): Promise<GameState> {
@@ -77,6 +86,16 @@ describe('flashcards emulator playthrough (IWER Quest 3, real controller input)'
     expect(s.session).toBe(true);
     expect(s.orbs.map((o) => o.label)).toContain(DECK);
     expect(g.errors).toEqual([]);
+  });
+
+  it('the first menu after entering XR is the start screen: a Start orb and no deck orbs', async () => {
+    game = await Game.launch(inject('baseUrl'));
+    await game.enterXR();
+    const s = await game.until((x) => x.menuOpen && x.orbs.length > 0, 'first menu');
+    const labels = s.orbs.map((o) => o.label);
+    expect(labels).toContain(START);
+    expect(labels).not.toContain(DECK);
+    expect(game.errors).toEqual([]);
   });
 
   // RED until the deck menu is re-placed when the XR session starts: today it stays where the
@@ -168,7 +187,7 @@ describe('flashcards emulator playthrough (IWER Quest 3, real controller input)'
     await g.reload();
     expect(await readSave(g)).toBe(before);
     await g.enterXR();
-    await g.until((s) => s.menuOpen && s.orbs.length > 0, 'deck menu after reload');
+    await pressStart(g);
     const next = await pickDeck(g);
     expect(next.waveCards.length).toBeGreaterThan(0);
     expect(next.waveCards.filter((id) => answered.includes(id))).toEqual([]);
