@@ -6,6 +6,7 @@ import { createMenu, masterySummary, startPlaying, type MasteryRow, type MenuSta
 import { loadReview, startEncounter, submitAnswer, type Attempt, type Encounter, type ReviewState } from './review-flow.js';
 import { startFlow, stepFlow, type RunFlowEffect, type RunFlowEvent, type RunFlowState } from './run-flow.js';
 import { readDecks, writeDecks, type DeckRead } from './deck-store.js';
+import { planPoolSizes } from './pool.js';
 import { readSave, type SaveStorage } from './save.js';
 
 export interface SessionEnv {
@@ -30,7 +31,10 @@ export interface GameSession {
   readonly deckSaveError: DeckSaveError | null;
 }
 
-export type SessionEffect = { type: 'spawnWave'; cards: readonly DeckCard[] } | RunFlowEffect;
+/** spawnWave.poolSizes: cards per spawned enemy, spawn order, summing to cards.length (M2). */
+export type SessionEffect =
+  | { type: 'spawnWave'; cards: readonly DeckCard[]; poolSizes: readonly number[] }
+  | RunFlowEffect;
 
 export interface SessionStep {
   session: GameSession;
@@ -110,7 +114,7 @@ export function startRun(s: GameSession): SessionStep {
   const cards = flow.state.run.cards.flatMap((id) => byId.get(id) ?? []);
   return {
     session: next(s, { menu, run: flow.state, review, deck, encounters: {} }),
-    effects: [{ type: 'spawnWave', cards }, ...flow.effects],
+    effects: [{ type: 'spawnWave', cards, poolSizes: planPoolSizes(cards.length) }, ...flow.effects],
   };
 }
 

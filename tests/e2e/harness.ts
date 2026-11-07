@@ -10,10 +10,14 @@ export interface GameState {
   menuOpen: boolean;
   pips: number;
   message: boolean;
+  /** Revealed enemy id (its first card's id; stays fixed while later pool cards are peeled). */
   targetId: string | null;
+  /** The revealed enemy's current pool card: the one shown, graded and answered. */
+  cardId: string | null;
   /** Card ids of the current wave (spawned + queued). */
   waveCards: string[];
-  active: { id: string; pos: Vec3 | null }[];
+  /** `cards`: the enemy's remaining pool cards, current first. */
+  active: { id: string; pos: Vec3 | null; cards: string[] }[];
   orbs: { label: string; pos: Vec3 }[];
   answer: string | null;
   runStatus: string | null;
@@ -61,7 +65,9 @@ const PAGE_HELPERS = `
     const fwd = new V(0, 0, -1).applyQuaternion(w.camera.getWorldQuaternion(new (H.Q())()));
     const views = s.enemies.views;
     const target = s.wave.targetId;
-    const card = target === null ? undefined : s.cards.get(target);
+    const targetEnemy = target === null ? undefined : s.wave.active.find((e) => e.id === target);
+    const cardId = targetEnemy && targetEnemy.pool.cards.length > 0 ? targetEnemy.pool.cards[0] : null;
+    const card = cardId === null ? undefined : s.cards.get(cardId);
     const run = s.session.run;
     return {
       session: !!w.session,
@@ -69,8 +75,9 @@ const PAGE_HELPERS = `
       pips: s.pips,
       message: s.message !== undefined,
       targetId: target,
+      cardId,
       waveCards: [...s.cards.keys()],
-      active: s.wave.active.map((e) => { const v = views.get(e.id); return { id: e.id, pos: v && v.entity.object3D ? H.center(v.entity.object3D) : null }; }),
+      active: s.wave.active.map((e) => { const v = views.get(e.id); return { id: e.id, pos: v && v.entity.object3D ? H.center(v.entity.object3D) : null, cards: [...e.pool.cards] }; }),
       orbs: [...s.panel.orbLabels.entries()].map(([e, label]) => ({ label, pos: H.center(e.object3D) })),
       answer: card ? card.answer : null,
       runStatus: run && run.run ? run.run.status : null,
