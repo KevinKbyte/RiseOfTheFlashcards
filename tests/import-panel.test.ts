@@ -103,6 +103,7 @@ function deckListText(root: HTMLElement): string[] {
   return [...byTestId(root, 'deck-list').querySelectorAll('li')].map((li) => li.textContent ?? '');
 }
 
+// Covers: M11, A10
 describe('import panel: paste and file import', () => {
   it('returns a handle and renders a textarea, an Import button and a .json/.txt file input', () => {
     const { root, handle } = mount();
@@ -323,5 +324,84 @@ describe('import panel: replace existing deck', () => {
     button(root, /^undo/i).click();
     expect(last().decks).toEqual(STARTER_DECKS);
     expect(root.textContent).not.toContain('Brand New Title');
+  });
+});
+
+// Requirement: after an import or a replace lands (screen 'ready'), editing the textarea must
+// never leave a dead Undo on screen -- any Undo control still visible must actually restore the
+// replaced deck, otherwise no Undo is shown. The success line names the imported deck and tells
+// the user to pick it from the deck menu in VR; it does not claim "Enter XR to play it" as if the
+// deck were preselected in XR.
+// Covers: M11, A10
+describe('import panel: ready screen after import', () => {
+  const existing = STARTER_DECKS[0];
+  const CLASH = deckJson(existing.id, 'Brand New Title');
+
+  it('typing after a replace leaves no visible Undo that does nothing', () => {
+    const { root, last } = mount();
+    pasteAndImport(root, CLASH);
+    button(root, /^replace/i).click();
+    expect(hasButton(root, /^undo/i)).toBe(true);
+    paste(root, 'still typing');
+    if (hasButton(root, /^undo/i)) {
+      button(root, /^undo/i).click();
+      expect(last().decks).toEqual(STARTER_DECKS);
+    }
+  });
+
+  it('typing after a plain import leaves no visible Undo that does nothing', () => {
+    const { root, last } = mount();
+    pasteAndImport(root, deckJson('mine', 'My Deck'));
+    paste(root, 'more');
+    if (hasButton(root, /^undo/i)) {
+      const before = last();
+      button(root, /^undo/i).click();
+      expect(last()).not.toBe(before);
+    }
+  });
+
+  it('success text names the deck and says to pick it from the menu in VR', () => {
+    const { root } = mount();
+    pasteAndImport(root, deckJson('mine', 'My Deck'));
+    expect(root.textContent).not.toContain('Enter XR to play it');
+    const line = [...root.querySelectorAll('p')].map((p) => p.textContent ?? '').find((t) => t.includes('My Deck'));
+    expect(line, 'a paragraph mentioning the imported deck title').toBeDefined();
+    expect(line).toMatch(/\b(pick|choose|select)\b/i);
+    expect(line).toMatch(/menu/i);
+    expect(line).toMatch(/\b(VR|XR)\b/);
+  });
+});
+
+// Requirement: while the user is in XR the 2D import panel must not be interactive behind the
+// headset session -- handle.setHidden(true) hides the panel (root or its panel container is hidden
+// or inert) and disables every control; setHidden(false) shows it again with controls enabled.
+// Covers: M11, A10
+describe('import panel: hide during XR', () => {
+  function controls(root: HTMLElement): (HTMLButtonElement | HTMLInputElement | HTMLTextAreaElement)[] {
+    return [...root.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLTextAreaElement>('button, input, textarea')];
+  }
+
+  function concealed(root: HTMLElement): boolean {
+    const panel = root.firstElementChild as HTMLElement | null;
+    return [root, panel].some((n) => !!n && (n.hidden || n.hasAttribute('inert')));
+  }
+
+  it('setHidden(true) hides the panel and disables all controls', () => {
+    const { root, handle } = mount();
+    handle.setHidden(true);
+    expect(concealed(root)).toBe(true);
+    const cs = controls(root);
+    expect(cs.length).toBeGreaterThan(0);
+    for (const ctl of cs) expect(ctl.disabled).toBe(true);
+  });
+
+  it('setHidden(false) shows the panel again with controls enabled', () => {
+    const { root, handle } = mount();
+    handle.setHidden(true);
+    handle.setHidden(false);
+    expect(concealed(root)).toBe(false);
+    for (const ctl of controls(root)) expect(ctl.disabled).toBe(false);
+    pasteAndImport(root, deckJson('mine', 'My Deck'));
+    expect(deckListText(root).some((t) => t.includes('My Deck'))).toBe(true);
   });
 });
