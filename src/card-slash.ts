@@ -4,8 +4,9 @@
  * space, and returns which answer orbs or card-enemies were slashed. Trigger select stays on the
  * existing Pressed path in cards.ts as the accessibility fallback.
  */
-import { Matrix4, Quaternion, Vector3, type Entity, type Mesh, type World } from '@iwsdk/core';
-import { createSlashInput, stepSlashInput, type GripPose, type InputFrame } from './flashcards/slash-input.js';
+import { Vector3, type Entity, type Mesh, type World } from '@iwsdk/core';
+import { poseToWorld } from './flashcards/pose-world.js';
+import { createSlashInput, stepSlashInput, type InputFrame } from './flashcards/slash-input.js';
 import type { SlashTarget } from './flashcards/slash.js';
 import type { Vec3 } from './flashcards/spawn.js';
 
@@ -18,15 +19,12 @@ export type SlashHit = { kind: 'orb'; orb: Entity } | { kind: 'enemy'; id: strin
 
 export class CardSlash {
   private state = createSlashInput();
-  private readonly origin = new Matrix4();
-  private readonly pose = new Matrix4();
   private readonly pos = new Vector3();
-  private readonly quat = new Quaternion();
   private readonly scale = new Vector3();
 
   constructor(private readonly world: World) {}
 
-  /** Targets slashed this frame, at most one hit per target. `t` is the system clock in seconds. */
+  /** Targets slashed this frame, at most one hit per target. `t` is the uncapped input clock in seconds. */
   step(
     t: number,
     orbs: Iterable<Entity>,
@@ -64,7 +62,7 @@ export class CardSlash {
     const session = this.world.xrSession;
     const originObj = this.world.playerEntity.object3D;
     if (!xr || !ref || !session || !originObj) return frame;
-    this.origin.copy(originObj.matrixWorld);
+    const origin = originObj.matrixWorld.elements;
     const hands: NonNullable<InputFrame['hands']> = {};
     const controllers: NonNullable<InputFrame['controllers']> = {};
     for (const source of session.inputSources) {
@@ -73,21 +71,15 @@ export class CardSlash {
       if (source.hand) {
         const tip = source.hand.get('index-finger-tip');
         const p = tip ? xr.getJointPose?.(tip, ref) : undefined;
-        if (p) hands[side] = this.toWorld(p.transform.matrix).pos;
+        if (p) hands[side] = poseToWorld(origin, p.transform.matrix).pos;
       } else if (source.targetRayMode === 'tracked-pointer') {
         const p = xr.getPose(source.gripSpace ?? source.targetRaySpace, ref);
-        if (p) controllers[side] = this.toWorld(p.transform.matrix);
+        if (p) controllers[side] = poseToWorld(origin, p.transform.matrix);
       }
     }
     frame.hands = hands;
     frame.controllers = controllers;
     return frame;
-  }
-
-  private toWorld(m: Float32Array): GripPose {
-    this.pose.fromArray(m).premultiply(this.origin).decompose(this.pos, this.quat, this.scale);
-    const { x, y, z, w } = this.quat;
-    return { pos: toVec(this.pos), quat: { x, y, z, w } };
   }
 }
 
