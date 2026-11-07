@@ -1,7 +1,7 @@
 // Plan D4: classify one voice attempt and decide its FSRS rating. At most one rating per
 // encounter, Easy never emitted. Pure: state is threaded by the caller, never mutated.
 import { Rating } from 'ts-fsrs';
-import { match, matchKey, type MatchInput, type MatchResult } from './matcher.js';
+import { match, matchKey, MAX_KEY_CHARS, type MatchInput, type MatchResult } from './matcher.js';
 
 export type VoiceResult = MatchResult | 'didnt-catch';
 
@@ -16,9 +16,12 @@ export interface AnswerOutcome {
   state: AnswerState;
 }
 
-// Empty or punctuation/whitespace-only transcripts are Didn't catch, never a matcher error.
+// Empty, punctuation/whitespace-only, or over-cap transcripts are Didn't catch, never a matcher error.
 export function classifyTranscript(input: MatchInput): VoiceResult {
-  if (typeof input.transcript === 'string' && matchKey(input.transcript) === '') return 'didnt-catch';
+  if (typeof input.transcript === 'string') {
+    const key = matchKey(input.transcript);
+    if (key === '' || key.length > MAX_KEY_CHARS) return 'didnt-catch';
+  }
   return match(input);
 }
 
@@ -32,7 +35,11 @@ export function answerOutcome(result: VoiceResult, state: AnswerState): AnswerOu
       return { outcome: result, rating: againWritten ? null : Rating.Again, state: { againWritten: true, missed } };
     case 'miss':
       return { outcome: result, rating: null, state: { againWritten, missed: true } };
-    default:
+    case 'didnt-catch':
       return { outcome: result, rating: null, state: { againWritten, missed } };
+    default: {
+      const unreachable: never = result;
+      throw new Error(`unhandled voice result: ${String(unreachable)}`);
+    }
   }
 }

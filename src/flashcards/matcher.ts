@@ -25,7 +25,7 @@ const FUZZY_MIN_MARGIN = 0.1;
 const MARGIN_EPSILON = 1e-9;
 // Below this length ratio a candidate cannot reach FUZZY_MIN_RATIO, so levenshtein is skipped.
 const MIN_LENGTH_RATIO = 0.75;
-const MAX_KEY_CHARS = 200;
+export const MAX_KEY_CHARS = 200;
 const HEDGE_TOKENS = new Set(['or', 'and']);
 
 // NORM-001: NFKD, drop combining marks, lowercase, punctuation -> space, collapse, trim.
