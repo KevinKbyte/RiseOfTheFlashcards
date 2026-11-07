@@ -142,3 +142,31 @@ describe('answerOutcome (D4 outcome + FSRS rating)', () => {
     expect(state).toEqual({ againWritten: false, missed: false });
   });
 });
+
+// Covers: MATCH-004, MATCH-005
+// Requirement: a rambling voice answer whose transcript normalizes to more than the matcher's
+// 200-char key limit is Didn't catch, never a thrown error, so the voice loop keeps running;
+// classifyTranscript never throws for any string transcript.
+describe('classifyTranscript over-long transcript (regression: matcher RangeError)', () => {
+  const words = (n: number) => Array.from({ length: n }, (_, i) => `word${i}`).join(' ');
+
+  it('201-char normalized transcript -> didnt-catch, no throw', () => {
+    const transcript = 'b'.repeat(201);
+    expect(() => classifyTranscript({ deck, cardId: 'aff', transcript })).not.toThrow();
+    expect(classifyTranscript({ deck, cardId: 'aff', transcript })).toBe('didnt-catch');
+  });
+
+  it('rambling multi-word transcript over 200 chars -> didnt-catch, no throw', () => {
+    const transcript = `um so I think it is ${words(40)} afferent`;
+    expect(transcript.length).toBeGreaterThan(200);
+    expect(() => classifyTranscript({ deck, cardId: 'aff', transcript })).not.toThrow();
+    expect(classifyTranscript({ deck, cardId: 'aff', transcript })).toBe('didnt-catch');
+  });
+
+  it('10k-char transcript -> didnt-catch, no throw', () => {
+    const transcript = 'afferent '.repeat(1112).slice(0, 10_000);
+    expect(transcript.length).toBe(10_000);
+    expect(() => classifyTranscript({ deck, cardId: 'aff', transcript })).not.toThrow();
+    expect(classifyTranscript({ deck, cardId: 'aff', transcript })).toBe('didnt-catch');
+  });
+});
