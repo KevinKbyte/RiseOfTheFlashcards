@@ -31,6 +31,8 @@ export interface ImportPanelOptions {
 export interface ImportPanelHandle {
   getState(): MenuState;
   destroy(): void;
+  /** Hides the panel and disables its controls (e.g. during an XR session); false restores it. */
+  setHidden(hidden: boolean): void;
 }
 
 let panelSeq = 0;
@@ -48,6 +50,7 @@ function toImport(state: MenuState): MenuState {
 
 export function mountImportPanel(root: HTMLElement, options: ImportPanelOptions): ImportPanelHandle {
   let state = options.state;
+  let hidden = false;
   const radioPrefix = `dupe-${++panelSeq}`;
   const container = el('div');
   root.appendChild(container);
@@ -102,10 +105,20 @@ export function mountImportPanel(root: HTMLElement, options: ImportPanelOptions)
     area.setAttribute('aria-label', 'Deck JSON');
     area.value = state.importText;
     const error = errorLine();
-    // No re-render on typing: replacing the textarea would drop focus and the caret.
+    // Typing re-renders only when it leaves another screen (e.g. 'ready', whose Undo would go
+    // stale); replacing the textarea drops focus and the caret, so both are restored after.
     area.addEventListener('input', () => {
-      update(setImportText(toImport(state), area.value), false);
-      error.textContent = '';
+      const next = setImportText(toImport(state), area.value);
+      if (next.screen === state.screen) {
+        update(next, false);
+        error.textContent = '';
+        return;
+      }
+      const { selectionStart, selectionEnd } = area;
+      update(next);
+      const fresh = container.querySelector('textarea');
+      fresh?.focus();
+      fresh?.setSelectionRange(selectionStart, selectionEnd);
     });
     const file = el('input');
     file.type = 'file';
@@ -189,7 +202,7 @@ export function mountImportPanel(root: HTMLElement, options: ImportPanelOptions)
     for (const deck of state.decks) list.append(el('li', `${deck.title} (${deck.cards.length} cards)`));
     section.append(list);
     if (state.screen === 'ready' && state.selectedDeck) {
-      section.append(el('p', `Imported: ${state.selectedDeck.title}. Enter XR to play it.`));
+      section.append(el('p', `Imported: ${state.selectedDeck.title}. In VR, pick it from the deck menu to play.`));
       if (state.replaceUndo) section.append(btn('Undo', () => update(undoReplace(state))));
     }
     return section;
@@ -199,11 +212,25 @@ export function mountImportPanel(root: HTMLElement, options: ImportPanelOptions)
     const body =
       state.screen === 'dedupe' ? dedupeSection() : state.screen === 'confirm-replace' ? replaceSection() : importSection();
     container.replaceChildren(el('h2', 'Import a deck'), body, deckList());
+    container.hidden = hidden;
+    container.toggleAttribute('inert', hidden);
+    if (hidden) {
+      for (const ctl of container.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLTextAreaElement>(
+        'button, input, textarea',
+      )) {
+        ctl.disabled = true;
+      }
+    }
   }
 
   render();
   return {
     getState: () => state,
     destroy: () => container.remove(),
+    // Re-rendering on show restores each control's own disabled state (e.g. Apply gated on canApply).
+    setHidden: (next: boolean) => {
+      hidden = next;
+      render();
+    },
   };
 }

@@ -41,7 +41,7 @@ import {
   type SessionStep,
 } from './flashcards/game-session.js';
 import { backToStart, deckOptions, openDeckSelect, openImport, selectDeck } from './flashcards/menu-flow.js';
-import { mountImportPanel } from './import-panel.js';
+import { mountImportPanel, type ImportPanelHandle } from './import-panel.js';
 import {
   answerTarget,
   createWave,
@@ -56,6 +56,7 @@ const MAX_DT = 0.1;
 // Decks imported on the 2D page panel; every VR deck menu opening reads them from here.
 const pageMenu = openImport(openDeckSelect(browserSession().menu));
 let pageDecks = pageMenu.decks;
+let importPanel: ImportPanelHandle | undefined;
 
 export class CardsSystem extends createSystem({
   pressed: { required: [RayInteractable, Pressed] },
@@ -163,6 +164,8 @@ export class CardsSystem extends createSystem({
     const session = this.world.session;
     const seen = this.sessionSeen;
     this.sessionSeen = session;
+    // The 2D import panel must not take input behind the headset while a session runs.
+    if (session !== seen) importPanel?.setHidden(session !== undefined);
     if (!this.menuOpen || session === undefined || session !== seen || session === this.placedFor) return;
     this.openMenu(this.menuHeading);
   }
@@ -318,7 +321,7 @@ export class CardsSystem extends createSystem({
 // transparent clear shows the room.
 const importRoot = document.getElementById('import-panel');
 if (importRoot) {
-  mountImportPanel(importRoot, {
+  importPanel = mountImportPanel(importRoot, {
     state: pageMenu,
     onChange: (s) => {
       pageDecks = s.decks;
