@@ -5,6 +5,7 @@ import type { Deck, DeckCard } from './deck-schema.js';
 import { createMenu, masterySummary, startPlaying, type MasteryRow, type MenuState } from './menu-flow.js';
 import { loadReview, startEncounter, submitAnswer, type Attempt, type Encounter, type ReviewState } from './review-flow.js';
 import { startFlow, stepFlow, type RunFlowEffect, type RunFlowEvent, type RunFlowState } from './run-flow.js';
+import { readDecks, writeDecks } from './deck-store.js';
 import { readSave, type SaveStorage } from './save.js';
 
 export interface SessionEnv {
@@ -33,13 +34,15 @@ export interface SessionStep {
 // The env (storage, clock) rides along non-enumerable: it is not session state, and a spread or
 // JSON snapshot of the session must not see storage internals change underneath it.
 const ENV = Symbol('env');
-type WithEnv = GameSession & { readonly [ENV]: SessionEnv };
+// decksReadFailed: the stored decks could not be read, so writing would clobber decks we never saw.
+type InnerEnv = SessionEnv & { readonly decksReadFailed: boolean };
+type WithEnv = GameSession & { readonly [ENV]: InnerEnv };
 
-function envOf(s: GameSession): SessionEnv {
+function envOf(s: GameSession): InnerEnv {
   return (s as WithEnv)[ENV];
 }
 
-function make(data: GameSession, env: SessionEnv): GameSession {
+function make(data: GameSession, env: InnerEnv): GameSession {
   const s = { ...data };
   Object.defineProperty(s, ENV, { value: env, enumerable: false });
   return s;
@@ -51,14 +54,37 @@ function next(s: GameSession, patch: Partial<GameSession>): GameSession {
 
 const same = (session: GameSession): SessionStep => ({ session, effects: [] });
 
-export function createSession(env: SessionEnv): GameSession {
-  const menu: MenuState = { ...createMenu(), decks: env.decks };
-  return make({ menu, run: null, review: null, deck: null, encounters: {} }, env);
+/** Stored decks replace bundled ones by id in place; the rest follow in stored order. */
+function mergeDecks(bundled: readonly Deck[], stored: readonly Deck[]): readonly Deck[] {
+  if (stored.length === 0) return bundled;
+  const byId = new Map(stored.map((d) => [d.id, d]));
+  const merged = bundled.map((d) => byId.get(d.id) ?? d);
+  const bundledIds = new Set(bundled.map((d) => d.id));
+  return [...merged, ...stored.filter((d) => !bundledIds.has(d.id))];
 }
 
+/** Decks not identical to the bundled deck of the same id: imports and replacements of a starter. */
+function importedDecks(decks: readonly Deck[], bundled: readonly Deck[]): Deck[] {
+  const byId = new Map(bundled.map((d) => [d.id, JSON.stringify(d)]));
+  return decks.filter((d) => byId.get(d.id) !== JSON.stringify(d));
+}
+
+export function createSession(env: SessionEnv): GameSession {
+  const stored = readDecks(env.storage);
+  const menu: MenuState = { ...createMenu(), decks: mergeDecks(env.decks, stored.decks) };
+  const inner: InnerEnv = { ...env, decksReadFailed: stored.readFailed };
+  return make({ menu, run: null, review: null, deck: null, encounters: {} }, inner);
+}
+
+/** Any menu change to the deck list (import, replace, Undo) persists the imported decks. */
 export function updateMenu(s: GameSession, fn: (m: MenuState) => MenuState): GameSession {
   const menu = fn(s.menu);
-  return menu === s.menu ? s : next(s, { menu });
+  if (menu === s.menu) return s;
+  const env = envOf(s);
+  if (menu.decks !== s.menu.decks && !env.decksReadFailed) {
+    writeDecks(importedDecks(menu.decks, env.decks), env.storage);
+  }
+  return next(s, { menu });
 }
 
 export function startRun(s: GameSession): SessionStep {

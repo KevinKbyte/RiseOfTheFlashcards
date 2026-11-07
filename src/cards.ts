@@ -56,7 +56,9 @@ import {
 const MAX_DT = 0.1;
 
 // Decks imported on the 2D page panel; every VR deck menu opening reads them from here.
-const pageMenu = openImport(openDeckSelect(browserSession().menu));
+// Stored decks load here at startup; panel changes go through updateMenu, which persists them.
+let pageSession = browserSession();
+const pageMenu = openImport(openDeckSelect(pageSession.menu));
 let pageDecks = pageMenu.decks;
 let importPanel: ImportPanelHandle | undefined;
 
@@ -335,6 +337,7 @@ if (importRoot) {
   importPanel = mountImportPanel(importRoot, {
     state: pageMenu,
     onChange: (s) => {
+      pageSession = updateMenu(pageSession, () => s);
       pageDecks = s.decks;
     },
   });
