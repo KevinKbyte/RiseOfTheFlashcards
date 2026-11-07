@@ -127,7 +127,7 @@ export function presented(s: GameSession, cardId: string, encounterId: string): 
   return { session: next(s, { run: r.run, encounters }), effects: r.effects };
 }
 
-/** Run-flow decides whether the orb counts; review-flow grades and persists it. */
+/** Run-flow decides whether the orb or hit counts; review-flow grades and persists it. */
 function orb(s: GameSession, event: RunFlowEvent & { cardId: string }, attempt: Attempt): SessionStep {
   const { review, deck } = s;
   if (!review || !deck) return same(s);
@@ -146,10 +146,9 @@ export function wrongOrb(s: GameSession, cardId: string, label: string): Session
   return orb(s, { type: 'wrongOrb', cardId }, { kind: 'orb', label });
 }
 
-/** A landed strike costs a pip via run-flow only: it is not an answer, so FSRS is not written. */
+/** A landed strike costs a pip and rates the card Again, sharing the wrong orb's once-per-encounter flag. */
 export function enemyHit(s: GameSession, cardId: string): SessionStep {
-  const r = step(s, { type: 'enemyHit', cardId });
-  return r ? { session: next(s, { run: r.run }), effects: r.effects } : same(s);
+  return orb(s, { type: 'enemyHit', cardId }, { kind: 'hit' });
 }
 
 export function correctOrb(s: GameSession, cardId: string): SessionStep {
