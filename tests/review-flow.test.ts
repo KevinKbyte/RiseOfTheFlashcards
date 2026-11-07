@@ -311,3 +311,95 @@ describe('review-flow purity: injected clock, inputs never mutated', () => {
     expect(attempt).toEqual(voice('synapse'));
   });
 });
+
+// Covers: D4, D5
+describe('submitAnswer: a card id not in the deck is ignored', () => {
+  it.each([
+    ['voice', voice('afferent')],
+    ['orb', orb('afferent')],
+  ] as const)('%s attempt on unknown id -> no throw, rating null, no write, counters unchanged', (_kind, attempt) => {
+    const storage = memoryStorage();
+    const state = loadReview(storage, deck, NOW);
+    let r: ReturnType<typeof submitAnswer> | undefined;
+    expect(() => {
+      r = submitAnswer(state, startEncounter('ghost'), attempt, env(storage));
+    }).not.toThrow();
+    expect(r?.rating).toBeNull();
+    expect(storage.writes).toEqual([]);
+    expect(r?.state.save.cards).toEqual({});
+    expect(r?.state.save.counters).toEqual(state.save.counters);
+  });
+});
+
+// Covers: D4, D5
+describe('submitAnswer: a card already rated this study day is not rated again', () => {
+  it('fresh encounter later the same study day: correct answer -> rating null, no write, counters unchanged', () => {
+    const storage = memoryStorage();
+    const first = submitAnswer(loadReview(storage, deck, NOW), startEncounter('aff'), voice('synapse'), env(storage));
+    expect(first.rating).toBe('again');
+    const reloaded = loadReview(storage, deck, LATER_SAME_DAY);
+    const writesBefore = storage.writes.length;
+    const r = submitAnswer(reloaded, startEncounter('aff'), voice('afferent'), env(storage, LATER_SAME_DAY));
+    expect(r.rating).toBeNull();
+    expect(storage.writes).toHaveLength(writesBefore);
+    expect(r.state.save.counters).toEqual(reloaded.save.counters);
+    expect(r.state.save.cards.aff).toEqual(first.state.save.cards.aff);
+  });
+
+  it('one encounter spanning the 04:00 rollover (wrong 03:59, correct 04:01) -> exactly one write', () => {
+    const storage = memoryStorage();
+    const key = liveKey();
+    const before = new Date(2026, 10, 8, 3, 59, 0);
+    const after = new Date(2026, 10, 8, 4, 1, 0);
+    const first = submitAnswer(loadReview(storage, deck, before), startEncounter('aff'), voice('synapse'), env(storage, before));
+    expect(first.rating).toBe('again');
+    const second = submitAnswer(first.state, first.encounter, voice('afferent'), env(storage, after));
+    expect(second.rating).toBeNull();
+    expect(storage.writes.filter((k) => k === key)).toHaveLength(1);
+  });
+});
+
+// Covers: D5, S6a
+describe('submitAnswer: a save that could not be read is never overwritten', () => {
+  it('getItem throws on load then recovers -> later rating writes nothing, saveFailed true, save unchanged', () => {
+    const storage = memoryStorage();
+    const key = liveKey();
+    submitAnswer(loadReview(storage, deck, NOW), startEncounter('aff'), voice('afferent'), env(storage));
+    submitAnswer(loadReview(storage, deck, NOW), startEncounter('mito'), voice('mitochondria'), env(storage));
+    const fullSave = storage.data.get(key);
+    expect(Object.keys(loadSave(storage).cards).sort()).toEqual(['aff', 'mito']);
+    let failNext = true;
+    const flaky: SaveStorage = {
+      getItem: (k) => {
+        if (failNext) {
+          failNext = false;
+          throw new Error('SecurityError');
+        }
+        return storage.getItem(k);
+      },
+      setItem: storage.setItem,
+    };
+    const writesBefore = storage.writes.length;
+    const state = loadReview(flaky, deck, NEXT_DAY);
+    let r: ReturnType<typeof submitAnswer> | undefined;
+    expect(() => {
+      r = submitAnswer(state, startEncounter('ion'), voice('ion channel'), env(flaky, NEXT_DAY));
+    }).not.toThrow();
+    expect(storage.writes).toHaveLength(writesBefore);
+    expect(storage.data.get(key)).toBe(fullSave);
+    expect(r?.state.saveFailed).toBe(true);
+  });
+
+  it('backup already exists and live save is unreadable -> no write to either key, saveFailed true', () => {
+    const storage = memoryStorage();
+    const key = liveKey();
+    storage.data.set(SAVE_BACKUP_KEY, 'first unreadable save');
+    storage.data.set(key, 'second unreadable save');
+    const state = loadReview(storage, deck, NOW);
+    const r = submitAnswer(state, startEncounter('aff'), voice('afferent'), env(storage));
+    expect(storage.writes).toEqual([]);
+    expect(storage.data.get(SAVE_BACKUP_KEY)).toBe('first unreadable save');
+    expect(storage.data.get(key)).toBe('second unreadable save');
+    expect(r.state.saveFailed).toBe(true);
+  });
+});
