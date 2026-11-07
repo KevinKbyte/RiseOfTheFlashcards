@@ -29,6 +29,7 @@ import { QuestionPanel, showMessage } from './card-question-panel.js';
 import { browserSession, shuffled } from './card-session.js';
 import { WallTracker } from './card-wall-tracker.js';
 import { pickOrbs, type Card } from './flashcards/deck.js';
+import { currentCard } from './flashcards/pool.js';
 import {
   correctOrb,
   enemyHit,
@@ -134,7 +135,7 @@ export class CardsSystem extends createSystem({
     if (targetId !== null && this.targetHits() > prevHits) {
       // A strike landed: game-session costs the pip (may end the run). apply() flashes on a pip
       // change; flash here only when none came (pip cap), so one hit is one flash.
-      const step = enemyHit(this.session, targetId);
+      const step = enemyHit(this.session, this.currentCardId() ?? targetId);
       this.apply(step);
       const pipFlashed = step.effects.some((e) => e.type === 'pips');
       if (!pipFlashed && this.panel.isOpen && !this.menuOpen) this.panel.flash(this.panelLines());
@@ -206,7 +207,7 @@ export class CardsSystem extends createSystem({
       if (effect.type === 'spawnWave') {
         this.cards.clear();
         for (const card of effect.cards) this.cards.set(card.id, card);
-        this.wave = createWave(shuffled(effect.cards.map((c) => c.id)));
+        this.wave = createWave(shuffled(effect.cards.map((c) => c.id)), { poolSizes: effect.poolSizes });
       } else if (effect.type === 'pips') {
         this.pips = effect.remaining;
         if (this.panel.isOpen && !this.menuOpen) this.panel.flash(this.panelLines());
@@ -250,11 +251,23 @@ export class CardsSystem extends createSystem({
     const next = revealEnemy(this.wave, id);
     if (next === this.wave) return;
     this.wave = next;
-    const card = this.cards.get(id);
-    if (card === undefined) return;
+    this.presentTarget();
+  }
+
+  // Reported once per reveal or pool peel; panel repaints (hit flash) never re-present the card.
+  private presentTarget(): void {
+    const cardId = this.currentCardId();
+    const card = cardId === null ? undefined : this.cards.get(cardId);
+    if (cardId === null || card === undefined) return;
     this.showPanel(card);
-    // Reported here, once per reveal; panel repaints (hit flash) never re-present the card.
-    this.apply(presented(this.session, id, `${id}#${++this.encounterSeq}`));
+    this.apply(presented(this.session, cardId, `${cardId}#${++this.encounterSeq}`));
+  }
+
+  /** The target's current pool card: the one shown, graded and struck for. */
+  private currentCardId(): string | null {
+    const id = this.wave.targetId;
+    const target = id === null ? undefined : this.wave.active.find((e) => e.id === id);
+    return target === undefined ? null : currentCard(target.pool);
   }
 
   private applyOrb(): void {
@@ -273,10 +286,11 @@ export class CardsSystem extends createSystem({
       return;
     }
     const targetId = this.wave.targetId;
-    const card = targetId === null ? undefined : this.cards.get(targetId);
-    if (targetId === null || card === undefined) return;
-    if (label !== card.answer) this.onWrongAnswer(orb, targetId, label);
-    else this.onCorrectAnswer(targetId);
+    const cardId = this.currentCardId();
+    const card = cardId === null ? undefined : this.cards.get(cardId);
+    if (targetId === null || cardId === null || card === undefined) return;
+    if (label !== card.answer) this.onWrongAnswer(orb, cardId, label);
+    else this.onCorrectAnswer(targetId, cardId);
   }
 
   // Wrong orb: game-session costs a pip (once per encounter) and writes one Again rating.
@@ -287,15 +301,18 @@ export class CardsSystem extends createSystem({
   }
 
   // Correct orb: game-session clears the card and writes its rating; the last card is the WIN.
-  private onCorrectAnswer(targetId: string): void {
-    const step = correctOrb(this.session, targetId);
+  // A multi-card enemy stays the target after a peel; its next card is presented as a new encounter.
+  private onCorrectAnswer(targetId: string, cardId: string): void {
+    const step = correctOrb(this.session, cardId);
     this.wave = answerTarget(this.wave, true);
     if (!this.enemies.worldPosition(targetId, this.fxAt)) this.fxAt.copy(this.eye);
     this.feedback.play(this.fxAt, this.pendingGamepad);
     this.panel.clear();
-    this.enemies.remove(targetId);
+    const peeled = this.wave.targetId === targetId;
+    if (!peeled) this.enemies.remove(targetId);
     this.apply(step);
-    if (isWaveCleared(this.wave)) this.onWaveCleared();
+    if (peeled && this.wave.targetId === targetId) this.presentTarget();
+    else if (isWaveCleared(this.wave)) this.onWaveCleared();
   }
 
   private onWaveCleared(): void {
@@ -329,7 +346,7 @@ export class CardsSystem extends createSystem({
   }
 
   private panelLines(): string[] {
-    const id = this.wave.targetId;
+    const id = this.currentCardId();
     const prompt = id === null ? '' : (this.cards.get(id)?.prompt ?? '');
     return [prompt, `Shields: ${this.pips}   Hits: ${this.targetHits()}`];
   }
