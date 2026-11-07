@@ -5,6 +5,11 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ## [Unreleased]
 
+### Changed
+
+- Plan/spec (Kev 2026-11-07): dodge descoped (M3, D7, ENC-005); strikes always hit unless the card is answered;
+  D7 upward-dodge question closed.
+
 ### Added
 
 - MATCH-001..004: deterministic answer matcher (`relay/lib/matcher.mjs`) with 62 golden cases (`tests/fixtures/matcher-golden.json`);

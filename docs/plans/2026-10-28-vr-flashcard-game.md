@@ -13,7 +13,7 @@ Changes from v1 (finisher -> round 2 -> round 1) + sources re-checked: [ledgers]
 ## Must-keep (Kev verbatim asks; never defer/cut/descope without Kev's explicit ask)
 M1 Enemies are flash cards; slash by hand (H-1; controller slash = optional stretch SX), then say the answer aloud; correct = damage.
 M2 Bigger enemies = multi-card health pools.
-M3 Enemies attack; player dodges (lean/duck).
+M3 Enemies attack; player dodges (lean/duck). **Descoped 2026-11-07 (Kev): too much head movement; strikes resolve without a dodge check.**
 M4 Ultimates unlocked after N correct answers.
 M5 Gaming track, New Experience division (G0a 2026-10-28: claim kept with D11 disclosure; Devpost division field final at S13).
 M6 Hands = sole required input, controllers optional stretch SX (H-1, supersedes Q12; rules.md:88,112,114); seated, 2 ft (design
@@ -132,7 +132,7 @@ D4 Answer outcomes (single table; "encounter" = one card-enemy's card until it i
 | Voice miss | non-empty, not correct/wrong (ratio, margin, prefix, length fails) | none | none | none; caps a later correct at Hard; counts toward 2-attempt orb trigger |
 | Grading (D3a toggle ON) | D3 miss on a free-form transcript, never empty/[unk] | advance/creep (D13) + attack timer frozen | none | Claude correct -> Voice correct row; wrong/error/2 s timeout/offline -> Voice miss row (orb trigger unchanged) |
 | Didn't catch | empty transcript or 6 s cap | none | none | none; counts toward 2-attempt orb trigger |
-| Arrived unanswered (D13) | creeping enemy reaches the strike slot with no correct answer yet | 2 s telegraph, then knockback + creep repeat | hit (dodgeable, D7; 1-hit cap, D14) | Again (written at once) unless an Again was already written; max one Again per encounter, shared with Voice wrong / Orb wrong; arrival adds no orb-trigger attempt |
+| Arrived unanswered (D13) | creeping enemy reaches the strike slot with no correct answer yet | 2 s telegraph, then knockback + creep repeat | hit (no dodge, D7 descoped; 1-hit cap, D14) | Again (written at once) unless an Again was already written; max one Again per encounter, shared with Voice wrong / Orb wrong; arrival adds no orb-trigger attempt |
 | Hard STT error | error callback or no final transcript 3 s after end of speech | none | none | none (a Hard-STT-only encounter writes nothing; card stays due/uncovered); orbs immediately for THIS card only; next card tries voice again |
 | Orb correct (voice mode, after misses/errors) | slash correct orb | -1 card | none | Hard if a miss or Didn't catch preceded and no Again was written; else none |
 | Orb correct (silent mode, first pick) | slash correct orb | -1 card | none | Good (Q3) |
@@ -178,7 +178,8 @@ D6 Pairing relay (M11), headset-shows-code direction: headset POST /pair -> func
   Freeze policy (G0b, Kev 2026-10-28; rules.md:168): relay fail-soft is automatic (headset circuit breaker -> "import unavailable", no
   manual step). Nov 18-Dec 11 allowed ops are ONLY {RELAY_ENABLED flip off, GRADER_ENABLED flip off (D3a), byte-identical privacy-page
   redeploy}; no code changes. Each op is logged with timestamp + reason, and the policy is disclosed in the Devpost testing instructions.
-D7 Dodge + interruptions (Kev 2026-10-28 "Any input pauses (Recommended)", ledgers E-K-a): baseline = mean head position over the 1.5 s before
+D7 Dodge + interruptions. Dodge part **Descoped 2026-11-07 (Kev): too much head movement; strikes resolve without a dodge check.**
+  Baseline kept (panel anchor, replay). (Kev 2026-10-28 "Any input pauses (Recommended)", ledgers E-K-a): baseline = mean head position over the 1.5 s before
   telegraph onset, FROZEN from onset until the attack resolves (overlapping attacks share the earliest frozen baseline until all resolve);
   the D13a panel anchors to this baseline, so a dodge never moves the panel; the
   baseline rolls only outside attack windows. Dodge = lateral or downward displacement >=20 cm from the frozen baseline at the hit frame; forward
@@ -318,7 +319,7 @@ S4 Nov 7 voice via IAnswerRecognizer + D4 outcomes (per-card fallback, 3 s timeo
 S5 Nov 8 silent orbs + toggle + D17 cue + D18 scenario.
 S6a Nov 9 (half day, MemriPal finals) FSRS persistence (D5 save: card state, daily counters, queue snapshot, run_day) + on-device golden vectors +
   EditMode save tests + mastery screen.
-S6 Nov 10 health pools, telegraphed attacks (in-view gate), dodge (frozen baseline), input-loss pause + interruption replay (D7), shield pips + run
+S6 Nov 10 health pools, telegraphed attacks (in-view gate), dodge (descoped, D7), input-loss pause + interruption replay (D7), shield pips + run
   end (D14), accessibility toggle + D17 cue + D18 scenario.
 S7 Nov 11 ultimates (charge >=5; two-palm push, D7; knockback, D4; 1 type, Q9) + experimental second,
   mastery-unlocked ultimate type behind its D15 toggle + D17 cue + D18 scenario.
@@ -405,7 +406,8 @@ S4 0 mic opens outside window; 3/3 forced hard STT errors -> orbs <1 s AND next 
 S5 full run with mic off 1/1.
 S6a EditMode: fresh dir first save then load 1/1; corrupt primary -> .bak 1/1; truncated primary + missing .bak -> fresh state 1/1; FSRS card state,
   daily counters and queue snapshot persist across app restart on device 3/3; FSRS golden vectors on device N/N.
-S6 3-card pool with no ultimate needs exactly 3 correct; dodge at >=20 cm lateral/down; lean at telegraph start held through a 2 s telegraph -> dodged
+S6 (dodge/auto-dodge criteria descoped, D7) 3-card pool with no ultimate needs exactly 3 correct;
+  dodge at >=20 cm lateral/down; lean at telegraph start held through a 2 s telegraph -> dodged
   3/3; same with accessibility slow telegraph 3/3; slow 1 s lean -> dodged 3/3; 0 false dodges in 20 forward-lean slashes; recenter + resume then
   dodge correct 3/3; enemy outside +/-40 deg never starts a telegraph 3/3; no hand tracked mid-telegraph -> prompt, freeze, fresh baseline, one
   replay, lands at its hit frame 3/3; hide again during the replay -> still lands 3/3; menu pause and recenter mid-telegraph -> same rule 2/2;
@@ -485,7 +487,8 @@ Resolved 2026-10-28 (Kev): ENGINE, Q1-Q12, D15, D19, G0a, G0b in
 - Resolved 2026-10-31 (Kev, EN-3): multi-enemy wave + choose target, feedback on every correct answer (D13); prototype passthrough
   wall spawns via immersive-ar + plane detection (D8).
 - Open (2026-11-07): D7 says dodge = "lateral or downward" displacement but measures Euclidean distance in the lateral/vertical
-  plane, so >=20 cm upward also passes. Does upward head movement count as a dodge? Undecided.
+  plane, so >=20 cm upward also passes. Does upward head movement count as a dodge? Closed 2026-11-07 (Kev: "Too much head
+  movement is bad isn't it" -> "Drop dodging"): moot, dodge descoped; strikes always hit unless the card is answered (D7, M3).
 
 ## Adversarial cheat sheet
 - Primary technical risk: big decks and one-correct WINs; grades or WINs given for nothing (deck-switch budget, empty queue, paused window).

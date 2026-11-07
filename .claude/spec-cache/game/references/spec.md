@@ -115,11 +115,12 @@ Deferred to relay integration:
   m); telegraphs and attacks happen only there. Re-slash after a miss is valid at any distance. EN-1 always-knockback-to-~2 m
   wording **Superseded by** EN-2.
 - ENC-003: Panel ~70% opaque with dark backing, world/body-locked, never head-locked; ~1.0 m away, ~15 deg below eye line, yaw-only
-  lazy-follow with ~20 deg dead zone, anchored to the D7 dodge baseline; never occludes the target enemy (CARDS-010). Text sized at ~1 m. "engaged enemy" **Superseded by** EN-3 (agent default, Kev to confirm).
+  lazy-follow with ~20 deg dead zone, anchored to the D7 baseline (dodge descoped 2026-11-07); never occludes the target enemy (CARDS-010). Text sized at ~1 m. "engaged enemy" **Superseded by** EN-3 (agent default, Kev to confirm).
 - ENC-004: Creep speed fixed = (2.0 - 0.5) m / 8 s = 0.1875 m/s, so reveal -> strike slot >= 8 s (>= 6 s no-speech cap + 2 s
   grading timeout); earlier reveal = more time; the pacing knob. Grading (GRADE-004) freezes it. EN-1 "creep time, default 8 s"
   **Superseded by** EN-2.
-- ENC-005: Arrived unanswered -> 2 s telegraph -> hit (dodgeable; 1 hit per encounter); writes FSRS Again unless already written
+- ENC-005: Arrived unanswered -> 2 s telegraph -> hit (1 hit per encounter);
+  "dodgeable" **Descoped 2026-11-07 (Kev): too much head movement; strikes resolve without a dodge check.** writes FSRS Again unless already written
   (max one Again per encounter, shared with a wrong voice/orb answer; plan D4); no orb-trigger attempt of its own; then knockback to
   2 m + creep repeat. "no FSRS write" **Superseded by** Again-on-arrival (Kev 2026-11-07).
 - ENC-006: Correct answer in any revealed phase (creep, telegraph, after knockback) shatters the panel and peels a card; a
