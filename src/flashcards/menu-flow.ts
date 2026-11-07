@@ -27,6 +27,15 @@ export const MASTERED_STABILITY_DAYS = 21;
 /** Import text shares the save-data cap so a pasted deck can never exceed what a save can hold. */
 export const MAX_IMPORT_CHARS = MAX_SAVE_CHARS;
 
+/** Cap on imported decks (starters excluded) so the deck list cannot grow without bound. */
+export const MAX_IMPORTED_DECKS = 10;
+
+const STARTER_IDS = new Set(STARTER_DECKS.map((d) => d.id));
+
+function importedCount(decks: readonly Deck[]): number {
+  return decks.filter((d) => !STARTER_IDS.has(d.id)).length;
+}
+
 export type Screen =
   | 'start'
   | 'deck-select'
@@ -168,7 +177,18 @@ function addAndSelect(state: MenuState, deck: Deck): MenuState {
 
 /** An id clash never replaces silently: it asks first via the confirm-replace screen. */
 function addOrAskReplace(state: MenuState, deck: Deck): MenuState {
-  if (!state.decks.some((d) => d.id === deck.id)) return addAndSelect(state, deck);
+  if (!state.decks.some((d) => d.id === deck.id)) {
+    if (importedCount(state.decks) >= MAX_IMPORTED_DECKS) {
+      // Back on the import screen: the dedupe screen does not render importError.
+      return {
+        ...state,
+        screen: 'import',
+        resolver: null,
+        importError: `deck limit reached: at most ${MAX_IMPORTED_DECKS} imported decks`,
+      };
+    }
+    return addAndSelect(state, deck);
+  }
   return { ...state, screen: 'confirm-replace', pendingReplace: deck, resolver: null };
 }
 

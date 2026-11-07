@@ -43,7 +43,7 @@ import {
 } from './flashcards/game-session.js';
 import { backToStart, openDeckSelect, openImport, selectDeck } from './flashcards/menu-flow.js';
 import { mountImportPanel, type ImportPanelHandle } from './import-panel.js';
-import { menuLayout, type MenuPick } from './card-menu.js';
+import { menuHeadingAfterNav, menuLayout, type MenuPick } from './card-menu.js';
 import {
   answerTarget,
   createWave,
@@ -132,9 +132,12 @@ export class CardsSystem extends createSystem({
     this.wave = tickWave(this.wave, dt);
     const targetId = this.wave.targetId;
     if (targetId !== null && this.targetHits() > prevHits) {
-      // A strike landed: flash the hit, then let game-session cost the pip (may end the run).
-      this.panel.flash(this.panelLines());
-      this.apply(enemyHit(this.session, targetId));
+      // A strike landed: game-session costs the pip (may end the run). apply() flashes on a pip
+      // change; flash here only when none came (pip cap), so one hit is one flash.
+      const step = enemyHit(this.session, targetId);
+      this.apply(step);
+      const pipFlashed = step.effects.some((e) => e.type === 'pips');
+      if (!pipFlashed && this.panel.isOpen && !this.menuOpen) this.panel.flash(this.panelLines());
     } else this.panel.tickFlash(dt, () => this.panelLines());
     this.enemies.spawnMissing(this.wave, this.walls.walls, this.eye, () => this.readHead());
     this.enemies.update(this.wave, dt, this.clock);
@@ -160,7 +163,13 @@ export class CardsSystem extends createSystem({
     this.menuHeading = heading;
     this.placedFor = this.world.session;
     const { lines, picks } = menuLayout(this.session, heading);
-    const orbs = this.panel.show(this.eye, this.readHead(), lines, picks.map((p) => p.label));
+    const orbs = this.panel.show(
+      this.eye,
+      this.readHead(),
+      lines,
+      picks.map((p) => p.label),
+      picks.map((p) => p.orbKind),
+    );
     this.menuPicks.clear();
     orbs.forEach((orb, i) => this.menuPicks.set(orb, picks[i].pick));
   }
@@ -259,7 +268,7 @@ export class CardsSystem extends createSystem({
       if (pick?.kind === 'deck') this.startRun(pick.deckId);
       else if (pick?.kind === 'nav') {
         this.session = pick.press(this.session);
-        this.openMenu(this.menuHeading);
+        this.openMenu(menuHeadingAfterNav(this.menuHeading, this.session));
       }
       return;
     }
