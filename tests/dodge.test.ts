@@ -2,7 +2,8 @@
 // >= 20 cm laterally or downward from a baseline frozen at telegraph onset (mean head position over the
 // 1.5 s before onset); forward lean never counts as a dodge, samples after impact are ignored, and an
 // undecidable strike (no baseline, no hit-frame sample) lands as a hit. Before impact the result is
-// "pending" so the strike code can poll it. Units match encounter.ts: meters and seconds.
+// "pending" so the strike code can poll it. A zero-length or non-finite forward direction is rejected
+// with a RangeError. Units match encounter.ts: meters and seconds.
 // M3/D7 IDs are prototype-local (plan doc 2026-10-28-vr-flashcard-game.md; no spec-cache home yet).
 import { describe, expect, it } from 'vitest';
 import {
@@ -29,10 +30,13 @@ function still(from: number, to: number, step = 0.1, pos = { x: 0, y: HEAD_Y, z:
 const STRIKE: StrikeTiming = { telegraphStart: 10, impactTime: 12 };
 
 // Covers: M3, D7
-describe('dodge: constants pinned from D7', () => {
-  it('uses a 20 cm displacement threshold, a 1.5 s baseline window, and a 0.1 s hit-frame tolerance', () => {
+describe('dodge: constants', () => {
+  it('uses the D7 20 cm displacement threshold and 1.5 s baseline window', () => {
     expect(DODGE_THRESHOLD_M).toBe(0.2);
     expect(BASELINE_WINDOW_S).toBe(1.5);
+  });
+
+  it('uses a 0.1 s hit-frame tolerance (implementation choice, not from D7)', () => {
     expect(HIT_FRAME_MAX_AGE_S).toBe(0.1);
   });
 });
@@ -151,8 +155,11 @@ describe('dodge: resolveDodge outcome', () => {
 
   it('is order-insensitive: shuffled samples give the same result', () => {
     const samples = [...still(8, 11), { t: 12, x: 0.3, y: HEAD_Y, z: 0 }];
-    const reversed = samples.slice().reverse();
-    expect(resolveDodge(reversed, STRIKE, 12)).toEqual(resolveDodge(samples, STRIKE, 12));
+    // Deterministic shuffle: stride 7 is coprime with 32 samples, so this is a full permutation.
+    expect(samples.length).toBe(32);
+    const shuffled = samples.map((_, i) => samples[(i * 7) % samples.length]);
+    expect(resolveDodge(shuffled, STRIKE, 12)).toEqual(resolveDodge(samples, STRIKE, 12));
+    expect(resolveDodge(shuffled, STRIKE, 12).outcome).toBe('dodged');
   });
 });
 
@@ -204,9 +211,12 @@ describe('dodge: telegraph shorter than a human reaction window', () => {
   const SHORT: StrikeTiming = { telegraphStart: 10, impactTime: 10.2 };
 
   it('a player already leaning before onset is still judged against the frozen baseline', () => {
-    // Baseline window is upright; the lean starts at onset and is held at impact.
-    const samples = [...still(8.5, 9.9), ...still(10, 10.2, 0.1, { x: 0.3, y: HEAD_Y, z: 0 })];
-    expect(resolveDodge(samples, SHORT, 10.2).outcome).toBe('dodged');
+    // Lean of 0.3 m starts at t=9.9 (before onset) and is held through impact. The baseline
+    // (15 samples over 8.5..9.9) absorbs one leaning sample: 0.3 / 15 = 0.02, so displacement 0.28.
+    const samples = [...still(8.5, 9.8), ...still(9.9, 10.2, 0.1, { x: 0.3, y: HEAD_Y, z: 0 })];
+    const r = resolveDodge(samples, SHORT, 10.2);
+    expect(r.outcome).toBe('dodged');
+    expect(r.displacement).toBeCloseTo(0.28, 6);
   });
 
   it('a standing player is hit by a short telegraph', () => {
@@ -216,5 +226,31 @@ describe('dodge: telegraph shorter than a human reaction window', () => {
   it('rejects a strike whose impact is not after telegraph onset', () => {
     expect(() => resolveDodge([], { telegraphStart: 10, impactTime: 10 }, 10)).toThrow(RangeError);
     expect(() => resolveDodge([], { telegraphStart: 10, impactTime: 9 }, 10)).toThrow(RangeError);
+  });
+});
+
+// Covers: M3, D7
+describe('dodge: strike forward validation', () => {
+  // Matches encounter.ts config validation: a bad forward vector is a caller bug, not a silent NaN.
+  it('a zero-length forward throws RangeError', () => {
+    expect(() => resolveDodge([], { ...STRIKE, forward: { x: 0, z: 0 } }, 12)).toThrow(RangeError);
+    expect(() => resolveDodge(still(8, 12), { ...STRIKE, forward: { x: 0, z: 0 } }, 12)).toThrow(RangeError);
+  });
+
+  it('a non-finite forward throws RangeError', () => {
+    for (const forward of [
+      { x: Number.NaN, z: -1 },
+      { x: 0, z: Number.NaN },
+      { x: Number.POSITIVE_INFINITY, z: 0 },
+      { x: 0, z: Number.NEGATIVE_INFINITY },
+    ]) {
+      expect(() => resolveDodge(still(8, 12), { ...STRIKE, forward }, 12)).toThrow(RangeError);
+    }
+  });
+
+  it('a non-unit finite forward is accepted and normalized', () => {
+    const fwd: StrikeTiming = { ...STRIKE, forward: { x: 0, z: -5 } };
+    const samples = [...still(8, 11), { t: 12, x: 0.3, y: HEAD_Y, z: 0 }];
+    expect(resolveDodge(samples, fwd, 12).displacement).toBeCloseTo(0.3, 9);
   });
 });
