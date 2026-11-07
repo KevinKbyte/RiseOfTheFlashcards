@@ -118,7 +118,7 @@ D2 STT ON-DEVICE ONLY (Kev 2026-10-30 "sherpa-onnx default (Recommended)", after
   until the recognizer's end-of-speech, capped at 6 s with no speech start (cap -> "didn't catch"); the mic is closed outside it.
   The window runs while the enemy creeps (D13); creep time >= 6 s cap + 2 s grading timeout, so a silent window closes before arrival. Mic is
   re-acquired on app focus/resume (Unity: OnApplicationPause/Focus; Unreal: the engine's app-lifecycle events), never assumed live.
-D3 Matcher (deterministic, no LLM). Normalize: NFKD, drop combining marks (Unicode Mn), lowercase, strip punctuation, collapse whitespace, strip a leading article (a/an/the) only if the remainder is non-empty. Candidates = distinct normalized answer+alias strings across the deck, each mapped to the set of cards that own it. Correct: exact match to a candidate owned by this card; or fuzzy: both strings >=4 normalized chars, ratio = 1 - lev(a,b)/max(len a, len b) >= 0.85, first 4 normalized chars identical, nearest candidate owned by this card, margin >= 0.1 over the best candidate not owned by this card. Wrong: same rules resolve to a candidate not owned by this card; or exact hit on the card's `reject` list; or hedge guard (transcript contains "or"/"and" token absent from the answer). Everything else non-empty = miss. Negation guard dropped (prefix rule blocks leading "not/no/never"; ratio blocks the rest). No number-word conversion; top hypothesis only.
+D3 Matcher (deterministic, no LLM inside the matcher; Claude grading = D3a). Normalize: NFKD, drop combining marks (Unicode Mn), lowercase, strip punctuation, collapse whitespace, strip a leading article (a/an/the) only if the remainder is non-empty. Candidates = distinct normalized answer+alias strings across the deck, each mapped to the set of cards that own it. Correct: exact match to a candidate owned by this card; or fuzzy: both strings >=4 normalized chars, ratio = 1 - lev(a,b)/max(len a, len b) >= 0.85, first 4 normalized chars identical, nearest candidate owned by this card, margin >= 0.1 over the best candidate not owned by this card. Wrong: same rules resolve to a candidate not owned by this card; or exact hit on the card's `reject` list; or hedge guard (transcript contains "or"/"and" token absent from the answer). Everything else non-empty = miss. Negation guard dropped (prefix rule blocks leading "not/no/never"; ratio blocks the rest). No number-word conversion; top hypothesis only.
 D3a Claude (Kev 2026-10-31, M12, ledgers C-1; contract spec GRADE-001..008, RELAY-013/014). Load-time: deck POST adds Claude aliases + rejects
   (starter decks once offline, committed); play stays deterministic + offline. Live: Settings toggle, upgrade-only (D4 Grading), free-form
   recognizer only, default OFF unless G1 picks Whisper; Haiku dev/test, Sonnet judged. Built: S10 ~0.5 slice-day; live S10+S4 ~1-1.5, Nov 16 buffer.
@@ -142,7 +142,7 @@ D4 Answer outcomes (single table; "encounter" = one card-enemy's card until it i
 D4 EN-2 (2026-10-31): Arrived unanswered applies only to a revealed enemy (D13); its knockback goes to 2 m. An unrevealed enemy halts at
   the reach line and never telegraphs. Voice outcomes classify in any revealed phase (creep, telegraph, after knockback).
 Orbs = 1 correct + 3 distractors drawn from distinct normalized answers not owned by this card (deck validation guarantees >=4 distinct answers). Silent mode: user toggle any time; latches automatically ONLY on mic permission denial.
-Orb trigger: any 2 non-correct voice attempts in one encounter (wrong, miss, didn't catch, in any mix) -> orbs for this card; a player who keeps saying wrong answers is never stuck taking hits. Each voice attempt needs a fresh slash on the same card.
+Orb trigger: any 2 non-correct voice attempts in one encounter (wrong, miss, didn't catch, in any mix; a D3a Grading that resolves to miss counts as a miss) -> orbs for this card; a player who keeps saying wrong answers is never stuck taking hits. Each voice attempt needs a fresh slash on the same card.
 Ultimate charge: +1 per correct outcome (voice or orb, assisted or not); firing the ultimate resets charge to 0.
 D5 SR = FSRS-6 (Kev 2026-10-28; ledgers E-FS-1..E-FS-8): 21 default weights, desired retention 0.90, no optimizer, fuzz OFF (D18), no learning steps,
   interval = clamp(round(S),1,365) whole study days. Engine-free C++ Core module (~70-300 LOC) hand-ported from py-fsrs (MIT; CREDITS); golden vectors
@@ -204,7 +204,8 @@ D8 MR only. Play-forward yaw = tracking-space forward, recomputed on every recen
   Fewer qualifying walls than active enemies (EN-3) (agent default, Kev to confirm): remaining spawns use the 2.5 m ring fallback across the same arc;
   wall spawns keep a minimum 15 deg bearing gap from each other.
 D9 CREDITS.md from first commit; README credits GitHub KevinKbyte only, never the YouTube channel.
-D10 Secrets + signing: no STT secret ships (on-device, D2; Wit token handling **Superseded by** D2, ledgers V-1). gitleaks local
+D10 Secrets + signing: no STT secret ships (on-device, D2; Wit token handling **Superseded by** D2, ledgers V-1); ANTHROPIC_API_KEY (D3a)
+  server-side only (GRADE-006), never in the APK or page bundle. gitleaks local
   pre-commit hook from S1 with a canary check; CI gitleaks on the private GitHub remote from 2026-10-28 (Q2). Release keystore created in
   SP1 outside the repo, *.keystore/*.jks gitignored, 2 backups (offline + cloud); SP2's v2 upload is signed with the keystore restored
   from backup. versionCode = build-script counter (built in SP1), strictly increasing per upload.
@@ -398,7 +399,7 @@ S3 20/20 slashes register with hands, 2/2 hands (slash = fingertip speed >=1.0 m
   cleared 1/1; every correct answer -> visible + sound + haptic (where available) 5/5.
   EN-1 "5/5 enemies travel wall -> reach line and no slash registers before arrival", "slash -> knockback to ~2 m + panel shown 5/5",
   "creep to strike slot >= 8 s 5/5" **Superseded by** EN-2.
-S4 0 mic opens outside window; 3/3 forced hard STT errors -> orbs <1 s AND next card's voice answer works 3/3; empty transcript -> 0 damage 3/3; 2 non-correct attempts -> orbs 3/3; 6 s silence -> didn't catch 3/3; Wi-Fi off: voice answers still graded 3/3 and the run completes 1/1; silent mode not auto-latched by any error except mic denial 1/1.
+S4 0 mic opens outside window; 3/3 forced hard STT errors -> orbs <1 s AND next card's voice answer works 3/3; empty transcript -> 0 damage 3/3; 2 non-correct attempts -> orbs 3/3; 6 s silence -> didn't catch 3/3; Wi-Fi off: voice answers still graded by the D3 matcher (D3a live grading -> miss, GRADE-003) 3/3 and the run completes 1/1; silent mode not auto-latched by any error except mic denial 1/1.
 S5 full run with mic off 1/1.
 S6a EditMode: fresh dir first save then load 1/1; corrupt primary -> .bak 1/1; truncated primary + missing .bak -> fresh state 1/1; FSRS card state,
   daily counters and queue snapshot persist across app restart on device 3/3; FSRS golden vectors on device N/N.
