@@ -1,6 +1,7 @@
 // Pure glue for the cards scene (M11, D4, D5, D14): composes menu-flow, run-flow and review-flow so
 // CardsSystem only forwards seam events and renders the plain-data effects. Never mutates input; an
 // event that does not apply returns the same session object and no effects.
+import { denyMic, initialModeState, setMode, type AnswerMode, type ModeState } from './answer-mode.js';
 import type { Deck, DeckCard } from './deck-schema.js';
 import { createMenu, masterySummary, startPlaying, type MasteryRow, type MenuState } from './menu-flow.js';
 import { loadReview, startEncounter, submitAnswer, type Attempt, type Encounter, type ReviewState } from './review-flow.js';
@@ -29,6 +30,8 @@ export interface GameSession {
   readonly encounters: Readonly<Record<string, Encounter>>;
   /** Why the last deck-store write failed; null when it succeeded or none happened yet. */
   readonly deckSaveError: DeckSaveError | null;
+  /** Silent (slash orbs) or voice, read when an orb is graded (M10, D2, D4). */
+  readonly answerMode: ModeState;
 }
 
 /** spawnWave.poolSizes: cards per spawned enemy, spawn order, summing to cards.length (M2). */
@@ -86,7 +89,7 @@ export function createSession(env: SessionEnv): GameSession {
   const stored = env.storedDecks ?? readDecks(env.storage);
   const menu: MenuState = { ...createMenu(), decks: mergeDecks(env.decks, stored.decks) };
   const inner: InnerEnv = { ...env, decksReadFailed: stored.readFailed };
-  return make({ menu, run: null, review: null, deck: null, encounters: {}, deckSaveError: null }, inner);
+  return make({ menu, run: null, review: null, deck: null, encounters: {}, deckSaveError: null, answerMode: initialModeState() }, inner);
 }
 
 /** Any menu change to the deck list (import, replace, Undo) persists the imported decks. */
@@ -147,7 +150,7 @@ function orb(s: GameSession, event: RunFlowEvent & { cardId: string }, attempt: 
 }
 
 export function wrongOrb(s: GameSession, cardId: string, label: string): SessionStep {
-  return orb(s, { type: 'wrongOrb', cardId }, { kind: 'orb', label });
+  return orb(s, { type: 'wrongOrb', cardId }, { kind: 'orb', label, mode: s.answerMode.mode });
 }
 
 /** A landed strike costs a pip and rates the card Again, sharing the wrong orb's once-per-encounter flag. */
@@ -158,12 +161,29 @@ export function enemyHit(s: GameSession, cardId: string): SessionStep {
 export function correctOrb(s: GameSession, cardId: string): SessionStep {
   const card = s.deck?.cards.find((c) => c.id === cardId);
   if (!card) return same(s);
-  return orb(s, { type: 'correctOrb', cardId }, { kind: 'orb', label: card.answer });
+  return orb(s, { type: 'correctOrb', cardId }, { kind: 'orb', label: card.answer, mode: s.answerMode.mode });
 }
 
 export function waveCleared(s: GameSession): SessionStep {
   const r = step(s, { type: 'waveCleared' });
   return r ? { session: next(s, { run: r.run }), effects: r.effects } : same(s);
+}
+
+export function answerModeOf(s: GameSession): AnswerMode {
+  return s.answerMode.mode;
+}
+
+function withMode(s: GameSession, answerMode: ModeState): GameSession {
+  return answerMode === s.answerMode ? s : next(s, { answerMode });
+}
+
+/** Allowed in the menu or mid-run; refused (same session) after a mic denial. */
+export function setAnswerMode(s: GameSession, mode: AnswerMode): GameSession {
+  return withMode(s, setMode(s.answerMode, mode));
+}
+
+export function micPermissionDenied(s: GameSession): GameSession {
+  return withMode(s, denyMic(s.answerMode));
 }
 
 export function masteryRows(s: GameSession): MasteryRow[] {

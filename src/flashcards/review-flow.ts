@@ -3,6 +3,7 @@
 // inputs; the clock is always injected.
 import { Rating as FsrsRating } from 'ts-fsrs';
 import { answerOutcome, classifyTranscript, type AnswerState, type VoiceResult } from './answer-outcome.js';
+import { orbOutcome, type AnswerMode } from './answer-mode.js';
 import type { MatchCard } from './matcher.js';
 import { applyRating, buildQueue, bumpCounters, type Queue, type Rating } from './scheduler.js';
 import { deckCards, readSave, withEntry, writeSave, type KnownDeck, type SaveData, type SaveStorage } from './save.js';
@@ -17,13 +18,21 @@ export interface ReviewState {
   readonly readFailed: boolean;
 }
 
+export type EncounterAnswer = AnswerState & { readonly didntCatch?: boolean };
+
 export interface Encounter {
   readonly cardId: string;
-  readonly answer: AnswerState;
+  readonly answer: EncounterAnswer;
 }
 
-/** 'hit': a landed enemy strike, graded as a wrong answer (Again, once per encounter). */
-export type Attempt = { kind: 'voice'; transcript: string } | { kind: 'orb'; label: string } | { kind: 'hit' };
+/**
+ * 'hit': a landed enemy strike, graded as a wrong answer (Again, once per encounter).
+ * An orb's mode selects the D4 orb rules; omitted, the orb grades like a voice answer.
+ */
+export type Attempt =
+  | { kind: 'voice'; transcript: string }
+  | { kind: 'orb'; label: string; mode?: AnswerMode }
+  | { kind: 'hit' };
 
 export interface ReviewEnv {
   deck: MatchCard[];
@@ -70,12 +79,30 @@ function classify(attempt: Attempt, cardId: string, deck: MatchCard[]): VoiceRes
   return deck.find((c) => c.id === cardId)?.answer === attempt.label ? 'correct' : 'wrong';
 }
 
+interface Graded {
+  outcome: VoiceResult;
+  rating: FsrsRating | null;
+  state: EncounterAnswer;
+}
+
+/** An orb carrying a mode is scored by answer-mode's D4 orb rules; everything else by answerOutcome. */
+function grade(attempt: Attempt, result: VoiceResult, answer: EncounterAnswer): Graded {
+  const didntCatch = answer.didntCatch === true;
+  if (attempt.kind === 'orb' && attempt.mode && (result === 'correct' || result === 'wrong')) {
+    const o = orbOutcome(result, attempt.mode, { ...answer, didntCatch });
+    return { outcome: result, rating: o.rating, state: o.state };
+  }
+  const o = answerOutcome(result, answer);
+  // Didn't catch is remembered so a later voice-mode orb can rate Hard (D4 Orb correct row).
+  return didntCatch || result === 'didnt-catch' ? { ...o, state: { ...o.state, didntCatch: true } } : o;
+}
+
 export function submitAnswer(state: ReviewState, encounter: Encounter, attempt: Attempt, env: ReviewEnv): SubmitResult {
   const { deck, storage, now } = env;
   const { cardId } = encounter;
   // An id outside the deck (stale save, UI bug) must not grade, write, or bump counters.
   if (!deck.some((c) => c.id === cardId)) return { state, encounter, outcome: 'wrong', rating: null };
-  const result = answerOutcome(classify(attempt, cardId, deck), encounter.answer);
+  const result = grade(attempt, classify(attempt, cardId, deck), encounter.answer);
   const next = { ...encounter, answer: result.state };
   const rating = result.rating === null ? null : (RATING[result.rating] ?? null);
   const unchanged = { state, encounter: next, outcome: result.outcome, rating };
