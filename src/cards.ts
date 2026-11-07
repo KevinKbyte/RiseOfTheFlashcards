@@ -61,6 +61,10 @@ export class CardsSystem extends createSystem({
   private session!: GameSession;
   /** The panel is showing the deck menu (orbs are deck titles), not a question. */
   private menuOpen = false;
+  private menuHeading = '';
+  // The XR session the menu was last placed for; a new session re-places it at the XR head.
+  private placedFor: XRSession | undefined;
+  private sessionSeen: XRSession | undefined;
   // Menu orb -> deck id, so duplicate deck titles still start the deck that was picked.
   private readonly menuDecks = new Map<Entity, string>();
   private pips = 0;
@@ -108,6 +112,7 @@ export class CardsSystem extends createSystem({
     this.applyReveal();
     this.applyOrb();
     this.feedback.update(dt);
+    this.placeMenuForSession();
     if (this.message !== undefined) {
       this.updateAnchor();
       return;
@@ -137,11 +142,24 @@ export class CardsSystem extends createSystem({
     this.session = updateMenu(this.session, (m) => openDeckSelect(backToStart(m)));
     this.panel.clear();
     this.menuOpen = true;
+    this.menuHeading = heading;
+    this.placedFor = this.world.session;
     const options = deckOptions(this.session.menu);
     const titles = options.map((o) => o.title);
     const orbs = this.panel.show(this.eye, this.readHead(), [heading, 'Pick a deck to start'], titles);
     this.menuDecks.clear();
     orbs.forEach((orb, i) => this.menuDecks.set(orb, options[i].id));
+  }
+
+  // The startup menu is placed from the non-XR camera; once a session starts, re-open it at the
+  // XR head so the deck orbs are in front of the player rather than behind. The camera only takes
+  // the XR pose when the session's first frame renders, so the re-place waits one frame.
+  private placeMenuForSession(): void {
+    const session = this.world.session;
+    const seen = this.sessionSeen;
+    this.sessionSeen = session;
+    if (!this.menuOpen || session === undefined || session !== seen || session === this.placedFor) return;
+    this.openMenu(this.menuHeading);
   }
 
   // The selected deck's FSRS queue (via game-session) decides what enters the wave.
