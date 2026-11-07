@@ -56,7 +56,9 @@ import {
 const MAX_DT = 0.1;
 
 // Decks imported on the 2D page panel; every VR deck menu opening reads them from here.
-const pageMenu = openImport(openDeckSelect(browserSession().menu));
+// Stored decks load here at startup; panel changes go through updateMenu, which persists them.
+let pageSession = browserSession();
+const pageMenu = openImport(openDeckSelect(pageSession.menu));
 let pageDecks = pageMenu.decks;
 let importPanel: ImportPanelHandle | undefined;
 
@@ -330,14 +332,25 @@ export class CardsSystem extends createSystem({
 // starts a session (enemies then use the ring fallback). level/assets: undefined drop the probe
 // scene and its preload manifest; with no level there is no background, so the AR renderer's
 // transparent clear shows the room.
+const SAVE_ERROR_TEXT = {
+  none: '',
+  'too-large': 'Imported decks are too large to save; they will be lost on reload.',
+  failed: 'Could not save imported decks; they will be lost on reload.',
+} as const;
 const importRoot = document.getElementById('import-panel');
 if (importRoot) {
+  const saveStatus = document.createElement('p');
+  saveStatus.setAttribute('role', 'status');
   importPanel = mountImportPanel(importRoot, {
     state: pageMenu,
     onChange: (s) => {
+      pageSession = updateMenu(pageSession, () => s);
       pageDecks = s.decks;
+      saveStatus.textContent = SAVE_ERROR_TEXT[pageSession.deckSaveError ?? 'none'];
     },
   });
+  // A sibling of the panel's own container, so panel re-renders leave it in place.
+  importRoot.appendChild(saveStatus);
 }
 
 type XRConfig = Exclude<WorldOptions['xr'], false | undefined>;
