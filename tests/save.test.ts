@@ -1,5 +1,6 @@
-// Requirement: FSRS progress persists across sessions as one versioned JSON save holding per-card
-// FSRS state and the global daily counters. Loading must never crash the game: malformed JSON,
+// Requirement: FSRS progress persists across sessions as one versioned JSON save holding FSRS state
+// per deck, then per card (see tests/per-deck-progress.test.ts), and the global daily counters.
+// Loading must never crash the game: malformed JSON,
 // wrong version/shape, or oversized input yield an empty save instead of throwing (and never
 // pollute Object.prototype). A defect inside ONE card (non-finite or out-of-range numbers,
 // non-ISO-8601 dates, stability above a sane cap, difficulty outside [1,10]) drops only that card;
@@ -15,6 +16,7 @@ import {
   MAX_SAVE_CHARS,
   SAVE_BACKUP_KEY,
   SAVE_VERSION,
+  deckCards,
   emptySave,
   loadSave,
   parseSave,
@@ -35,8 +37,8 @@ const card = {
 };
 
 const sample = (): SaveData => ({
-  version: SAVE_VERSION,
-  cards: { abc123: { ...card } },
+  ...emptySave(),
+  decks: { d1: { abc123: { ...card } } },
   counters: { day: '2026-11-07', newCount: 3, reviewCount: 17 },
 });
 
@@ -63,14 +65,17 @@ const throwingStorage: SaveStorage = {
 /** Build save JSON with one card field overridden (raw text so 1e999 survives). */
 function withCardField(field: string, rawValue: string): string {
   const base = JSON.parse(serializeSave(sample()));
-  base.cards.abc123[field] = '__RAW__';
+  base.decks.d1.abc123[field] = '__RAW__';
   return JSON.stringify(base).replace('"__RAW__"', rawValue);
 }
 
 // Covers: D5, S6a
 describe('serializeSave / parseSave round trip', () => {
   it('empty save is version-stamped with no cards and no counters', () => {
-    expect(emptySave()).toEqual({ version: SAVE_VERSION, cards: {}, counters: null });
+    const empty = emptySave();
+    expect(empty.version).toBe(SAVE_VERSION);
+    expect(empty.decks).toEqual({});
+    expect(empty.counters).toBeNull();
   });
 
   it('round-trips a populated save', () => {
@@ -97,8 +102,8 @@ describe('parseSave rejects bad input safely (empty save, never throws)', () => 
     ['top-level array', '[]'],
     ['JSON null', 'null'],
     ['wrong version', JSON.stringify({ ...sample(), version: 999 })],
-    ['missing cards', JSON.stringify({ version: SAVE_VERSION, counters: null })],
-    ['cards is an array', JSON.stringify({ version: SAVE_VERSION, cards: [], counters: null })],
+    ['missing decks', JSON.stringify({ version: SAVE_VERSION, counters: null })],
+    ['decks is an array', JSON.stringify({ version: SAVE_VERSION, decks: [], counters: null })],
     [
       'non-finite counter',
       JSON.stringify({ ...sample(), counters: { day: '2026-11-07', newCount: 0, reviewCount: 0 } }).replace(
@@ -149,12 +154,14 @@ describe('parseSave rejects bad input safely (empty save, never throws)', () => 
   ];
   for (const [label, input] of badCard) {
     it(`${label} -> that card dropped, counters kept`, () => {
-      expect(parseSave(input)).toEqual({ ...sample(), cards: {} });
+      const parsed = parseSave(input);
+      expect(deckCards(parsed, 'd1')).toEqual({});
+      expect(parsed.counters).toEqual(sample().counters);
     });
   }
 
   it('a __proto__ card key does not pollute Object.prototype', () => {
-    const text = `{"version":${SAVE_VERSION},"cards":{"__proto__":${JSON.stringify({ ...card, polluted: true })}},"counters":null}`;
+    const text = `{"version":${SAVE_VERSION},"decks":{"d1":{"__proto__":${JSON.stringify({ ...card, polluted: true })}}},"counters":null}`;
     expect(() => parseSave(text)).not.toThrow();
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
     expect(({} as Record<string, unknown>).stability).toBeUndefined();
@@ -217,7 +224,7 @@ describe('loadSave / writeSave via injected storage', () => {
 /** Two-card save where card `bad` has one field replaced by raw JSON text. */
 function twoCardsWithBad(field: string, rawValue: string): string {
   const base = JSON.parse(serializeSave(sample()));
-  base.cards.bad = { ...card, [field]: '__RAW__' };
+  base.decks.d1.bad = { ...card, [field]: '__RAW__' };
   return JSON.stringify(base).replace('"__RAW__"', rawValue);
 }
 
@@ -229,7 +236,7 @@ describe('parseSave: one bad card is skipped, the rest of the save survives', ()
 
   it('card that is not an object -> only that card dropped', () => {
     const base = JSON.parse(serializeSave(sample()));
-    base.cards.bad = 'oops';
+    base.decks.d1.bad = 'oops';
     expect(parseSave(JSON.stringify(base))).toEqual(sample());
   });
 
@@ -239,7 +246,7 @@ describe('parseSave: one bad card is skipped, the rest of the save survives', ()
     const [key] = [...storage.data.keys()];
     storage.data.set(key, twoCardsWithBad('difficulty', 'null'));
     expect(writeSave(loadSave(storage), storage)).toBe(true);
-    expect(loadSave(storage).cards).toEqual(sample().cards);
+    expect(deckCards(loadSave(storage), 'd1')).toEqual(deckCards(sample(), 'd1'));
   });
 });
 
@@ -274,7 +281,7 @@ describe('parseSave: strict per-card dates and number ranges', () => {
   for (const [label, field, value] of accepted) {
     it(`${label} -> card kept`, () => {
       const data = sample();
-      data.cards.abc123 = { ...card, [field]: value };
+      data.decks.d1.abc123 = { ...card, [field]: value };
       expect(parseSave(serializeSave(data))).toEqual(data);
     });
   }

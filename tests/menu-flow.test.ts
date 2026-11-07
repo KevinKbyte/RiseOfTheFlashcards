@@ -314,7 +314,8 @@ describe('menu-flow dedupe screen', () => {
 // Requirement: a plain-text mastery screen summarizes each deck from scheduler state: New = no
 // stored state or FSRS state 0; Mastered = FSRS state 2 (Review) with stability >=
 // MASTERED_STABILITY_DAYS (21 days, the conventional "mature card" interval); Learning = every
-// other stored state (Learning 1, Relearning 3, or Review below the stability threshold).
+// other stored state (Learning 1, Relearning 3, or Review below the stability threshold). Each
+// deck counts only its own progress map (save.decks[deckId]).
 // Covers: D5
 describe('menu-flow mastery summary', () => {
   const deck: Deck = {
@@ -346,7 +347,7 @@ describe('menu-flow mastery summary', () => {
       l3: st(2, MASTERED_STABILITY_DAYS - 0.01),
       m1: st(2, MASTERED_STABILITY_DAYS),
     };
-    expect(masterySummary([deck], cards)).toEqual([
+    expect(masterySummary([deck], { m: cards })).toEqual([
       {
         deckId: 'm',
         title: 'Mastery deck',

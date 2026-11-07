@@ -11,7 +11,8 @@
 // reflects the new ratings; losing every pip is a LOSE; an empty queue is a practice run that
 // never WINs; progress survives a reload (a new session on the same storage sees prior ratings);
 // a storage read failure leaves the game playable but never writes (it would clobber a save we
-// never saw). The clock and storage are injected; the session is immutable.
+// never saw). Progress is per deck (see tests/per-deck-progress.test.ts). The clock and storage are
+// injected; the session is immutable.
 //
 // API contract for src/flashcards/game-session.ts (pure, no three.js/DOM; reuses the controller
 // types, never re-implementing them):
@@ -51,7 +52,7 @@ import {
 import { openDeckSelect, selectDeck } from '../src/flashcards/menu-flow.js';
 import type { Deck } from '../src/flashcards/deck-schema.js';
 import { applyRating } from '../src/flashcards/scheduler.js';
-import { emptySave, loadSave, writeSave, type SaveStorage } from '../src/flashcards/save.js';
+import { deckCards, emptySave, loadSave, writeSave, type SaveStorage } from '../src/flashcards/save.js';
 
 // 10:00 local: well clear of the 04:00 study-day rollover.
 const NOW = new Date(2026, 10, 7, 10, 0, 0);
@@ -191,7 +192,7 @@ describe('game-session: menu -> run -> review glue for the cards scene', () => {
     s = hit.session;
     expect(pips(hit.effects)).toEqual([4]);
     expect(storage.writes).toHaveLength(1);
-    expect(loadSave(storage).cards[id]).toEqual(applyRating(undefined, 'again', NOW));
+    expect(deckCards(loadSave(storage), BIG.id)[id]).toEqual(applyRating(undefined, 'again', NOW));
   });
 
   it('a second wrong orb in the same encounter costs no pip and writes nothing', () => {
@@ -229,7 +230,7 @@ describe('game-session: menu -> run -> review glue for the cards scene', () => {
     expect(hit.session.run?.run.remaining).toHaveLength(11);
     expect(endScreens(hit.effects)).toEqual([]);
     expect(storage.writes).toHaveLength(1);
-    expect(loadSave(storage).cards[id]).toEqual(applyRating(undefined, 'good', NOW));
+    expect(deckCards(loadSave(storage), BIG.id)[id]).toEqual(applyRating(undefined, 'good', NOW));
   });
 
   it('correct orb after a wrong one in the same encounter clears the card but adds no write', () => {
@@ -241,7 +242,7 @@ describe('game-session: menu -> run -> review glue for the cards scene', () => {
     const hit = correctOrb(s, id);
     expect(hit.session.run?.run.remaining).not.toContain(id);
     expect(storage.writes).toHaveLength(1);
-    expect(loadSave(storage).cards[id]).toEqual(applyRating(undefined, 'again', NOW));
+    expect(deckCards(loadSave(storage), BIG.id)[id]).toEqual(applyRating(undefined, 'again', NOW));
   });
 
   it('clearing all 12 reserved cards ends in a win and the mastery text reflects the ratings', () => {
@@ -297,7 +298,7 @@ describe('game-session: menu -> run -> review glue for the cards scene', () => {
   it('an empty queue (every card already rated today) is a practice run that never wins', () => {
     const storage = memoryStorage();
     const cards = Object.fromEntries(SMALL.cards.map((c) => [c.id, applyRating(undefined, 'good', NOW)]));
-    expect(writeSave({ ...emptySave(), cards }, storage)).toBe(true);
+    expect(writeSave({ ...emptySave(), decks: { [SMALL.id]: cards } }, storage)).toBe(true);
     const writesBefore = storage.writes.length;
     const { step, ids } = started(storage, SMALL.id);
     expect(ids).toEqual([]);

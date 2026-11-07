@@ -1,7 +1,8 @@
 // Requirement: a study session joins voice/orb grading to FSRS scheduling and the persisted save,
 // so src/cards.ts calls one module instead of wiring matcher, answer-outcome, scheduler and save
 // itself. API (src/flashcards/review-flow.ts):
-//   loadReview(storage, deck, now) -> ReviewState { save, queue, saveFailed }
+//   loadReview(storage, deck, now, { deckId, knownDecks? }) -> ReviewState { save, queue, saveFailed }
+//   (progress is read and written under deckId only; see tests/per-deck-progress.test.ts)
 //   startEncounter(cardId) -> Encounter { cardId, answer: AnswerState }
 //   submitAnswer(state, encounter, attempt, { deck, storage, now })
 //     -> { state, encounter, outcome: VoiceResult, rating: 'again' | 'hard' | 'good' | null }
@@ -23,7 +24,7 @@ import {
   type Encounter,
   type ReviewState,
 } from '../src/flashcards/review-flow.js';
-import { SAVE_BACKUP_KEY, emptySave, loadSave, writeSave, type SaveStorage } from '../src/flashcards/save.js';
+import { SAVE_BACKUP_KEY, deckCards, emptySave, loadSave, writeSave, type SaveStorage } from '../src/flashcards/save.js';
 import type { MatchCard } from '../src/flashcards/matcher.js';
 
 const deck: MatchCard[] = [
@@ -32,6 +33,9 @@ const deck: MatchCard[] = [
   { id: 'ion', answer: 'ion channel' },
   { id: 'syn', answer: 'synapse' },
 ];
+
+const DECK_ID = 'neuro';
+const KEY = { deckId: DECK_ID };
 
 // 10:00 local: well clear of the 04:00 study-day rollover.
 const NOW = new Date(2026, 10, 7, 10, 0, 0);
@@ -82,7 +86,7 @@ afterEach(() => {
 describe('loadReview: start-of-session load', () => {
   it('missing save -> fresh progress and today\'s queue of New cards in deck order', () => {
     const storage = memoryStorage();
-    const state = loadReview(storage, deck, NOW);
+    const state = loadReview(storage, deck, NOW, KEY);
     expect(state.save).toEqual(emptySave());
     expect(state.queue.day).toBe('2026-11-07');
     expect(state.queue.ids).toEqual(['aff', 'mito', 'ion', 'syn']);
@@ -91,9 +95,9 @@ describe('loadReview: start-of-session load', () => {
 
   it('existing save -> its cards are loaded and a card reviewed today is not queued again', () => {
     const storage = memoryStorage();
-    submitAnswer(loadReview(storage, deck, NOW), startEncounter('aff'), voice('afferent'), env(storage));
-    const reloaded = loadReview(storage, deck, LATER_SAME_DAY);
-    expect(Object.keys(reloaded.save.cards)).toEqual(['aff']);
+    submitAnswer(loadReview(storage, deck, NOW, KEY), startEncounter('aff'), voice('afferent'), env(storage));
+    const reloaded = loadReview(storage, deck, LATER_SAME_DAY, KEY);
+    expect(Object.keys(deckCards(reloaded.save, DECK_ID))).toEqual(['aff']);
     expect(reloaded.queue.ids).not.toContain('aff');
     expect(reloaded.queue.ids).toEqual(['mito', 'ion', 'syn']);
   });
@@ -105,7 +109,7 @@ describe('loadReview: start-of-session load', () => {
     storage.data.set(key, corrupt);
     let state: ReviewState | undefined;
     expect(() => {
-      state = loadReview(storage, deck, NOW);
+      state = loadReview(storage, deck, NOW, KEY);
     }).not.toThrow();
     expect(state?.save).toEqual(emptySave());
     expect(storage.data.get(key)).toBe(corrupt);
@@ -116,11 +120,11 @@ describe('loadReview: start-of-session load', () => {
     const key = liveKey();
     const corrupt = 'not json at all';
     storage.data.set(key, corrupt);
-    const state = loadReview(storage, deck, NOW);
+    const state = loadReview(storage, deck, NOW, KEY);
     const r = submitAnswer(state, startEncounter('aff'), voice('afferent'), env(storage));
     expect(r.state.saveFailed).toBe(false);
     expect(storage.data.get(SAVE_BACKUP_KEY)).toBe(corrupt);
-    expect(Object.keys(loadSave(storage).cards)).toEqual(['aff']);
+    expect(Object.keys(deckCards(loadSave(storage), DECK_ID))).toEqual(['aff']);
   });
 
   it('throwing storage on load -> fresh progress, no throw', () => {
@@ -132,8 +136,8 @@ describe('loadReview: start-of-session load', () => {
         throw new Error('SecurityError');
       },
     };
-    expect(() => loadReview(storage, deck, NOW)).not.toThrow();
-    expect(loadReview(storage, deck, NOW).save).toEqual(emptySave());
+    expect(() => loadReview(storage, deck, NOW, KEY)).not.toThrow();
+    expect(loadReview(storage, deck, NOW, KEY).save).toEqual(emptySave());
   });
 });
 
@@ -145,34 +149,34 @@ describe('submitAnswer: classification via answer-outcome', () => {
     ['efferent', 'wrong', 'again'],
   ] as const)('voice %j on aff -> %s, rating %s', (transcript, outcome, rating) => {
     const storage = memoryStorage();
-    const r = submitAnswer(loadReview(storage, deck, NOW), startEncounter('aff'), voice(transcript), env(storage));
+    const r = submitAnswer(loadReview(storage, deck, NOW, KEY), startEncounter('aff'), voice(transcript), env(storage));
     expect(r.outcome).toBe(outcome);
     expect(r.rating).toBe(rating);
   });
 
   it.each(['', '   ', '?!...', 'a'.repeat(500)])('voice %j -> didnt-catch, not graded, nothing saved', (transcript) => {
     const storage = memoryStorage();
-    const state = loadReview(storage, deck, NOW);
+    const state = loadReview(storage, deck, NOW, KEY);
     const r = submitAnswer(state, startEncounter('aff'), voice(transcript), env(storage));
     expect(r.outcome).toBe('didnt-catch');
     expect(r.rating).toBeNull();
-    expect(r.state.save.cards).toEqual({});
+    expect(deckCards(r.state.save, DECK_ID)).toEqual({});
     expect(storage.writes).toEqual([]);
   });
 
   it('didnt-catch leaves the encounter open: a following correct answer is graded good', () => {
     const storage = memoryStorage();
-    const state = loadReview(storage, deck, NOW);
+    const state = loadReview(storage, deck, NOW, KEY);
     const first = submitAnswer(state, startEncounter('aff'), voice(''), env(storage));
     const second = submitAnswer(first.state, first.encounter, voice('afferent'), env(storage));
     expect(second.outcome).toBe('correct');
     expect(second.rating).toBe('good');
-    expect(second.state.save.cards.aff).toBeDefined();
+    expect(deckCards(second.state.save, DECK_ID).aff).toBeDefined();
   });
 
   it('orb choice: matching label -> correct/good; other label -> wrong/again', () => {
     const storage = memoryStorage();
-    const state = loadReview(storage, deck, NOW);
+    const state = loadReview(storage, deck, NOW, KEY);
     const right = submitAnswer(state, startEncounter('mito'), orb('mitochondria'), env(storage));
     expect([right.outcome, right.rating]).toEqual(['correct', 'good']);
     const wrong = submitAnswer(state, startEncounter('syn'), orb('ion channel'), env(storage));
@@ -184,21 +188,21 @@ describe('submitAnswer: classification via answer-outcome', () => {
 describe('submitAnswer: exactly one FSRS write per card per encounter', () => {
   it('wrong then correct in one encounter: only the first (again) is recorded', () => {
     const storage = memoryStorage();
-    const state = loadReview(storage, deck, NOW);
+    const state = loadReview(storage, deck, NOW, KEY);
     const first = submitAnswer(state, startEncounter('aff'), voice('mitochondria'), env(storage));
     expect(first.rating).toBe('again');
-    const afterFirst = first.state.save.cards.aff;
+    const afterFirst = deckCards(first.state.save, DECK_ID).aff;
     expect(afterFirst).toBeDefined();
     const second = submitAnswer(first.state, first.encounter, voice('afferent'), env(storage, LATER_SAME_DAY));
     expect(second.outcome).toBe('correct');
     expect(second.rating).toBeNull();
-    expect(second.state.save.cards.aff).toEqual(afterFirst);
+    expect(deckCards(second.state.save, DECK_ID).aff).toEqual(afterFirst);
     expect(second.state.save.counters).toEqual(first.state.save.counters);
   });
 
   it('repeated wrong answers after the first change nothing', () => {
     const storage = memoryStorage();
-    const state = loadReview(storage, deck, NOW);
+    const state = loadReview(storage, deck, NOW, KEY);
     const first = submitAnswer(state, startEncounter('aff'), voice('synapse'), env(storage));
     const second = submitAnswer(first.state, first.encounter, voice('ion channel'), env(storage, LATER_SAME_DAY));
     expect(second.rating).toBeNull();
@@ -208,7 +212,7 @@ describe('submitAnswer: exactly one FSRS write per card per encounter', () => {
   it('the save is written once per graded encounter, not per attempt', () => {
     const storage = memoryStorage();
     const key = liveKey();
-    let state = loadReview(storage, deck, NOW);
+    let state = loadReview(storage, deck, NOW, KEY);
     let r = submitAnswer(state, startEncounter('aff'), voice(''), env(storage));
     r = submitAnswer(r.state, r.encounter, voice('synapse'), env(storage));
     r = submitAnswer(r.state, r.encounter, voice('afferent'), env(storage));
@@ -220,7 +224,7 @@ describe('submitAnswer: exactly one FSRS write per card per encounter', () => {
 
   it('a graded New card counts once against today\'s new budget', () => {
     const storage = memoryStorage();
-    const state = loadReview(storage, deck, NOW);
+    const state = loadReview(storage, deck, NOW, KEY);
     const first = submitAnswer(state, startEncounter('aff'), voice('synapse'), env(storage));
     const second = submitAnswer(first.state, first.encounter, voice('afferent'), env(storage));
     expect(second.state.save.counters).toEqual({ day: '2026-11-07', newCount: 1, reviewCount: 0 });
@@ -228,15 +232,15 @@ describe('submitAnswer: exactly one FSRS write per card per encounter', () => {
 
   it('a new encounter on the next study day grades the card again', () => {
     const storage = memoryStorage();
-    const day1 = loadReview(storage, deck, NOW);
+    const day1 = loadReview(storage, deck, NOW, KEY);
     const graded1 = submitAnswer(day1, startEncounter('aff'), voice('synapse'), env(storage));
-    const day2 = loadReview(storage, deck, NEXT_DAY);
-    expect(day2.save.cards.aff).toEqual(graded1.state.save.cards.aff);
+    const day2 = loadReview(storage, deck, NEXT_DAY, KEY);
+    expect(deckCards(day2.save, DECK_ID).aff).toEqual(deckCards(graded1.state.save, DECK_ID).aff);
     const graded2 = submitAnswer(day2, startEncounter('aff'), voice('afferent'), env(storage, NEXT_DAY));
     expect(graded2.rating).toBe('good');
-    expect(graded2.state.save.cards.aff.lastReview).toBe(NEXT_DAY.toISOString());
-    expect(graded2.state.save.cards.aff.reps).toBe(graded1.state.save.cards.aff.reps + 1);
-    expect(loadSave(storage).cards.aff).toEqual(graded2.state.save.cards.aff);
+    expect(deckCards(graded2.state.save, DECK_ID).aff.lastReview).toBe(NEXT_DAY.toISOString());
+    expect(deckCards(graded2.state.save, DECK_ID).aff.reps).toBe(deckCards(graded1.state.save, DECK_ID).aff.reps + 1);
+    expect(deckCards(loadSave(storage), DECK_ID).aff).toEqual(deckCards(graded2.state.save, DECK_ID).aff);
   });
 });
 
@@ -244,7 +248,7 @@ describe('submitAnswer: exactly one FSRS write per card per encounter', () => {
 describe('submitAnswer: save failures never crash or lose progress', () => {
   it('throwing setItem -> no throw, saveFailed true, in-memory progress kept', () => {
     const storage = memoryStorage();
-    const state = loadReview(storage, deck, NOW);
+    const state = loadReview(storage, deck, NOW, KEY);
     const failing: SaveStorage = {
       getItem: storage.getItem,
       setItem: () => {
@@ -257,7 +261,7 @@ describe('submitAnswer: save failures never crash or lose progress', () => {
     }).not.toThrow();
     expect(r?.state.saveFailed).toBe(true);
     expect(r?.rating).toBe('good');
-    expect(r?.state.save.cards.aff).toBeDefined();
+    expect(deckCards(r!.state.save, DECK_ID).aff).toBeDefined();
   });
 
   it('a later successful save clears saveFailed and persists the progress kept in memory', () => {
@@ -268,11 +272,11 @@ describe('submitAnswer: save failures never crash or lose progress', () => {
         throw new Error('QuotaExceededError');
       },
     };
-    const state = loadReview(storage, deck, NOW);
+    const state = loadReview(storage, deck, NOW, KEY);
     const failed = submitAnswer(state, startEncounter('aff'), voice('afferent'), env(failing));
     const ok = submitAnswer(failed.state, startEncounter('mito'), voice('mitochondria'), env(storage));
     expect(ok.state.saveFailed).toBe(false);
-    expect(Object.keys(loadSave(storage).cards).sort()).toEqual(['aff', 'mito']);
+    expect(Object.keys(deckCards(loadSave(storage), DECK_ID)).sort()).toEqual(['aff', 'mito']);
   });
 });
 
@@ -282,17 +286,17 @@ describe('review-flow purity: injected clock, inputs never mutated', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2001, 0, 1, 12, 0, 0));
     const storage = memoryStorage();
-    const state = loadReview(storage, deck, NOW);
+    const state = loadReview(storage, deck, NOW, KEY);
     expect(state.queue.day).toBe('2026-11-07');
     const r = submitAnswer(state, startEncounter('aff'), voice('afferent'), env(storage));
-    expect(r.state.save.cards.aff.lastReview).toBe(NOW.toISOString());
+    expect(deckCards(r.state.save, DECK_ID).aff.lastReview).toBe(NOW.toISOString());
     expect(r.state.save.counters?.day).toBe('2026-11-07');
   });
 
   it('deck, state, encounter and attempt are not mutated (frozen inputs do not throw)', () => {
     const storage = memoryStorage();
     const frozenDeck = deepFreeze(structuredClone(deck));
-    const state = deepFreeze(loadReview(storage, frozenDeck, NOW));
+    const state = deepFreeze(loadReview(storage, frozenDeck, NOW, KEY));
     const snapshot = structuredClone(state);
     const enc: Encounter = deepFreeze(startEncounter('aff'));
     const encSnapshot = structuredClone(enc);
@@ -319,14 +323,14 @@ describe('submitAnswer: a card id not in the deck is ignored', () => {
     ['orb', orb('afferent')],
   ] as const)('%s attempt on unknown id -> no throw, rating null, no write, counters unchanged', (_kind, attempt) => {
     const storage = memoryStorage();
-    const state = loadReview(storage, deck, NOW);
+    const state = loadReview(storage, deck, NOW, KEY);
     let r: ReturnType<typeof submitAnswer> | undefined;
     expect(() => {
       r = submitAnswer(state, startEncounter('ghost'), attempt, env(storage));
     }).not.toThrow();
     expect(r?.rating).toBeNull();
     expect(storage.writes).toEqual([]);
-    expect(r?.state.save.cards).toEqual({});
+    expect(deckCards(r!.state.save, DECK_ID)).toEqual({});
     expect(r?.state.save.counters).toEqual(state.save.counters);
   });
 });
@@ -335,15 +339,15 @@ describe('submitAnswer: a card id not in the deck is ignored', () => {
 describe('submitAnswer: a card already rated this study day is not rated again', () => {
   it('fresh encounter later the same study day: correct answer -> rating null, no write, counters unchanged', () => {
     const storage = memoryStorage();
-    const first = submitAnswer(loadReview(storage, deck, NOW), startEncounter('aff'), voice('synapse'), env(storage));
+    const first = submitAnswer(loadReview(storage, deck, NOW, KEY), startEncounter('aff'), voice('synapse'), env(storage));
     expect(first.rating).toBe('again');
-    const reloaded = loadReview(storage, deck, LATER_SAME_DAY);
+    const reloaded = loadReview(storage, deck, LATER_SAME_DAY, KEY);
     const writesBefore = storage.writes.length;
     const r = submitAnswer(reloaded, startEncounter('aff'), voice('afferent'), env(storage, LATER_SAME_DAY));
     expect(r.rating).toBeNull();
     expect(storage.writes).toHaveLength(writesBefore);
     expect(r.state.save.counters).toEqual(reloaded.save.counters);
-    expect(r.state.save.cards.aff).toEqual(first.state.save.cards.aff);
+    expect(deckCards(r.state.save, DECK_ID).aff).toEqual(deckCards(first.state.save, DECK_ID).aff);
   });
 
   it('one encounter spanning the 04:00 rollover (wrong 03:59, correct 04:01) -> exactly one write', () => {
@@ -351,7 +355,7 @@ describe('submitAnswer: a card already rated this study day is not rated again',
     const key = liveKey();
     const before = new Date(2026, 10, 8, 3, 59, 0);
     const after = new Date(2026, 10, 8, 4, 1, 0);
-    const first = submitAnswer(loadReview(storage, deck, before), startEncounter('aff'), voice('synapse'), env(storage, before));
+    const first = submitAnswer(loadReview(storage, deck, before, KEY), startEncounter('aff'), voice('synapse'), env(storage, before));
     expect(first.rating).toBe('again');
     const second = submitAnswer(first.state, first.encounter, voice('afferent'), env(storage, after));
     expect(second.rating).toBeNull();
@@ -364,10 +368,10 @@ describe('submitAnswer: a save that could not be read is never overwritten', () 
   it('getItem throws on load then recovers -> later rating writes nothing, saveFailed true, save unchanged', () => {
     const storage = memoryStorage();
     const key = liveKey();
-    submitAnswer(loadReview(storage, deck, NOW), startEncounter('aff'), voice('afferent'), env(storage));
-    submitAnswer(loadReview(storage, deck, NOW), startEncounter('mito'), voice('mitochondria'), env(storage));
+    submitAnswer(loadReview(storage, deck, NOW, KEY), startEncounter('aff'), voice('afferent'), env(storage));
+    submitAnswer(loadReview(storage, deck, NOW, KEY), startEncounter('mito'), voice('mitochondria'), env(storage));
     const fullSave = storage.data.get(key);
-    expect(Object.keys(loadSave(storage).cards).sort()).toEqual(['aff', 'mito']);
+    expect(Object.keys(deckCards(loadSave(storage), DECK_ID)).sort()).toEqual(['aff', 'mito']);
     let failNext = true;
     const flaky: SaveStorage = {
       getItem: (k) => {
@@ -380,7 +384,7 @@ describe('submitAnswer: a save that could not be read is never overwritten', () 
       setItem: storage.setItem,
     };
     const writesBefore = storage.writes.length;
-    const state = loadReview(flaky, deck, NEXT_DAY);
+    const state = loadReview(flaky, deck, NEXT_DAY, KEY);
     let r: ReturnType<typeof submitAnswer> | undefined;
     expect(() => {
       r = submitAnswer(state, startEncounter('ion'), voice('ion channel'), env(flaky, NEXT_DAY));
@@ -395,7 +399,7 @@ describe('submitAnswer: a save that could not be read is never overwritten', () 
     const key = liveKey();
     storage.data.set(SAVE_BACKUP_KEY, 'first unreadable save');
     storage.data.set(key, 'second unreadable save');
-    const state = loadReview(storage, deck, NOW);
+    const state = loadReview(storage, deck, NOW, KEY);
     const r = submitAnswer(state, startEncounter('aff'), voice('afferent'), env(storage));
     expect(storage.writes).toEqual([]);
     expect(storage.data.get(SAVE_BACKUP_KEY)).toBe('first unreadable save');
