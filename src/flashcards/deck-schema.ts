@@ -22,7 +22,23 @@ export interface Deck {
   cards: DeckCard[];
 }
 
-export type ParseResult = { ok: true; deck: Deck } | { ok: false; error: string };
+export interface DuplicateCopy {
+  index: number;
+  prompt: string;
+  answer: string;
+}
+
+export interface DuplicateGroup {
+  id: string;
+  copies: DuplicateCopy[];
+}
+
+// Duplicate ids are still ok:false so callers that only check .ok never load them, but they carry
+// the normalized deck so the dedupe UI (deck-dedupe.ts) can resolve them instead of rejecting.
+export type ParseResult =
+  | { ok: true; deck: Deck }
+  | { ok: false; error: string }
+  | { ok: false; kind: 'duplicates'; error: string; deck: Deck; groups: DuplicateGroup[] };
 
 class DeckError extends Error {}
 
@@ -69,16 +85,24 @@ function parseCards(raw: unknown): DeckCard[] {
   if (raw.length === 0) throw new DeckError('deck must have at least one card');
   if (raw.length > MAX_CARDS) throw new DeckError(`deck exceeds ${MAX_CARDS} cards`);
   const cards = raw.map(parseCard);
-  const ids = new Set<string>();
-  for (const c of cards) {
-    if (ids.has(c.id)) throw new DeckError(`duplicate card id "${c.id}"`);
-    ids.add(c.id);
-  }
+  // Checked before duplicates: dropping copies never adds distinct answers, so this error wins.
   const answers = new Set(cards.map((c) => c.answer.toLowerCase()));
   if (answers.size < MIN_DISTINCT_ANSWERS) {
     throw new DeckError(`deck needs at least ${MIN_DISTINCT_ANSWERS} distinct answers`);
   }
   return cards;
+}
+
+/** Cards sharing a normalized (trimmed, whitespace-collapsed, case-sensitive) id, in first-seen order. */
+export function findDuplicateGroups(cards: readonly DeckCard[]): DuplicateGroup[] {
+  const byId = new Map<string, DuplicateCopy[]>();
+  cards.forEach((card, index) => {
+    const id = normalize(card.id);
+    const copies = byId.get(id) ?? [];
+    copies.push({ index, prompt: card.prompt, answer: card.answer });
+    byId.set(id, copies);
+  });
+  return [...byId].filter(([, copies]) => copies.length > 1).map(([id, copies]) => ({ id, copies }));
 }
 
 export function parseDeck(input: unknown): ParseResult {
@@ -89,6 +113,11 @@ export function parseDeck(input: unknown): ParseResult {
       title: text(input.title, 'deck title', MAX_TITLE_CHARS),
       cards: parseCards(input.cards),
     };
+    const groups = findDuplicateGroups(deck.cards);
+    if (groups.length > 0) {
+      const error = `duplicate card id ${groups.map((g) => `"${g.id}"`).join(', ')}`;
+      return { ok: false, kind: 'duplicates', error, deck, groups };
+    }
     return { ok: true, deck };
   } catch (err) {
     // Non-DeckError only from hostile objects (throwing getters); the contract is still "never throws".
