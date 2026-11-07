@@ -2,7 +2,7 @@
 // input: the page loads without console errors and enters XR with the deck menu in front of the
 // player behind a start screen whose 'Start' orb leads to deck select; pointing the ray at a deck orb and pulling the trigger starts a wave of card enemies;
 // selecting an enemy reveals its question panel; a wrong orb costs one shield pip and is removed, the
-// right orb clears the card (with feedback); clearing all 12 cards shows the win message and losing
+// right orb clears the card (with feedback; on a multi-card enemy the next pool card is then shown); clearing all 12 cards shows the win message and losing
 // all 5 shields shows "Shields down. Try again."; progress is saved per deck to localStorage under
 // flashcards.fsrs.save (other decks' progress untouched), survives a reload unchanged, and cards
 // already answered correctly are not served again in the next run that day.
@@ -59,10 +59,12 @@ async function revealNext(g: Game): Promise<GameState> {
   return g.until((x) => x.targetId === enemy.id && x.orbs.length > 0 && x.answer !== null, `card ${enemy.id} revealed`);
 }
 
+/** Answers the current card; cleared = the card left (enemy peeled to its next card or gone) or the run ended. */
 async function answerRight(g: Game, s: GameState): Promise<GameState> {
-  const id = s.targetId;
-  await g.aimAndSelect({ kind: 'orb', label: s.answer! }, (x) => x.targetId !== id || x.message);
-  return g.until((x) => x.targetId !== id || x.message, `card ${id} cleared`);
+  const card = s.cardId;
+  const cleared = (x: GameState) => x.cardId !== card || x.message;
+  await g.aimAndSelect({ kind: 'orb', label: s.answer! }, cleared);
+  return g.until(cleared, `card ${card} cleared`);
 }
 
 async function answerWrong(g: Game, s: GameState): Promise<{ label: string; after: GameState }> {
@@ -129,8 +131,8 @@ describe('flashcards emulator playthrough (IWER Quest 3, real controller input)'
     expect(after.orbs.map((o) => o.label)).not.toContain(label);
     expect(after.targetId).toBe(shown.targetId);
     const cleared = await answerRight(g, after);
-    expect(cleared.targetId).not.toBe(shown.targetId);
-    expect(cleared.active.map((e) => e.id)).not.toContain(shown.targetId);
+    expect(cleared.cardId).not.toBe(shown.cardId);
+    expect(cleared.active.flatMap((e) => e.cards)).not.toContain(shown.cardId);
     expect(cleared.pips).toBe(START_PIPS - 1);
     expect(g.errors).toEqual([]);
   });
@@ -186,7 +188,7 @@ describe('flashcards emulator playthrough (IWER Quest 3, real controller input)'
     const answered: string[] = [];
     for (let i = 0; i < 3; i++) {
       const shown = await revealNext(g);
-      answered.push(shown.targetId!);
+      answered.push(shown.cardId!);
       await answerRight(g, shown);
     }
     const before = await readSave(g);
