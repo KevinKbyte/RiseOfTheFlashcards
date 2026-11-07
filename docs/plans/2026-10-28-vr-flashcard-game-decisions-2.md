@@ -91,3 +91,10 @@ D20 Quest 3S compatibility (Kev 2026-10-28 "yes add the 3S compat decision to th
   Meta XR Simulator has a Quest 3S device profile (xrsim-intro); its UE 5.8 support UNVERIFIED = D18 premise check (7) in SP1; Devpost testing notes
   carry a 3S smoke checklist (S13); store review per declared device UNVERIFIED (only VRC.Quest.Packaging manifest checks found). Residual: real-3S
   frame time and comfort unprovable without a device (A4).
+
+## UE spike debug checklist (SP-DBG)
+Kev 2026-11-07; spike repo C:/Users/Kev/ue-spike/MetaXRSpike.
+- Black/odd desktop render: first load /Engine/Maps/Templates/Template_Default; a WorldGrid checker on your mesh = DefaultMaterial fallback
+  (RendererSettings cvars ruled out for this spike; see spike README.md "Known issue: desktop `-game` preview shows the default checker"),
+  not lighting/capture.
+- Verify a test method on a control (blank project) before trusting a negative result.

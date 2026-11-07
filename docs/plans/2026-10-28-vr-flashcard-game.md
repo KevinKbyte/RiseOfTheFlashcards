@@ -272,6 +272,7 @@ D14-D20 (run loop, experimental pane, intro scene, onboarding cues, agent valida
 UE spike (Kev, 2026-10-28; D1): SP1 + SP2 run on UE 5.8 + Meta XR 207 source-built (A2; MetaXRPlatform OFF) with on-device voice (D2); pass = SP1
   + SP2 CRITERIA by Nov 2; fail -> Unity 6.3 LTS. Setup present (A2); step 1 = MetaXR source build (A2). SP1 also creates a second (backup) Meta
   dashboard app (Q7). SP2 second speaker = Kev + several TTS voices/accents (Q6); residual (TTS cleaner than real speech) in ADR 0002.
+  Debug checklist: decisions-2 SP-DBG.
 SP1 Oct 28-Nov 1 (~7 h): Android toolchain (UE: NDK r27c + JDK; Unity fallback: Android module); Quest 2 dev mode; release keystore
   + 2 backups; versionCode build script; hello-hands+passthrough APK release-signed; Meta dashboard app + Competition channel; upload
   versionCode 1; invite URL install on a non-org account with App Sharing off; 10 s on-device capture shows the passthrough room. Kev
