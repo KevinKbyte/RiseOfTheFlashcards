@@ -1,8 +1,10 @@
 // Requirement: the ultimate fires from any one of three inputs (plan D7, S7 amended 2026-11-07 by Kev,
 // ledgers-2 H-2): a two-palm push (both palms face forward and both move forward >= X cm in < 0.3 s),
 // a controller grip squeeze (the press edge, not a held grip), or selecting the glowing ultimate
-// orb with any input. The orb shows and glows (ready-glow, decisions-2 D17) only while the run is
-// active with charge >= ULTIMATE_CHARGE (5), cleared on firing. A fire request only spends charge
+// orb with any input. The orb is shown, dim, whenever the run is active (an uncharged orb select is
+// a no-op, ledgers-2 H-2 S7 CRITERIA "uncharged orb select -> 0", so it must be selectable below
+// full charge) and glows (ready-glow, decisions-2 D17) only at charge >= ULTIMATE_CHARGE (5); the
+// glow, not the orb, is cleared on firing; no run or an ended run hides it. A fire request only spends charge
 // when there is a strike-slot enemy to knock back (wave.targetId not null); with none it spends
 // nothing and emits nothing. Several inputs in the same frame fire once. An ended run or charge < 5
 // is a no-op.
@@ -214,9 +216,9 @@ function charged(n: number): RunState {
 
 // Covers: S7, H-2, D17
 describe('ultimate-input: ultimate orb ready-glow', () => {
-  it('hidden and unlit below full charge', () => {
+  it('visible but dim (not glowing) while charging below full charge in an active run', () => {
     for (let n = 0; n < ULTIMATE_CHARGE; n++) {
-      expect(ultimateOrb(charged(n))).toEqual({ visible: false, glowing: false });
+      expect(ultimateOrb(charged(n))).toEqual({ visible: true, glowing: false });
     }
   });
 
@@ -231,8 +233,8 @@ describe('ultimate-input: ultimate orb ready-glow', () => {
     expect(ultimateOrb(ended)).toEqual({ visible: false, glowing: false });
   });
 
-  it('cleared once firing resets charge to 0', () => {
-    expect(ultimateOrb({ ...charged(ULTIMATE_CHARGE), charge: 0 })).toEqual({ visible: false, glowing: false });
+  it('glow cleared, orb still shown dim, once firing resets charge to 0', () => {
+    expect(ultimateOrb({ ...charged(ULTIMATE_CHARGE), charge: 0 })).toEqual({ visible: true, glowing: false });
   });
 });
 
