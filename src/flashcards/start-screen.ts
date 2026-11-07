@@ -41,6 +41,8 @@ export function pressStart(s: GameSession): GameSession {
 }
 
 export function pressMastery(s: GameSession): GameSession {
+  // Explicit guard: updateMenu would hand back a new session even though openMastery no-ops.
+  if (s.menu.screen !== 'start') return s;
   return updateMenu(s, openMastery);
 }
 

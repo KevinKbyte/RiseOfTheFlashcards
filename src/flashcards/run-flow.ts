@@ -82,6 +82,10 @@ export function stepFlow(state: RunFlowState, event: RunFlowEvent): RunFlowStep 
       return { state: { run: next, latest }, effects: [] };
     }
     case 'wrongOrb': {
+      // No `latest` check here, unlike enemyHit: answer orbs exist only on the question panel, which
+      // the scene opens in the same step that reports `presented`, so a wrong answer always follows
+      // its presentation. A strike comes from the wave's own timer and can land on a target whose
+      // presentation was never reported (e.g. no card found for it), so enemyHit must check.
       const next = recordWrong(run, event.cardId);
       if (next === run) return noop;
       return { state: { ...state, run: next }, effects: hitEffects(run, next) };

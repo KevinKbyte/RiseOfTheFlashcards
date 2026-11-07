@@ -14,6 +14,7 @@ import {
   type Vector3,
   type World,
 } from '@iwsdk/core';
+import type { OrbKind } from './card-menu.js';
 import { paintText, textPlane } from './card-paint.js';
 import { PANEL, panelYaw } from './flashcards/encounter.js';
 
@@ -26,6 +27,12 @@ const PANEL_W = 0.6;
 const PANEL_H = 0.28;
 const MESSAGE_DISTANCE = 1.2;
 const FLASH_SECONDS = 0.4;
+
+// Action orbs (Start, Mastery, Back) are smaller and amber so they read as navigation, not decks.
+const ORB_STYLE: Record<OrbKind, { radius: number; color: number }> = {
+  deck: { radius: ORB_RADIUS, color: 0x38bdf8 },
+  action: { radius: ORB_RADIUS * 0.75, color: 0xf59e0b },
+};
 
 const PANEL_BG = '#0f172a';
 const PANEL_FLASH_BG = '#b91c1c';
@@ -74,7 +81,14 @@ export class QuestionPanel {
   // The anchor is a world-space, yaw-only frame placed once at the eye when the panel pops out
   // (never parented to the camera, never following head position); the pitched panel and the orbs
   // hang off it so one yaw update turns them together. Returns the orbs in label order.
-  show(eye: Vector3, headYaw: number, lines: readonly string[], labels: readonly string[]): Entity[] {
+  // `kinds[i]` styles orb i; answer orbs pass none and get the deck-orb look.
+  show(
+    eye: Vector3,
+    headYaw: number,
+    lines: readonly string[],
+    labels: readonly string[],
+    kinds: readonly OrbKind[] = [],
+  ): Entity[] {
     this.anchorYaw = Number.isFinite(headYaw) ? headYaw : 0;
     const root = new Group();
     const pitch = (PANEL.pitchBelowDeg * Math.PI) / 180;
@@ -91,9 +105,10 @@ export class QuestionPanel {
     this.anchor = this.world.createTransformEntity(root);
 
     return labels.map((text, i) => {
+      const style = ORB_STYLE[kinds[i] ?? 'deck'];
       const sphere = new Mesh(
-        new SphereGeometry(ORB_RADIUS, 24, 16),
-        new MeshBasicMaterial({ color: 0x38bdf8 }),
+        new SphereGeometry(style.radius, 24, 16),
+        new MeshBasicMaterial({ color: style.color }),
       );
       sphere.position.set((i - (labels.length - 1) / 2) * ORB_SPACING, -ORB_DOWN, -ORB_FORWARD);
       const label = textPlane([text], 0.15, 0.04, '#0f172a');
