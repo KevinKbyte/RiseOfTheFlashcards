@@ -3,9 +3,9 @@
 // player; pointing the ray at a deck orb and pulling the trigger starts a wave of card enemies;
 // selecting an enemy reveals its question panel; a wrong orb costs one shield pip and is removed, the
 // right orb clears the card (with feedback); clearing all 12 cards shows the win message and losing
-// all 5 shields shows "Shields down. Try again."; progress is saved to localStorage under
-// flashcards.fsrs.save, survives a reload unchanged, and cards already answered correctly are not
-// served again in the next run that day.
+// all 5 shields shows "Shields down. Try again."; progress is saved per deck to localStorage under
+// flashcards.fsrs.save (other decks' progress untouched), survives a reload unchanged, and cards
+// already answered correctly are not served again in the next run that day.
 import { mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -14,6 +14,7 @@ import { forwardness, Game, type GameState } from './harness.js';
 
 const SAVE_KEY = 'flashcards.fsrs.save';
 const DECK = 'World Capitals';
+const DECK_ID = 'world-capitals';
 const RUN_CARDS = 12;
 const START_PIPS = 5;
 const LOSE_TEXT = 'Shields down. Try again.';
@@ -147,6 +148,8 @@ describe('flashcards emulator playthrough (IWER Quest 3, real controller input)'
 
   it('the save survives a reload unchanged and correctly answered cards are not served again', async () => {
     const g = await open();
+    const pre = await readSave(g);
+    const preDecks: Record<string, unknown> = pre ? (JSON.parse(pre).decks ?? {}) : {};
     await pickDeck(g);
     const answered: string[] = [];
     for (let i = 0; i < 3; i++) {
@@ -157,7 +160,10 @@ describe('flashcards emulator playthrough (IWER Quest 3, real controller input)'
     const before = await readSave(g);
     expect(before).not.toBeNull();
     const saved = JSON.parse(before!);
-    expect(Object.keys(saved.cards)).toEqual(expect.arrayContaining(answered));
+    expect(saved.version).toBe(2);
+    expect(Object.keys(saved.decks[DECK_ID] ?? {})).toEqual(expect.arrayContaining(answered));
+    const otherIds = new Set([...Object.keys(saved.decks), ...Object.keys(preDecks)].filter((id) => id !== DECK_ID));
+    for (const id of otherIds) expect(saved.decks[id], `deck ${id} touched by a ${DECK_ID} run`).toEqual(preDecks[id]);
 
     await g.reload();
     expect(await readSave(g)).toBe(before);
