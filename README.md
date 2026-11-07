@@ -74,6 +74,20 @@ node_modules/.bin/tsc --noEmit
 python -m pytest scripts/fsrs
 ```
 
+End-to-end playthrough (headless Chromium + the IWER-emulated Quest 3, real
+controller input via IWER's remote-control interface):
+
+```sh
+npm run test:e2e
+```
+
+It plays against `E2E_BASE_URL` if set, else this worktree's own live IWSDK dev
+runtime (`.iwsdk/runtime/session.json`), else it spawns vite on a free port.
+IWSDK allows one dev runtime per worktree, so a running `npm run dev` is reused,
+never duplicated. Screenshots go to `E2E_SCREENSHOT_DIR` (default: OS temp
+`flashcards-e2e/`). "deck menu faces the player after entering XR" is a known
+RED test until the deck menu is re-placed when the XR session starts.
+
 The pytest suite checks that `scripts/fsrs/gen_vectors.py` regenerates
 `tests/fixtures/fsrs/vectors.json` byte-for-byte; the fixture is pinned to
 py-fsrs 6.3.2 (`scripts/fsrs/requirements.txt`). Regenerate with
