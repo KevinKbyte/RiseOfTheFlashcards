@@ -72,10 +72,13 @@ export function gripSqueezed(prev: GripState, curr: GripState): boolean {
   return (curr.left && !prev.left) || (curr.right && !prev.right);
 }
 
-/** D17 ready-glow: shown and lit only while the run is active at full charge. */
+/**
+ * D17 ready-glow: shown (dim) whenever the run is active, so an uncharged orb select is a selectable
+ * no-op (H-2 S7); lit only at full charge.
+ */
 export function ultimateOrb(run: RunState | null): { visible: boolean; glowing: boolean } {
-  const ready = run !== null && run.status === 'active' && run.charge >= ULTIMATE_CHARGE;
-  return { visible: ready, glowing: ready };
+  const active = run !== null && run.status === 'active';
+  return { visible: active, glowing: active && run.charge >= ULTIMATE_CHARGE };
 }
 
 /** Fires at most once per frame, and only with a strike-slot target to knock back. */
