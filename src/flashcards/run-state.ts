@@ -4,6 +4,8 @@
 
 export const RUN_CARD_CAP = 12;
 export const SHIELD_PIPS = 5;
+/** Correct outcomes needed before the ultimate can fire (M4, D4/D7). */
+export const ULTIMATE_CHARGE = 5;
 
 export type RunStatus = 'active' | 'won' | 'lost' | 'practice';
 export type WinTier = 'day-cleared' | 'deck-conquered';
@@ -26,6 +28,8 @@ export interface RunState {
   readonly hitCards: readonly string[];
   readonly correct: number;
   readonly wrong: number;
+  /** Ultimate charge: +1 per correct outcome, keeps counting past ULTIMATE_CHARGE, 0 after firing. */
+  readonly charge: number;
   readonly deckMastered: boolean;
   readonly endless: boolean;
 }
@@ -55,6 +59,7 @@ export function startRun(opts: RunOptions): RunState {
     hitCards: [],
     correct: 0,
     wrong: 0,
+    charge: 0,
     deckMastered: opts.deckMastered === true,
     endless: opts.endless === true,
   };
@@ -76,9 +81,16 @@ export function recordCorrect(s: RunState, cardId: string): RunState {
     ...s,
     remaining,
     correct: s.correct + 1,
+    charge: s.charge + 1,
     status: won ? 'won' : s.status,
     winTier: won ? winTierFor(s) : null,
   };
+}
+
+/** Spends the charge; a no-op (same object) below ULTIMATE_CHARGE or once the run is over. */
+export function fireUltimate(s: RunState): RunState {
+  if (s.status !== 'active' || s.charge < ULTIMATE_CHARGE) return s;
+  return { ...s, charge: 0 };
 }
 
 /** Costs one pip unless this card already cost one; the 5th pip lost ends the run. */

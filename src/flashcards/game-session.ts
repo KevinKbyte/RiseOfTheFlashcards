@@ -8,6 +8,7 @@ import { loadReview, startEncounter, submitAnswer, type Attempt, type Encounter,
 import { startFlow, stepFlow, type RunFlowEffect, type RunFlowEvent, type RunFlowState } from './run-flow.js';
 import { readDecks, writeDecks, type DeckRead } from './deck-store.js';
 import { planPoolSizes } from './pool.js';
+import { fireUltimate as fireRunUltimate } from './run-state.js';
 import { readSave, type SaveStorage } from './save.js';
 
 export interface SessionEnv {
@@ -37,6 +38,8 @@ export interface GameSession {
 /** spawnWave.poolSizes: cards per spawned enemy, spawn order, summing to cards.length (M2). */
 export type SessionEffect =
   | { type: 'spawnWave'; cards: readonly DeckCard[]; poolSizes: readonly number[] }
+  /** The ultimate fired: knock the strike-slot enemy back (wave ultimateKnockback). */
+  | { type: 'ultimate' }
   | RunFlowEffect;
 
 export interface SessionStep {
@@ -162,6 +165,14 @@ export function correctOrb(s: GameSession, cardId: string): SessionStep {
   const card = s.deck?.cards.find((c) => c.id === cardId);
   if (!card) return same(s);
   return orb(s, { type: 'correctOrb', cardId }, { kind: 'orb', label: card.answer, mode: s.answerMode.mode });
+}
+
+/** Spends a full charge; removes no card, costs no pip and writes no rating (S2). */
+export function fireUltimate(s: GameSession): SessionStep {
+  if (!s.run) return same(s);
+  const run = fireRunUltimate(s.run.run);
+  if (run === s.run.run) return same(s);
+  return { session: next(s, { run: { ...s.run, run } }), effects: [{ type: 'ultimate' }] };
 }
 
 export function waveCleared(s: GameSession): SessionStep {
