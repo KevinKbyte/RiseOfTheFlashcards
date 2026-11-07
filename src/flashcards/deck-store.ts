@@ -21,8 +21,11 @@ export type DeckWrite = { ok: true } | { ok: false; reason?: 'too-large' };
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
-/** Valid decks, or null when the envelope (size, JSON, version, decks array) is unreadable. */
-function parseStore(text: string): Deck[] | null {
+/**
+ * Valid decks plus whether every stored deck validated, or null when the envelope (size, JSON,
+ * version, decks array) is unreadable.
+ */
+function parseStore(text: string): { decks: Deck[]; complete: boolean } | null {
   if (text.length > MAX_DECK_STORE_CHARS) return null;
   let raw: unknown;
   try {
@@ -32,26 +35,30 @@ function parseStore(text: string): Deck[] | null {
   }
   if (!isObj(raw) || raw.version !== DECK_STORE_VERSION || !Array.isArray(raw.decks)) return null;
   // One bad deck is skipped, not fatal: the rest of the user's imports still load.
-  return raw.decks.flatMap((d) => {
+  const decks = raw.decks.flatMap((d) => {
     const r = parseDeck(d);
     return r.ok ? [r.deck] : [];
   });
+  return { decks, complete: decks.length === raw.decks.length };
 }
 
 /** Load stored decks; missing or unreadable text yields none. Never throws. */
 export function readDecks(storage: SaveStorage): DeckRead {
   try {
     const text = storage.getItem(DECK_STORE_KEY);
-    return { decks: text === null ? [] : (parseStore(text) ?? []), readFailed: false };
+    return { decks: text === null ? [] : (parseStore(text)?.decks ?? []), readFailed: false };
   } catch {
     return { decks: [], readFailed: true };
   }
 }
 
-/** See save.ts backupUnreadable: false means the live text has nowhere safe to go. */
+/**
+ * See save.ts backupUnreadable: false means the live text has nowhere safe to go. A payload with
+ * a dropped (invalid) deck counts as unreadable, so overwriting it never silently erases that deck.
+ */
 function backupUnreadable(s: SaveStorage): boolean {
   const live = s.getItem(DECK_STORE_KEY);
-  if (live === null || parseStore(live) !== null) return true;
+  if (live === null || parseStore(live)?.complete) return true;
   if (s.getItem(DECK_STORE_BACKUP_KEY) !== null) return false;
   s.setItem(DECK_STORE_BACKUP_KEY, live);
   return true;

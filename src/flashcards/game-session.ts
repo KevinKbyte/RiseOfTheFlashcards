@@ -5,14 +5,18 @@ import type { Deck, DeckCard } from './deck-schema.js';
 import { createMenu, masterySummary, startPlaying, type MasteryRow, type MenuState } from './menu-flow.js';
 import { loadReview, startEncounter, submitAnswer, type Attempt, type Encounter, type ReviewState } from './review-flow.js';
 import { startFlow, stepFlow, type RunFlowEffect, type RunFlowEvent, type RunFlowState } from './run-flow.js';
-import { readDecks, writeDecks } from './deck-store.js';
+import { readDecks, writeDecks, type DeckRead } from './deck-store.js';
 import { readSave, type SaveStorage } from './save.js';
 
 export interface SessionEnv {
   decks: readonly Deck[];
   storage: SaveStorage;
   clock: () => Date;
+  /** One readDecks result shared by every session on the page; given, the store is not re-read. */
+  storedDecks?: DeckRead;
 }
+
+export type DeckSaveError = 'too-large' | 'failed';
 
 export interface GameSession {
   readonly menu: MenuState;
@@ -22,6 +26,8 @@ export interface GameSession {
   readonly deck: Deck | null;
   /** Review encounter per card id, replaced on each new presentation. */
   readonly encounters: Readonly<Record<string, Encounter>>;
+  /** Why the last deck-store write failed; null when it succeeded or none happened yet. */
+  readonly deckSaveError: DeckSaveError | null;
 }
 
 export type SessionEffect = { type: 'spawnWave'; cards: readonly DeckCard[] } | RunFlowEffect;
@@ -57,12 +63,15 @@ const same = (session: GameSession): SessionStep => ({ session, effects: [] });
 /** Stored decks replace bundled ones by id in place; the rest follow in stored order. */
 function mergeDecks(bundled: readonly Deck[], stored: readonly Deck[]): readonly Deck[] {
   if (stored.length === 0) return bundled;
+  // A Map keeps an id's first position but its last value: duplicate stored ids collapse, last wins.
   const byId = new Map(stored.map((d) => [d.id, d]));
   const merged = bundled.map((d) => byId.get(d.id) ?? d);
   const bundledIds = new Set(bundled.map((d) => d.id));
-  return [...merged, ...stored.filter((d) => !bundledIds.has(d.id))];
+  return [...merged, ...[...byId.values()].filter((d) => !bundledIds.has(d.id))];
 }
 
+// JSON comparison: a key-order mismatch between equal decks only makes one look imported, which
+// causes a needless store write; it never drops a deck.
 /** Decks not identical to the bundled deck of the same id: imports and replacements of a starter. */
 function importedDecks(decks: readonly Deck[], bundled: readonly Deck[]): Deck[] {
   const byId = new Map(bundled.map((d) => [d.id, JSON.stringify(d)]));
@@ -70,10 +79,10 @@ function importedDecks(decks: readonly Deck[], bundled: readonly Deck[]): Deck[]
 }
 
 export function createSession(env: SessionEnv): GameSession {
-  const stored = readDecks(env.storage);
+  const stored = env.storedDecks ?? readDecks(env.storage);
   const menu: MenuState = { ...createMenu(), decks: mergeDecks(env.decks, stored.decks) };
   const inner: InnerEnv = { ...env, decksReadFailed: stored.readFailed };
-  return make({ menu, run: null, review: null, deck: null, encounters: {} }, inner);
+  return make({ menu, run: null, review: null, deck: null, encounters: {}, deckSaveError: null }, inner);
 }
 
 /** Any menu change to the deck list (import, replace, Undo) persists the imported decks. */
@@ -81,10 +90,13 @@ export function updateMenu(s: GameSession, fn: (m: MenuState) => MenuState): Gam
   const menu = fn(s.menu);
   if (menu === s.menu) return s;
   const env = envOf(s);
-  if (menu.decks !== s.menu.decks && !env.decksReadFailed) {
-    writeDecks(importedDecks(menu.decks, env.decks), env.storage);
-  }
-  return next(s, { menu });
+  if (menu.decks === s.menu.decks || env.decksReadFailed) return next(s, { menu });
+  const imports = importedDecks(menu.decks, env.decks);
+  // Key-order mismatch here only causes a needless store, never a drop.
+  if (JSON.stringify(imports) === JSON.stringify(importedDecks(s.menu.decks, env.decks))) return next(s, { menu });
+  const result = writeDecks(imports, env.storage);
+  const deckSaveError = result.ok ? null : (result.reason ?? 'failed');
+  return next(s, { menu, deckSaveError });
 }
 
 export function startRun(s: GameSession): SessionStep {
