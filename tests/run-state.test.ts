@@ -1,6 +1,9 @@
 // Requirement: one flashcard run reserves at most 12 cards (D14) and gives the player 5 shield
 // pips. A correct answer clears that card; a wrong answer (voice or orb, D4) or an enemy strike
-// costs the player one pip, at most one pip per card encounter (D14/Q8). The run is lost when
+// costs the player one pip, at most one pip per card ENCOUNTER (D14/Q8; Kev 2026-11-07: per
+// encounter, not once per run). An encounter is one presentation of a card until it is cleared or
+// leaves; when the same card is re-presented later (beginEncounter) it can cost a pip again, so
+// even a deck of 4 or fewer cards can be lost. The run is lost when
 // the 5th pip is gone; it is won when every reserved card is cleared: "Day cleared", or "Deck
 // conquered" when the selection is already fully mastered (M24/D19). Endless never wins. An empty
 // queue at start is a practice run with no WIN (D19). Once the run is over, nothing changes it.
@@ -33,6 +36,8 @@
 //   export function recordCorrect(s: RunState, cardId: string): RunState;
 //   export function recordWrong(s: RunState, cardId: string): RunState;
 //   export function recordEnemyHit(s: RunState, cardId: string): RunState;
+//   export function beginEncounter(s: RunState, cardId: string): RunState; // card (re)presented:
+//     starts a new encounter, so this card may cost one pip again
 //   export function pipsRemaining(s: RunState): number;
 //   export function isRunOver(s: RunState): boolean;
 //   export function runSummary(s: RunState): RunSummary;
@@ -41,6 +46,7 @@ import { describe, expect, it } from 'vitest';
 import {
   RUN_CARD_CAP,
   SHIELD_PIPS,
+  beginEncounter,
   isRunOver,
   pipsRemaining,
   recordCorrect,
@@ -166,6 +172,77 @@ describe('recording answers and hits', () => {
     expect(s0.remaining).toEqual(deck(3));
     expect(s3.remaining).toEqual(['c2', 'c3']);
     expect(s3.pips).toBe(3);
+  });
+});
+
+// Covers: D4, D14
+describe('per-encounter pip cap (Kev 2026-11-07: one pip per encounter, not per run)', () => {
+  it('two wrong answers in one encounter cost exactly 1 pip', () => {
+    let s = beginEncounter(startRun({ cardIds: deck(3) }), 'c1');
+    s = recordWrong(s, 'c1');
+    s = recordWrong(s, 'c1');
+    expect(s.pips).toBe(4);
+    expect(s.wrong).toBe(2);
+  });
+
+  it('the same card re-presented in a new encounter costs another pip when missed again', () => {
+    let s = beginEncounter(startRun({ cardIds: deck(3) }), 'c1');
+    s = recordWrong(s, 'c1');
+    expect(s.pips).toBe(4);
+    s = beginEncounter(s, 'c1');
+    s = recordWrong(s, 'c1');
+    expect(s.pips).toBe(3);
+    s = recordEnemyHit(s, 'c1'); // still the second encounter: capped
+    expect(s.pips).toBe(3);
+  });
+
+  it('an enemy hit in a new encounter also costs a pip again', () => {
+    let s = recordEnemyHit(startRun({ cardIds: deck(3) }), 'c2');
+    s = recordEnemyHit(beginEncounter(s, 'c2'), 'c2');
+    expect(s.pips).toBe(3);
+  });
+
+  it('a 4-card deck can reach the 5th pip and LOSE', () => {
+    let s = startRun({ cardIds: deck(4) });
+    for (const id of deck(4)) s = recordWrong(beginEncounter(s, id), id);
+    expect(s.pips).toBe(1);
+    expect(s.status).toBe('active');
+    s = recordWrong(beginEncounter(s, 'c1'), 'c1');
+    expect(s.pips).toBe(0);
+    expect(s.status).toBe('lost');
+    expect(isRunOver(s)).toBe(true);
+    expect(runSummary(s).hitsTaken).toBe(5);
+  });
+
+  it('a 1-card deck missed in 5 separate encounters is lost', () => {
+    let s = startRun({ cardIds: ['a'] });
+    for (let i = 0; i < 5; i++) s = recordWrong(beginEncounter(s, 'a'), 'a');
+    expect(s.status).toBe('lost');
+  });
+
+  it('beginning an encounter costs no pip and does not clear or remove the card', () => {
+    const s0 = startRun({ cardIds: deck(3) });
+    const s1 = beginEncounter(recordWrong(s0, 'c1'), 'c1');
+    expect(s1.pips).toBe(4);
+    expect(s1.remaining).toEqual(deck(3));
+    expect(s1.status).toBe('active');
+  });
+
+  it('beginEncounter ignores cards not in play and runs that are over', () => {
+    const cleared = recordCorrect(startRun({ cardIds: deck(3) }), 'c1');
+    expect(beginEncounter(cleared, 'c1')).toBe(cleared);
+    expect(beginEncounter(cleared, 'nope')).toBe(cleared);
+    const won = recordCorrect(startRun({ cardIds: ['a'] }), 'a');
+    expect(beginEncounter(won, 'a')).toBe(won);
+    const practice = startRun({ cardIds: [] });
+    expect(beginEncounter(practice, 'a')).toBe(practice);
+  });
+
+  it('beginEncounter never mutates the state it is given', () => {
+    const s0 = deepFreeze(recordWrong(startRun({ cardIds: deck(3) }), 'c1'));
+    const s1 = recordWrong(beginEncounter(s0, 'c1'), 'c1');
+    expect(s0.pips).toBe(4);
+    expect(s1.pips).toBe(3);
   });
 });
 
