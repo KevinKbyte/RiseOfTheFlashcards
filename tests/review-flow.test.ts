@@ -13,7 +13,8 @@
 // written through the injected storage after each graded attempt; a throwing storage never crashes
 // and never loses the in-memory progress (saveFailed flag instead). A corrupt or missing save
 // loads as fresh progress and the unreadable text is preserved via the save module's backup key.
-// The clock is always injected; inputs are never mutated.
+// The clock is always injected; inputs are never mutated. With knownDecks omitted, the deck being
+// played still adopts an old flat save's progress for its cards.
 // No spec-cache ID exists yet for FSRS scheduling/save; Covers tags cite plan IDs as the
 // scheduler/save/answer-outcome tests do (docs/plans/2026-10-28-vr-flashcard-game.md D4, D5, S6a).
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -405,5 +406,47 @@ describe('submitAnswer: a save that could not be read is never overwritten', () 
     expect(storage.data.get(SAVE_BACKUP_KEY)).toBe('first unreadable save');
     expect(storage.data.get(key)).toBe('second unreadable save');
     expect(r.state.saveFailed).toBe(true);
+  });
+});
+
+const learned = {
+  stability: 12.5,
+  difficulty: 4.2,
+  state: 2 as const,
+  reps: 4,
+  lapses: 1,
+  due: '2026-11-20T09:00:00.000Z',
+  lastReview: '2026-11-06T09:00:00.000Z',
+};
+// Review card already due at NOW (due yesterday).
+const dueNow = { ...learned, due: '2026-11-06T09:00:00.000Z', lastReview: '2026-10-30T09:00:00.000Z' };
+
+function storageWithFlatSave(cards: Record<string, typeof learned>) {
+  const storage = memoryStorage();
+  storage.data.set(liveKey(), JSON.stringify({ version: 1, cards, counters: null }));
+  return storage;
+}
+
+// Covers: D5, S6a
+describe('loadReview without knownDecks: the played deck adopts an old flat save\'s progress', () => {
+  it('a learned card is loaded under the played deck and not queued as New', () => {
+    const storage = storageWithFlatSave({ aff: learned });
+    const state = loadReview(storage, deck, NOW, KEY);
+    expect(deckCards(state.save, DECK_ID).aff).toEqual(learned);
+    expect(state.queue.ids).not.toContain('aff');
+    expect(state.queue.ids).toEqual(['mito', 'ion', 'syn']);
+  });
+
+  it('the first rating of a migrated card builds on its history (reps + 1), counted as a review', () => {
+    const storage = storageWithFlatSave({ mito: dueNow });
+    const state = loadReview(storage, deck, NOW, KEY);
+    expect(state.queue.ids).toContain('mito');
+    const r = submitAnswer(state, startEncounter('mito'), voice('mitochondria'), env(storage));
+    expect(r.rating).toBe('good');
+    const graded = deckCards(r.state.save, DECK_ID).mito;
+    expect(graded.reps).toBe(dueNow.reps + 1);
+    expect(graded.lapses).toBe(dueNow.lapses);
+    expect(r.state.save.counters).toEqual({ day: '2026-11-07', newCount: 0, reviewCount: 1 });
+    expect(deckCards(loadSave(storage), DECK_ID).mito).toEqual(graded);
   });
 });

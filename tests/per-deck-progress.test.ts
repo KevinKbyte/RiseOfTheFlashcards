@@ -8,7 +8,9 @@
 // later deck, never dropped). The first write after load uses the new format. Backup rules are
 // unchanged: an unreadable live save is never overwritten without a backup, and a readable old
 // save is a migration source, not an unreadable one. A reload (new session, same storage) sees
-// the per-deck progress.
+// the per-deck progress. The first new-format write over an old flat save copies the original
+// text to the backup key when it is empty (rollback safety). Prototype-named CARD ids
+// ("__proto__", "constructor") keep their progress across a reload.
 //
 // API contract (save.ts, review-flow.ts, menu-flow.ts, game-session.ts):
 //   SAVE_VERSION === 2; SaveData.decks: Record<deckId, Record<cardId, CardState>>; counters stay global
@@ -384,4 +386,59 @@ describe('game-session: per-deck progress across a reload', () => {
     expect(rowFor(reloaded, 'Deck A')).toBe('Deck A: 2 new, 2 learning, 0 mastered');
     expect(rowFor(reloaded, 'Deck B')).toBe('Deck B: 3 new, 1 learning, 0 mastered');
   });
+});
+
+// Covers: D5, S6a
+describe('old flat save: first new-format write keeps the original text as a rollback backup', () => {
+  const flat = { shared: stA, onlyA: stB, orphan: stOrphan };
+
+  it('empty backup key -> the original v1 text is copied there before it is replaced', () => {
+    const storage = storageWithFlat(flat);
+    const original = flatSaveText(flat);
+    expect(writeSave(loadSave(storage, DECKS), storage)).toBe(true);
+    expect(storage.data.get(SAVE_BACKUP_KEY)).toBe(original);
+    expect((stored(storage) as { version: number }).version).toBe(2);
+  });
+
+  it('later new-format writes leave that v1 backup unchanged', () => {
+    const storage = storageWithFlat(flat);
+    const original = flatSaveText(flat);
+    writeSave(loadSave(storage, DECKS), storage);
+    expect(writeSave(loadSave(storage, DECKS), storage)).toBe(true);
+    expect(storage.data.get(SAVE_BACKUP_KEY)).toBe(original);
+  });
+});
+
+// deck-schema accepts any non-empty id up to its length cap, so a real deck may hold these card ids.
+const PROTO_DECK = [
+  { id: '__proto__', answer: 'alpha' },
+  { id: 'constructor', answer: 'beta' },
+  { id: 'plain', answer: 'gamma' },
+];
+
+// Covers: D4, D5, S6a
+describe('per-deck save: prototype-named CARD ids keep their progress across a reload', () => {
+  for (const [id, answer] of [['__proto__', 'alpha'], ['constructor', 'beta']] as const) {
+    it(`card id "${id}": rating it then reloading keeps its progress, no pollution`, () => {
+      const storage = memoryStorage();
+      const key = { deckId: 'protoDeck' };
+      const r = submitAnswer(loadReview(storage, PROTO_DECK, NOW, key), startEncounter(id), voice(answer), {
+        deck: PROTO_DECK,
+        storage,
+        now: NOW,
+      });
+      expect(r.rating).toBe('good');
+      const rated = applyRating(undefined, 'good', NOW);
+
+      const reloaded = loadReview(storage, PROTO_DECK, LATER_SAME_DAY, key);
+      const cards = deckCards(reloaded.save, 'protoDeck');
+      expect(Object.prototype.hasOwnProperty.call(cards, id)).toBe(true);
+      expect(cards[id]).toEqual(rated);
+      expect(reloaded.queue.ids).not.toContain(id);
+      expect(reloaded.queue.ids).toContain('plain');
+      expect(({} as Record<string, unknown>).stability).toBeUndefined();
+      expect(Object.getPrototypeOf({})).toBe(Object.prototype);
+      expect(typeof ({} as { constructor: unknown }).constructor).toBe('function');
+    });
+  }
 });
