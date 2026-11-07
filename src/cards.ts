@@ -41,8 +41,9 @@ import {
   type GameSession,
   type SessionStep,
 } from './flashcards/game-session.js';
-import { backToStart, deckOptions, openDeckSelect, openImport, selectDeck } from './flashcards/menu-flow.js';
+import { backToStart, openDeckSelect, openImport, selectDeck } from './flashcards/menu-flow.js';
 import { mountImportPanel, type ImportPanelHandle } from './import-panel.js';
+import { menuLayout, type MenuPick } from './card-menu.js';
 import {
   answerTarget,
   createWave,
@@ -72,8 +73,8 @@ export class CardsSystem extends createSystem({
   // The XR session the menu was last placed for; a new session re-places it at the XR head.
   private placedFor: XRSession | undefined;
   private sessionSeen: XRSession | undefined;
-  // Menu orb -> deck id, so duplicate deck titles still start the deck that was picked.
-  private readonly menuDecks = new Map<Entity, string>();
+  // Menu orb -> pick, so duplicate deck titles still start the deck that was picked.
+  private readonly menuPicks = new Map<Entity, MenuPick>();
   private pips = 0;
   // Each reveal is one presentation; the counter makes its encounter id unique for the run-flow.
   private encounterSeq = 0;
@@ -148,18 +149,18 @@ export class CardsSystem extends createSystem({
     super.destroy();
   }
 
-  /** Start screen and replay menu: one orb per deck on the question panel. */
+  /** Renders the current menu screen (start, mastery or deck select) on the question panel. */
   private openMenu(heading: string): void {
-    this.session = updateMenu(this.session, (m) => openDeckSelect(backToStart({ ...m, decks: pageDecks })));
+    // Decks imported on the 2D page join the menu without changing which screen it shows.
+    this.session = updateMenu(this.session, (m) => ({ ...m, decks: pageDecks }));
     this.panel.clear();
     this.menuOpen = true;
     this.menuHeading = heading;
     this.placedFor = this.world.session;
-    const options = deckOptions(this.session.menu);
-    const titles = options.map((o) => o.title);
-    const orbs = this.panel.show(this.eye, this.readHead(), [heading, 'Pick a deck to start'], titles);
-    this.menuDecks.clear();
-    orbs.forEach((orb, i) => this.menuDecks.set(orb, options[i].id));
+    const { lines, picks } = menuLayout(this.session, heading);
+    const orbs = this.panel.show(this.eye, this.readHead(), lines, picks.map((p) => p.label));
+    this.menuPicks.clear();
+    orbs.forEach((orb, i) => this.menuPicks.set(orb, picks[i].pick));
   }
 
   // The startup menu is placed from the non-XR camera; once a session starts, re-open it at the
@@ -208,6 +209,7 @@ export class CardsSystem extends createSystem({
     this.clearEnemies();
     this.message?.dispose();
     this.message = showMessage(this.world, this.eye, this.readHead(), [text, ...masteryText(this.session)]);
+    this.session = updateMenu(this.session, (m) => openDeckSelect(backToStart({ ...m, decks: pageDecks })));
     this.openMenu('Play again?');
   }
 
@@ -251,8 +253,12 @@ export class CardsSystem extends createSystem({
     const label = this.panel.labelOf(orb);
     if (label === undefined) return;
     if (this.menuOpen) {
-      const deckId = this.menuDecks.get(orb);
-      if (deckId !== undefined) this.startRun(deckId);
+      const pick = this.menuPicks.get(orb);
+      if (pick?.kind === 'deck') this.startRun(pick.deckId);
+      else if (pick?.kind === 'nav') {
+        this.session = pick.press(this.session);
+        this.openMenu(this.menuHeading);
+      }
       return;
     }
     const targetId = this.wave.targetId;
