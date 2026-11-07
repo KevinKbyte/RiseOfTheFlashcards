@@ -11,12 +11,12 @@ Kev decisions 2026-10-28: ENGINE (Unreal, spike-gated; D1; 5.8 per Kev 10-30, A2
 Changes from v1 (finisher -> round 2 -> round 1) + sources re-checked: [ledgers](2026-10-28-vr-flashcard-game-ledgers.md) MV-1.
 
 ## Must-keep (Kev verbatim asks; never defer/cut/descope without Kev's explicit ask)
-M1 Enemies are flash cards; slash by hand (H-1; controller slash = optional stretch SX), then say the answer aloud; correct = damage.
+M1 Enemies are flash cards; slash by hand or controller (hands sufficient, controllers allowed; Amended 2026-11-07 Kev, H-2: was "controller slash = optional stretch SX", H-1), then say the answer aloud; correct = damage.
 M2 Bigger enemies = multi-card health pools.
 M3 Enemies attack; player dodges (lean/duck). **Descoped 2026-11-07 (Kev): too much head movement; strikes resolve without a dodge check.**
 M4 Ultimates unlocked after N correct answers.
 M5 Gaming track, New Experience division (G0a 2026-10-28: claim kept with D11 disclosure; Devpost division field final at S13).
-M6 Hands = sole required input, controllers optional stretch SX (H-1, supersedes Q12; rules.md:88,112,114); seated, 2 ft (design
+M6 Hands sufficient, controllers allowed (Amended 2026-11-07 Kev, H-2: was "Hands = sole required input, controllers optional stretch SX"; H-1, supersedes Q12; rules.md:88,112,114); seated, 2 ft (design
   limit <=30 cm head/hand radius satisfies both rules.md:122 radius and guidelines.md:47 diameter readings); judged on Quest 3/3S; >=60 fps.
 M7 Deadline Nov 18 12:00 PT; build live + unchanged to ~Dec 11.
 M8 Full-time VR from Nov 5; before Nov 4 only spikes.
@@ -25,7 +25,7 @@ M9 Speech recognition in headset (on-device only, D2; Web Speech API rejected pe
 M10 Silent mode (slash answer orbs) for bus-stop test + accessibility.
 M11 Deck input: bundled starter decks + companion paste page with pairing code.
 M12 Deterministic fuzzy answer matcher with aliases, always first; "no LLM grading" amended by Kev 2026-10-31 to hybrid D3a (ledgers C-1):
-  "both, live can be toggled in the settings". Slash kept, point-to-select rejected ("slash feels better"; M1 unchanged, never re-propose).
+  "both, live can be toggled in the settings". Slash kept, point-to-select rejected ("slash feels better"; M1 unchanged, never re-propose). H-2 keeps this: trigger select on an orb = accessibility fallback only, never primary.
 M13 Engine choice Unreal (spike-gated) vs Unity fallback evaluated (ADR 0001; Kev sign-off 2026-10-28; D1).
 M14 Spaced repetition (Best Reason to Come Back).
 M15 Purposeful passthrough: enemies emerge from real walls via MRUK.
@@ -188,10 +188,11 @@ D7 Dodge + interruptions. Dodge part **Descoped 2026-11-07 (Kev): too much head 
   lands; on the first resume all frozen attacks take one fresh shared baseline (1.5 s) and each replays its full telegraph once. A replay runs on
   through input loss and lands at its hit frame; a menu pause or recenter during a replay freezes it, re-takes the baseline, then resumes the
   remaining telegraph (no second replay). Input-loss pause: no hand tracked for >0.5 s -> "show your hands" prompt; resumes when a hand is
-  tracked (controller poses count only with SX enabled, H-1); never touches the mic or an open answer window. A system/menu pause during
+  tracked (controller poses count only with SX enabled, H-1; Amended 2026-11-07 Kev, H-2: controller poses count once S3b lands); never touches the mic or an open answer window. A system/menu pause during
   an open answer window closes the mic and discards the in-flight recognition: speech already started -> Voice wrong (D4 rating and orb
   trigger), no hit; no speech yet -> Didn't catch. Ultimate (charge >=5): two-palm push (both palms face forward and move forward >=X cm
-  in <0.3 s; X tuned in S7); controller mappings (A+X, one-controller A/X hold) **Superseded by** H-1, moved to SX. Armed = charged with
+  in <0.3 s; X tuned in S7); controller mappings (A+X, one-controller A/X hold) **Superseded by** H-1, moved to SX. Amended 2026-11-07 Kev (H-2): three inputs, any
+  one fires it: two-palm push, controller grip squeeze, or select the glowing ultimate orb with any input; ready-glow cue at full charge. Armed = charged with
   both palms facing forward; while armed, a slash event waits <=0.3 s and is dropped only if the push fires. Accessibility toggle: slower
   telegraphs + auto-dodge option.
 D8 MR only. Play-forward yaw = tracking-space forward, recomputed on every recenter. Enemies emerge from MRUK walls 1.2-3.5 m away
@@ -314,6 +315,7 @@ S3 Nov 6 slash + card enemy (wall emerge -> reveal at any distance, unrevealed h
   knockback to 2 m only if inside 2 m -> strike slot, D13) + cartoon enemy face (D13a) + answer window + damage + D17 cues + D18
   scenario. Pre-G1 IWSDK prototype of the same loop: D13a. EN-1 "reach line -> slash knockback" **Superseded by** EN-2.
   Real hand swing gesture at a distance: later slice (reveal by select works now).
+  S3b (Amended 2026-11-07 Kev, H-2; promoted from SX): one slash classifier fed by fingertip AND controller-tip swing; trigger select on an orb = accessibility fallback.
   EN-3: multi-enemy wave (maxActive 3) + choose target + correct-answer sound/haptic feedback (D13).
 S4 Nov 7 voice via IAnswerRecognizer + D4 outcomes (per-card fallback, 3 s timeout) + earcon + mic re-acquire on resume + D17 cue + D18 scenario.
 S5 Nov 8 silent orbs + toggle + D17 cue + D18 scenario.
@@ -321,10 +323,10 @@ S6a Nov 9 (half day, MemriPal finals) FSRS persistence (D5 save: card state, dai
   EditMode save tests + mastery screen.
 S6 Nov 10 health pools, telegraphed attacks (in-view gate), dodge (descoped, D7), input-loss pause + interruption replay (D7), shield pips + run
   end (D14), accessibility toggle + D17 cue + D18 scenario.
-S7 Nov 11 ultimates (charge >=5; two-palm push, D7; knockback, D4; 1 type, Q9) + experimental second,
+S7 Nov 11 ultimates (charge >=5; two-palm push, grip squeeze or ultimate orb + ready-glow, D7/H-2; knockback, D4; 1 type, Q9) + experimental second,
   mastery-unlocked ultimate type behind its D15 toggle + D17 cue + D18 scenario.
 SX OPTIONAL STRETCH, controllers (H-1; no date): only after hands-only S1-S7 pass their CRITERIA; never blocks S8-S13; cut first.
-  Controller slash (controller-tip), A+X ultimate, one-controller A/X hold (SIG-1), controller pose in the input-loss pause, controller
+  Controller slash (controller-tip), A+X ultimate, one-controller A/X hold (SIG-1) **Superseded by** H-2 (S3b, S7 grip squeeze), controller pose in the input-loss pause, controller
   ghost + glow cues (D17), Touch / Touch Plus profiles (D20); detail + criteria verbatim in ledgers H-1.
 S8 Nov 12 MR walls + arc + fallback + test matrix. CHECKPOINT Nov 12 evening: D18 T2 run; apply constraint ladder if any of S1-S8 open.
 S9 Nov 13 first-five-minutes tutorial (incl. per-player strike-slot calibration, D13), pause/resume (voice re-arm), accessibility pass, D5
@@ -399,7 +401,7 @@ S3 20/20 slashes register with hands, 2/2 hands (slash = fingertip speed >=1.0 m
   correct during the telegraph -> panel shattered, 0 hits 3/3; 2-card enemy -> knockback per card 2/2; panel never occludes the enemy 5/5.
   EN-3: 3 enemies advance at once, each from its own spawn 3/3; select a 2nd while one is revealed -> ignored 3/3; non-targets keep
   advancing during the answer window and Grading 3/3; correct -> active refilled to maxActive 3/3; deck empty + 0 active -> deck
-  cleared 1/1; every correct answer -> visible + sound + haptic (where available) 5/5.
+  cleared 1/1; every correct answer -> visible + sound + haptic (where available) 5/5. S3b CRITERIA (controller slash, orb trigger fallback): ledgers H-2.
   EN-1 "5/5 enemies travel wall -> reach line and no slash registers before arrival", "slash -> knockback to ~2 m + panel shown 5/5",
   "creep to strike slot >= 8 s 5/5" **Superseded by** EN-2.
 S4 0 mic opens outside window; 3/3 forced hard STT errors -> orbs <1 s AND next card's voice answer works 3/3; empty transcript -> 0 damage 3/3; 2 non-correct attempts -> orbs 3/3; 6 s silence -> didn't catch 3/3; Wi-Fi off: voice answers still graded by the D3 matcher (D3a live grading -> miss, GRADE-003) 3/3 and the run completes 1/1; silent mode not auto-latched by any error except mic denial 1/1.
@@ -419,7 +421,7 @@ S7 ultimate at exactly 5; 6th correct while charged -> ultimate still fires 1/1;
   forward, one-hand slash -> registers 3/3; uncharged two-palm push -> 0 3/3; 0 ultimate triggers in 60 s of charged slashing (hands) 1/1;
   knockback: strike-slot enemy pushed back toward its wall spawn, its in-flight attack cancelled, 0 cards removed, hit cap + attempt/orb
   counters held, open mic window untouched 3/3; charge 0 after firing 1/1; D15 toggle OFF -> second ultimate type never offered 1/1; judge
-  test (rules.md:114): full run, intro to mastery screen, with no controller ever paired 1/1. SX CRITERIA: ledgers H-1.
+  test (rules.md:114): full run, intro to mastery screen, with no controller ever paired 1/1. SX CRITERIA: ledgers H-1. Grip squeeze, ultimate orb, ready-glow CRITERIA: ledgers H-2.
 D18 per slice S3-S7: >=1 new tagged scenario 5/5; T1 >=1 screenshot per scenario; affected set for the slice's whole diff (base =
   slice start commit) green at slice close 5/5; per-commit runs affected-only; scenario count never decreases.
 D18 T2 (S8 checkpoint, S11): scenarios affected since the last T2 sha green + OVR Metrics fps >= M6 target (60) 1/1 each.
@@ -480,6 +482,7 @@ Resolved 2026-10-28 (Kev): ENGINE, Q1-Q12, D15, D19, G0a, G0b in
   [ledgers Resolved decisions](2026-10-28-vr-flashcard-game-ledgers.md#resolved-decisions).
 - Resolved 2026-10-30 (Kev): cloud Wit default -> on-device only (D2, ledgers V-1).
 - Resolved 2026-10-31 (Kev): hands = sole required input, controllers = optional stretch SX; Q12 **Superseded by** H-1 (ledgers H-1).
+  Amended 2026-11-07 Kev (ledgers H-2): hands sufficient, controllers allowed; controller slash -> S3b; ultimate = palm push, grip, or orb.
 - Resolved 2026-10-31 (Kev): encounter = slash at reach line, pop-out panel, creep to strike slot (D13, D13a; ledgers EN-1).
   "slash at reach line" **Superseded by** EN-2: reveal at any distance, fixed-speed creep, cartoon enemy faces (D13, D13a).
 - Resolved 2026-10-31 (Kev, EN-2): "after a miss the enemy is out of reach, so the re-slash point is undefined" -> re-slash valid at any

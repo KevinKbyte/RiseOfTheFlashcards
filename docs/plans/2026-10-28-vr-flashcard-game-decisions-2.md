@@ -33,7 +33,7 @@ D17 Onboarding cues, show don't tell (Kev, 2026-10-28; workshop notes show-dont-
   mic-live earcon + pulsing mic glyph on the D13a panel. Silent-mode orbs (M10): all pulse equally on idle, never singling out the correct
   one. Where: wall-crack light at each spawn (M15, D13). Dodge (M3, D7): floor lean-direction marker on the first telegraph of the
   first run; retired after the first dodge. Ultimate (M4, D7 input): palms glow when charged; ghost two-palm-push demo on first charge
-  only (controller glow/ghost = SX). Text only for card prompt/answer/numbers, always paired with a glow. Built per slice:
+  only (controller glow/ghost = SX); Amended 2026-11-07 Kev (H-2): ready-glow on the ultimate orb when charge is full, cleared on firing. Text only for card prompt/answer/numbers, always paired with a glow. Built per slice:
   S3 slash/glow/stack, S4 mic glyph, S5 orbs, S6 dodge marker, S7 ultimate. Cuttable: falls back to the constraint ladder's "tutorial as 3
   prompts" (Must-keep). Open: diegetic wrist-turn UI (pop-up in the hand on a wrist turn) for hints/mastery (Kev's note).
 D18 Agent validation loop + reusable E2E suite (Kev, 2026-10-28; M22, M23): the agent plays, sees and fixes the game unattended; Kev

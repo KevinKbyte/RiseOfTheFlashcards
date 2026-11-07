@@ -117,3 +117,26 @@ below live in [2026-10-28-vr-flashcard-game.md](2026-10-28-vr-flashcard-game.md)
   "Multi-card enemies (M2) unchanged."; CARDS-010 "Correct answer defeats the target; the deck refills active up to maxActive." and
   "Multi-card enemies unchanged."; D13a "hides the engaged enemy's approach"; ENC-003 "never occludes the engaged enemy"; D17 "Which
   enemy: rim glow only on the engaged enemy (D13); wall-queued enemies unlit."; D19 "Horde = the D13 wall queue."
+
+## Slash + ultimate input decision 2026-11-07 (H-2)
+- H-2 Amended 2026-11-07 Kev. Slash: hands stay PRIMARY and sufficient (hackathon wants hands; controllers optional) -> "hands
+  sufficient, controllers allowed". One slash classifier fed by fingertip AND controller-tip swing (same speed/collider rule);
+  controller slash promoted from stretch SX to S3 sub-slice S3b; trigger select on an orb kept as an accessibility fallback only.
+  M12 not reversed: point-to-select is never the primary input, only that fallback. Ultimate: three inputs, any one fires it:
+  two-palm push (hands, D7), controller grip squeeze, or a glowing ultimate orb selectable by any input (slash, pinch, trigger);
+  ready-glow cue when charge is full (>=5). H-1 rules.md:88/112/114 still hold: the no-controller judge test (S7) stays.
+  Plan M1, M6, M12, D7, S3/S3b, S7, SX, S3/S7 CRITERIA, Open questions; decisions-2 D17 ultimate cue. Spec: no change (ENC rules
+  are input-agnostic).
+  Consequences (agent, Kev to confirm): with S3b, controller poses count in the D7 input-loss pause (was SX-only); S3b and the grip
+  squeeze bind via the D20 classic Touch profile (Touch Plus on 3S stays UNVERIFIED, SX).
+  Superseded wording (verbatim): M1 "(H-1; controller slash = optional stretch SX)"; M6 "Hands = sole required input, controllers
+  optional stretch SX"; D7 "controller mappings (A+X, one-controller A/X hold) **Superseded by** H-1, moved to SX" (A+X and A/X
+  hold now superseded by the grip squeeze); D7 "(controller poses count only with SX enabled, H-1)"; SX "Controller slash
+  (controller-tip), A+X ultimate, one-controller A/X hold (SIG-1)"; H-1 SX table rows "S7 slice", "S7 CRITERIA" (A+X / A/X hold
+  parts) and "S3 CRITERIA" (controller part now S3b).
+  CRITERIA (S3b): 20/20 slashes register with controllers, 2/2 controllers (controller-tip speed >=1.0 m/s through the card
+  collider, same classifier as hands); 0 false triggers in 60 s idle holding controllers; trigger select on an orb answers it 3/3;
+  S3 hands-only CRITERIA still pass with S3b on 1/1.
+  CRITERIA (S7 add): grip squeeze charged -> ultimate 3/3, uncharged -> 0 3/3; ultimate orb selected (hand slash, pinch,
+  controller trigger) charged -> ultimate 3/3 each, uncharged orb select -> 0 3/3; ready-glow shown at charge 5 and cleared on
+  firing 3/3; 0 ultimate triggers in 60 s of charged slashing with controllers 1/1.

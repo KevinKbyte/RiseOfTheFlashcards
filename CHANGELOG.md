@@ -9,6 +9,9 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 - Plan/spec (Kev 2026-11-07): dodge descoped (M3, D7, ENC-005); strikes always hit unless the card is answered;
   D7 upward-dodge question closed.
+- Plan (Kev 2026-11-07, ledgers H-2): hands sufficient, controllers allowed (M1, M6); controller slash promoted from SX to S3b
+  (one classifier, fingertip + controller tip); orb trigger select = accessibility fallback (M12 kept); ultimate = two-palm push,
+  grip squeeze, or glowing ultimate orb, with a ready-glow cue (D7, S7, D17).
 
 ### Added
 
