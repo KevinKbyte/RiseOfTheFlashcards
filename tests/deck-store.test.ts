@@ -284,3 +284,39 @@ describe('deck-store prototype-pollution safety', () => {
     expect((read.decks[0] as unknown as Record<string, unknown>).polluted).toBeUndefined();
   });
 });
+
+// Requirement: a stored payload in which ANY deck fails parseDeck is not fully readable, so its
+// raw text is copied to DECK_STORE_BACKUP_KEY before the next writeDecks replaces the live key
+// (the dropped deck is never silently erased). Same rules as an unreadable payload: if the backup
+// already holds an earlier payload the write is refused and the live text is left as-is. The
+// valid decks in that payload still load.
+// Covers: M11, A10, S2
+describe('deck-store backup of payloads with a dropped deck', () => {
+  const partial = () => envelope([deck('good'), { id: 'bad', title: 'Bad', cards: [] }]);
+
+  it('still loads the valid decks from a payload with an invalid deck', () => {
+    expect(readDecks(mem({ [DECK_STORE_KEY]: partial() })).decks.map((d) => d.id)).toEqual(['good']);
+  });
+
+  it('copies the raw payload to the backup key before the next write overwrites it', () => {
+    const raw = partial();
+    const s = mem({ [DECK_STORE_KEY]: raw });
+    expect(writeDecks([deck('good')], s)).toEqual({ ok: true });
+    expect(s.data.get(DECK_STORE_BACKUP_KEY)).toBe(raw);
+    expect(readDecks(s).decks.map((d) => d.id)).toEqual(['good']);
+  });
+
+  it('refuses the write when the backup already holds an earlier payload', () => {
+    const raw = partial();
+    const s = mem({ [DECK_STORE_KEY]: raw, [DECK_STORE_BACKUP_KEY]: '{first corrupt' });
+    expect(writeDecks([deck('good')], s).ok).toBe(false);
+    expect(s.data.get(DECK_STORE_KEY)).toBe(raw);
+    expect(s.data.get(DECK_STORE_BACKUP_KEY)).toBe('{first corrupt');
+  });
+
+  it('a payload whose decks all validate is overwritten without a backup', () => {
+    const s = mem({ [DECK_STORE_KEY]: envelope([deck('a'), deck('b')]) });
+    expect(writeDecks([deck('a')], s).ok).toBe(true);
+    expect(s.data.has(DECK_STORE_BACKUP_KEY)).toBe(false);
+  });
+});
