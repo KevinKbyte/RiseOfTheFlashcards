@@ -88,3 +88,61 @@ describe('advanceInputClock real frame time', () => {
     expect(runHand(advanceInputClock, frames)).toEqual(['a']);
   });
 });
+
+// Requirement: each frame splits ONE raw frame delta into two clocks (M1, S3): a capped game dt
+// (<= MAX_GAME_DT = 0.1 s) that drives creep, telegraph and flash, and an UNCAPPED input clock that
+// drives slash and palm-push timing. cards.ts calls stepFrameClocks once per frame and hands
+// `dt`/`game` to the game consumers and `input` to CardSlash.step and CardUltimate.collect, so a
+// hitch longer than 0.1 s slows the game but never shrinks the time the input classifiers see.
+//
+// Contract added to src/flashcards/input-clock.ts (pure):
+//   export const MAX_GAME_DT = 0.1;
+//   export interface FrameClocks { game: number; input: number }
+//   export function stepFrameClocks(prev: FrameClocks, deltaSeconds: number): FrameClocks & { dt: number };
+//     dt = delta clamped to [0, MAX_GAME_DT] (non-finite -> 0); game = prev.game + dt;
+//     input = advanceInputClock(prev.input, delta). Never mutates prev.
+interface FrameClocks {
+  game: number;
+  input: number;
+}
+function stepFrameClocks(prev: FrameClocks, delta: number): FrameClocks & { dt: number } {
+  const fn = (inputClock as Record<string, unknown>).stepFrameClocks;
+  if (typeof fn !== 'function') throw new Error('input-clock does not export stepFrameClocks');
+  return (fn as (p: FrameClocks, d: number) => FrameClocks & { dt: number })(prev, delta);
+}
+
+// Covers: M1, S3
+describe('stepFrameClocks capped game dt vs uncapped input time', () => {
+  it('exports the game cap as 0.1 s', () => {
+    expect((inputClock as Record<string, unknown>).MAX_GAME_DT).toBe(GAME_MAX_DT);
+  });
+
+  it('a 0.25 s hitch gives a capped game dt but the true input time', () => {
+    const next = stepFrameClocks({ game: 5, input: 7 }, HITCH);
+    expect(next.dt).toBeCloseTo(GAME_MAX_DT, 12);
+    expect(next.game).toBeCloseTo(5 + GAME_MAX_DT, 12);
+    expect(next.input).toBeCloseTo(7 + HITCH, 12);
+  });
+
+  it('an ordinary frame advances both clocks by the same delta', () => {
+    const next = stepFrameClocks({ game: 1, input: 1 }, DT);
+    expect(next.dt).toBeCloseTo(DT, 12);
+    expect(next.game).toBeCloseTo(1 + DT, 12);
+    expect(next.input).toBeCloseTo(1 + DT, 12);
+  });
+
+  it('a negative or non-finite delta advances neither clock and gives dt 0', () => {
+    for (const d of [-0.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(stepFrameClocks({ game: 2, input: 3 }, d)).toEqual({ game: 2, input: 3, dt: 0 });
+    }
+  });
+
+  it('never mutates the previous clocks and keeps them diverged across hitches', () => {
+    const start = { game: 0, input: 0 };
+    let c: FrameClocks = start;
+    for (const d of [DT, HITCH, DT, 0.5]) c = stepFrameClocks(c, d);
+    expect(start).toEqual({ game: 0, input: 0 });
+    expect(c.game).toBeCloseTo(2 * DT + 2 * GAME_MAX_DT, 12);
+    expect(c.input).toBeCloseTo(2 * DT + HITCH + 0.5, 12);
+  });
+});
