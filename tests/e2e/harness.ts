@@ -24,9 +24,27 @@ export interface GameState {
   endTexts: string[];
   cam: Vec3;
   camForward: Vec3;
+  /** Run ultimate charge and correct count; null outside a run. */
+  charge: number | null;
+  correct: number | null;
+  /** Centre of the ultimate orb while it shows, else null. */
+  ultimateOrb: Vec3 | null;
+  /** Whether the shown ultimate orb is lit (bright ready glow) rather than dim; null while no orb shows. */
+  ultimateGlow: boolean | null;
+  /** Revealed enemy's distance from the player (metres), and the wave's spawn distance. */
+  targetDistance: number | null;
+  spawnDistance: number;
+  /** Ultimate shockwaves played so far (knockback feedback). */
+  pulses: number;
 }
 
-export type Target = { kind: 'orb'; label: string } | { kind: 'enemy'; id: string };
+export type Target = { kind: 'orb'; label: string } | { kind: 'enemy'; id: string } | { kind: 'ultimate' };
+
+/** One sweep step: the controller tip (grip + 0.12 m along grip -Z) and the system clock (s). */
+export interface TipSample {
+  tip: Vec3;
+  clock: number;
+}
 
 // Page-side helpers, installed before any page script runs so they survive reloads. They only read
 // the world through window.FRAMEWORK_MCP_RUNTIME and drive input through window.IWER_DEVICE.
@@ -51,12 +69,26 @@ const PAGE_HELPERS = `
     if (n === 0) { obj.getWorldPosition(acc); return H.arr(acc); }
     return H.arr(acc.multiplyScalar(1 / n));
   };
+  // Drawn lightness (HSL, 0..1) of the first coloured mesh under obj: what the player sees as dim vs lit.
+  H.lightness = (obj) => {
+    let l = null;
+    obj.traverse((o) => {
+      if (l !== null || !o.isMesh || !o.material || !o.material.color) return;
+      l = o.material.color.getHSL({ h: 0, s: 0, l: 0 }).l;
+    });
+    return l;
+  };
+  // Dim orb is ~0.27 lightness, the ready glow ~0.53 and brighter while it pulses.
+  H.GLOW_LIGHTNESS = 0.4;
   H.hookEnd = () => {
     const s = H.sys();
     if (!s || s.__e2eHooked) return;
     s.__e2eHooked = true; s.__e2eEndTexts = [];
     const orig = s.endRun;
     s.endRun = function (text) { this.__e2eEndTexts.push(text); return orig.call(this, text); };
+    s.__e2ePulses = 0;
+    const u = s.ultimate; const origPulse = u.pulse;
+    u.pulse = function (at) { s.__e2ePulses++; return origPulse.call(this, at); };
   };
   H.state = () => {
     const w = H.world(); const s = H.sys(); const V = H.V();
@@ -69,6 +101,8 @@ const PAGE_HELPERS = `
     const cardId = targetEnemy && targetEnemy.pool.cards.length > 0 ? targetEnemy.pool.cards[0] : null;
     const card = cardId === null ? undefined : s.cards.get(cardId);
     const run = s.session.run;
+    const orbObj = s.ultimate.orb && s.ultimate.orb.object3D;
+    const orbL = orbObj ? H.lightness(orbObj) : null;
     return {
       session: !!w.session,
       menuOpen: s.menuOpen,
@@ -84,10 +118,21 @@ const PAGE_HELPERS = `
       endTexts: s.__e2eEndTexts.slice(),
       cam: H.arr(cam),
       camForward: H.arr(fwd),
+      charge: run && run.run ? run.run.charge : null,
+      correct: run && run.run ? run.run.correct : null,
+      ultimateOrb: orbObj ? H.center(orbObj) : null,
+      ultimateGlow: orbL === null ? null : orbL > H.GLOW_LIGHTNESS,
+      targetDistance: targetEnemy ? targetEnemy.enc.distance : null,
+      spawnDistance: s.wave.cfg.spawnDistance,
+      pulses: s.__e2ePulses,
     };
   };
   H.targetPos = (t) => {
     const s = H.sys();
+    if (t.kind === 'ultimate') {
+      const o = s.ultimate.orb;
+      return o && o.object3D ? H.center(o.object3D) : null;
+    }
     if (t.kind === 'orb') {
       for (const [e, label] of s.panel.orbLabels) if (label === t.label) return H.center(e.object3D);
       return null;
@@ -116,6 +161,41 @@ const PAGE_HELPERS = `
     const o = new (H.V())(); rs.getWorldPosition(o);
     const q = rs.getWorldQuaternion(new (H.Q())());
     return { rayPos: H.arr(o), rayQuat: [q.x, q.y, q.z, q.w], ctrlPos: H.arr(c.position), ctrlQuat: [c.quaternion.x, c.quaternion.y, c.quaternion.z, c.quaternion.w] };
+  };
+  // Answer orb pivot (the slash collider centre; H.center would include the label mesh).
+  H.orbPivot = (label) => {
+    for (const [e, l] of H.sys().panel.orbLabels) {
+      if (l !== label || !e.object3D) continue;
+      const v = new (H.V())(); e.object3D.getWorldPosition(v); return H.arr(v);
+    }
+    return null;
+  };
+  // Controller slash tip in world space, as src/card-slash.ts samples it: grip pose + 0.12 m along grip -Z.
+  H.tip = () => {
+    const g = H.world().player.gripSpaces.right; const V = H.V();
+    const p = new V(); g.getWorldPosition(p);
+    const q = g.getWorldQuaternion(new (H.Q())());
+    return H.arr(p.add(new V(0, 0, -0.12).applyQuaternion(q)));
+  };
+  // Moves the right controller so its tip visits each world point, one IWER set_transform per XR
+  // frame at a fixed orientation; returns the tip and system clock sampled after each step.
+  H.sweepTip = async (points) => {
+    const dev = window.IWER_DEVICE; const c = dev.controllers.right; const V = H.V();
+    const orientation = { x: 0, y: 0, z: 0, w: 1 };
+    await dev.remote.dispatch('set_transform', { device: 'controller-right', orientation });
+    await H.frames(3);
+    const origin = H.world().playerEntity.object3D.matrixWorld;
+    const inv = origin.clone().invert();
+    const lifted = new V(c.position.x, c.position.y, c.position.z).applyMatrix4(origin);
+    const delta = new V(...H.tip()).sub(lifted);
+    const trace = [];
+    for (const p of points) {
+      const r = new V(p[0], p[1], p[2]).sub(delta).applyMatrix4(inv);
+      await dev.remote.dispatch('set_transform', { device: 'controller-right', position: { x: r.x, y: r.y, z: r.z }, orientation });
+      await H.frames(1);
+      trace.push({ tip: H.tip(), clock: H.sys().clock });
+    }
+    return trace;
   };
   H.trigger = (v) => window.IWER_DEVICE.remote.dispatch('set_select_value', { device: 'controller-right', value: v });
   // Resolves after n XR frames (the session drives rendering once XR is entered).
@@ -256,6 +336,21 @@ export class Game {
     await this.frames(3);
     await page.evaluate(() => (window as any).__e2e.trigger(0));
     await this.frames(3);
+  }
+
+  /** World pivot of the answer orb labelled `label` (its slash collider centre), or null. */
+  orbPivot(label: string): Promise<Vec3 | null> {
+    return this.page.evaluate((l) => (window as any).__e2e.orbPivot(l), label);
+  }
+
+  /** Current controller slash tip in world space. */
+  tip(): Promise<Vec3> {
+    return this.page.evaluate(() => (window as any).__e2e.tip());
+  }
+
+  /** Real input: sweeps the right controller tip through `points`, one point per XR frame. */
+  sweepTip(points: Vec3[]): Promise<TipSample[]> {
+    return this.page.evaluate((pts) => (window as any).__e2e.sweepTip(pts), points);
   }
 
   async screenshot(path: string): Promise<void> {

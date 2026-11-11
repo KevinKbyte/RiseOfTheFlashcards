@@ -10,14 +10,13 @@ import { mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, inject, it } from 'vitest';
-import { forwardness, Game, type GameState } from './harness.js';
+import { forwardness, Game } from './harness.js';
+import { answerRight, answerWrong, DECK, pickDeck, pressStart, revealNext, START } from './flow.js';
 
 const SAVE_KEY = 'flashcards.fsrs.save';
-const DECK = 'World Capitals';
 const DECK_ID = 'world-capitals';
 const RUN_CARDS = 12;
 const START_PIPS = 5;
-const START = 'Start';
 const LOSE_TEXT = 'Shields down. Try again.';
 const WIN_TEXTS = ['Day cleared! Well done.', 'Deck conquered! Every card mastered.'];
 const SHOTS = process.env.E2E_SCREENSHOT_DIR ?? join(tmpdir(), 'flashcards-e2e');
@@ -35,44 +34,6 @@ async function open(): Promise<Game> {
   await game.enterXR();
   await pressStart(game);
   return game;
-}
-
-/** From the start screen, presses the 'Start' orb; resolves once the deck orbs show. */
-async function pressStart(g: Game): Promise<GameState> {
-  await g.until((s) => s.menuOpen && s.orbs.some((o) => o.label === START), 'start screen');
-  const deckShown = (s: GameState) => s.menuOpen && s.orbs.some((o) => o.label === DECK);
-  await g.aimAndSelect({ kind: 'orb', label: START }, deckShown);
-  return g.until(deckShown, 'deck menu');
-}
-
-async function pickDeck(g: Game, title = DECK): Promise<GameState> {
-  await g.aimAndSelect({ kind: 'orb', label: title }, (s) => !s.menuOpen);
-  return g.until((s) => !s.menuOpen && s.waveCards.length > 0 && s.active.some((e) => e.pos), 'wave spawned');
-}
-
-/** Selects (slashes) the first spawned enemy; resolves once its question panel shows orbs. */
-async function revealNext(g: Game): Promise<GameState> {
-  const s = await g.until((x) => x.targetId !== null || x.active.some((e) => e.pos), 'an enemy to reveal');
-  if (s.targetId !== null && s.orbs.length > 0) return s;
-  const enemy = s.active.find((e) => e.pos)!;
-  await g.aimAndSelect({ kind: 'enemy', id: enemy.id }, (x) => x.targetId !== null);
-  return g.until((x) => x.targetId === enemy.id && x.orbs.length > 0 && x.answer !== null, `card ${enemy.id} revealed`);
-}
-
-/** Answers the current card; cleared = the card left (enemy peeled to its next card or gone) or the run ended. */
-async function answerRight(g: Game, s: GameState): Promise<GameState> {
-  const card = s.cardId;
-  const cleared = (x: GameState) => x.cardId !== card || x.message;
-  await g.aimAndSelect({ kind: 'orb', label: s.answer! }, cleared);
-  return g.until(cleared, `card ${card} cleared`);
-}
-
-async function answerWrong(g: Game, s: GameState): Promise<{ label: string; after: GameState }> {
-  const wrong = s.orbs.find((o) => o.label !== s.answer)!;
-  const handled = (x: GameState) => x.pips < s.pips || x.message || !x.orbs.some((o) => o.label === wrong.label);
-  await g.aimAndSelect({ kind: 'orb', label: wrong.label }, handled);
-  const after = await g.until(handled, `wrong orb ${wrong.label} handled`);
-  return { label: wrong.label, after };
 }
 
 function readSave(g: Game): Promise<string | null> {
