@@ -24,6 +24,7 @@ import {
   type UltimateRequest,
 } from './flashcards/ultimate-input.js';
 import type { Vec3 } from './flashcards/spawn.js';
+import { orbPosition, shouldPlaceOrb, type OrbView } from './flashcards/ultimate-orb-place.js';
 
 type Hand = 'left' | 'right';
 
@@ -36,8 +37,6 @@ const SQUEEZE_BUTTON = 1;
 // Keep a little more than the classifier window so its oldest in-window sample is always present.
 const HISTORY_S = PALM_PUSH_WINDOW_S * 2;
 
-// Orb offset in the head-yaw frame: right of and above the answer orbs, inside seated reach.
-const ORB_OFFSET = { x: 0.35, y: -0.2, z: -0.45 };
 const ORB_RADIUS = 0.06;
 const ORB_DIM = 0x78350f;
 const ORB_GLOW = 0xfacc15;
@@ -53,6 +52,8 @@ export class UltimateInput {
   private orbMaterial: MeshBasicMaterial | undefined;
   private wave: { entity: Entity; material: MeshBasicMaterial; geometry: SphereGeometry; age: number } | undefined;
   private orbGeometry: SphereGeometry | undefined;
+  // Last frame's orb view: placement happens only on its transitions, never every frame.
+  private prevView: OrbView = { visible: false, glowing: false };
   private readonly q = new Quaternion();
   private readonly v = new Vector3();
 
@@ -93,16 +94,22 @@ export class UltimateInput {
     return requests;
   }
 
-  /** Shows the orb while `view.visible` (placed at the head when it appears) and pulses it while glowing. */
-  syncOrb(view: { visible: boolean; glowing: boolean }, eye: Vector3, headYaw: number, clock: number): void {
+  /** Shows the orb while `view.visible`, re-placing it at the head when it appears or starts glowing. */
+  syncOrb(view: OrbView, eye: Vector3, headYaw: number, clock: number): void {
+    const prev = this.prevView;
+    this.prevView = { visible: view.visible, glowing: view.glowing };
     if (!view.visible) {
       this.disposeOrb();
       return;
     }
-    if (this.orb === undefined) this.createOrb(eye, Number.isFinite(headYaw) ? headYaw : 0);
+    if (this.orb === undefined) this.createOrb();
     const obj = this.orb?.object3D;
     const material = this.orbMaterial;
     if (obj === undefined || material === undefined) return;
+    if (shouldPlaceOrb(prev, view)) {
+      const p = orbPosition(eye, headYaw);
+      obj.position.set(p.x, p.y, p.z);
+    }
     const pulse = view.glowing ? 0.5 + 0.5 * Math.sin(clock * GLOW_RATE) : 0;
     material.color.setHex(view.glowing ? ORB_GLOW : ORB_DIM);
     material.color.offsetHSL(0, 0, 0.15 * pulse);
@@ -165,14 +172,10 @@ export class UltimateInput {
     return len > 1e-6 ? { x: this.v.x / len, y: 0, z: this.v.z / len } : null;
   }
 
-  private createOrb(eye: Vector3, yaw: number): void {
-    const { x, y, z } = ORB_OFFSET;
-    const c = Math.cos(yaw);
-    const s = Math.sin(yaw);
+  private createOrb(): void {
     this.orbMaterial = new MeshBasicMaterial({ color: ORB_GLOW });
     this.orbGeometry = new SphereGeometry(ORB_RADIUS, 24, 16);
     const sphere = new Mesh(this.orbGeometry, this.orbMaterial);
-    sphere.position.set(eye.x + x * c + z * s, eye.y + y, eye.z - x * s + z * c);
     this.orb = this.world.createTransformEntity(sphere);
     this.orb.addComponent(RayInteractable);
   }

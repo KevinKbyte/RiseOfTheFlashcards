@@ -29,7 +29,7 @@ import { QuestionPanel, showMessage } from './card-question-panel.js';
 import { browserSession, shuffled } from './card-session.js';
 import { CardSlash } from './card-slash.js';
 import { UltimateInput } from './card-ultimate.js';
-import { advanceInputClock } from './flashcards/input-clock.js';
+import { stepFrameClocks, type FrameClocks } from './flashcards/input-clock.js';
 import { mergeOrbPick, type OrbPick } from './flashcards/orb-pick.js';
 import { resolveUltimate, ultimateOrb } from './flashcards/ultimate-input.js';
 import { WallTracker } from './card-wall-tracker.js';
@@ -60,8 +60,6 @@ import {
   type Wave,
 } from './flashcards/wave.js';
 
-const MAX_DT = 0.1;
-
 // Decks imported on the 2D page panel; every VR deck menu opening reads them from here.
 // Stored decks load here at startup; panel changes go through updateMenu, which persists them.
 let pageSession = browserSession();
@@ -91,9 +89,8 @@ export class CardsSystem extends createSystem({
   private panel!: QuestionPanel;
   private readonly walls = new WallTracker();
   private message: Entity | undefined;
-  private clock = 0;
-  // Slash and palm-push timing need real elapsed time; `clock` is capped at MAX_DT per frame.
-  private inputClock = 0;
+  // `game` is capped per frame (creep, telegraph, flash); `input` is real elapsed time (slash, palm push).
+  private clocks: FrameClocks = { game: 0, input: 0 };
   private readonly eye = new Vector3();
   private readonly headQuat = new Quaternion();
   private readonly headEuler = new Euler(0, 0, 0, 'YXZ');
@@ -130,9 +127,8 @@ export class CardsSystem extends createSystem({
   // tickWave() is pure and returns a fresh wave each frame: a tiny allocation accepted for the
   // prototype in exchange for a fully unit-tested wave loop.
   update(delta: number): void {
-    const dt = Number.isFinite(delta) ? Math.min(Math.max(delta, 0), MAX_DT) : 0;
-    this.clock += dt;
-    this.inputClock = advanceInputClock(this.inputClock, delta);
+    const { dt, ...clocks } = stepFrameClocks(this.clocks, delta);
+    this.clocks = clocks;
     this.walls.refresh(this.queries.planes.entities);
     this.collectSlash();
     this.applyReveal();
@@ -160,7 +156,7 @@ export class CardsSystem extends createSystem({
       }
     } else this.panel.tickFlash(dt, () => this.panelLines());
     this.enemies.spawnMissing(this.wave, this.walls.walls, this.eye, () => this.readHead());
-    this.enemies.update(this.wave, dt, this.clock);
+    this.enemies.update(this.wave, dt, this.clocks.game);
     this.updateAnchor();
   }
 
@@ -266,7 +262,7 @@ export class CardsSystem extends createSystem({
   // target count once. Enemies are slash targets only while none is revealed.
   private collectSlash(): void {
     const enemyIds = this.wave.targetId === null ? this.wave.active.map((e) => e.id) : [];
-    const hits = this.slash.step(this.inputClock, this.panel.orbs(), enemyIds, (id, out) =>
+    const hits = this.slash.step(this.clocks.input,this.panel.orbs(), enemyIds, (id, out) =>
       this.enemies.worldPosition(id, out),
     );
     for (const hit of hits) {
@@ -356,7 +352,7 @@ export class CardsSystem extends createSystem({
   private applyUltimate(dt: number): void {
     const orbSelected = this.pendingUltimateOrb;
     this.pendingUltimateOrb = false;
-    const requests = this.ultimate.collect(this.world.xrFrame, this.world.xrReferenceSpace, this.inputClock, orbSelected);
+    const requests = this.ultimate.collect(this.world.xrFrame, this.world.xrReferenceSpace, this.clocks.input, orbSelected);
     const targetId = this.wave.targetId;
     const r = resolveUltimate(this.session, this.wave, requests, { spawnDistance: this.wave.cfg.spawnDistance });
     this.wave = r.wave;
@@ -365,7 +361,7 @@ export class CardsSystem extends createSystem({
       if (!this.enemies.worldPosition(targetId, this.fxAt)) this.fxAt.copy(this.eye);
       this.ultimate.pulse(this.fxAt);
     }
-    this.ultimate.syncOrb(ultimateOrb(this.session.run?.run ?? null), this.eye, this.readHead(), this.clock);
+    this.ultimate.syncOrb(ultimateOrb(this.session.run?.run ?? null), this.eye, this.readHead(), this.clocks.game);
     this.ultimate.update(dt);
   }
 
