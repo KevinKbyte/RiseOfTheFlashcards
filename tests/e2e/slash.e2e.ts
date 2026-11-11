@@ -37,7 +37,7 @@ function segDist(a: Vec3, b: Vec3, c: Vec3): number {
   return Math.hypot(f[0] - t * d[0], f[1] - t * d[1], f[2] - t * d[2]);
 }
 
-/** Tip speed (m/s, system clock) of each consecutive trace segment that passes through the orb. */
+/** Tip speed (m/s, slash input clock) of each consecutive trace segment that passes through the orb. */
 function crossingSpeeds(trace: TipSample[], orb: Vec3): number[] {
   const out: number[] = [];
   for (let i = 1; i < trace.length; i++) {
@@ -73,7 +73,8 @@ describe('controller tip slash on the emulated Quest 3 (IWER set_transform input
     const shown = await revealNext(g);
     const orb = (await g.orbPivot(shown.answer!))!;
     expect(orb, `pivot of the correct orb ${shown.answer}`).not.toBeNull();
-    // 0.25 m per frame; the system clock advances at most 0.1 s per frame, so >= 2.5 m/s.
+    // 0.25 m per frame on the uncapped input clock. The classifier cuts the path at sample gaps
+    // over 0.1 s (SLASH_MAX_SAMPLE_GAP_S), so any frame that can land a slash measures >= 2.5 m/s.
     const swing: Vec3[] = [add(orb, 0.125), add(orb, -0.125), add(orb, -0.375)];
     const trace = await g.sweepTip([...(await approachAbove(g, orb, 0.375)), ...swing]);
     const speeds = crossingSpeeds(trace, orb);

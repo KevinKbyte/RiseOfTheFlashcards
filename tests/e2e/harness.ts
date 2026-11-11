@@ -178,7 +178,8 @@ const PAGE_HELPERS = `
     return H.arr(p.add(new V(0, 0, -0.12).applyQuaternion(q)));
   };
   // Moves the right controller so its tip visits each world point, one IWER set_transform per XR
-  // frame at a fixed orientation; returns the tip and system clock sampled after each step.
+  // frame at a fixed orientation; returns the tip and the slash input clock (CardsSystem
+  // clocks.input, real elapsed seconds) sampled after each step.
   H.sweepTip = async (points) => {
     const dev = window.IWER_DEVICE; const c = dev.controllers.right; const V = H.V();
     const orientation = { x: 0, y: 0, z: 0, w: 1 };
@@ -193,7 +194,7 @@ const PAGE_HELPERS = `
       const r = new V(p[0], p[1], p[2]).sub(delta).applyMatrix4(inv);
       await dev.remote.dispatch('set_transform', { device: 'controller-right', position: { x: r.x, y: r.y, z: r.z }, orientation });
       await H.frames(1);
-      trace.push({ tip: H.tip(), clock: H.sys().clock });
+      trace.push({ tip: H.tip(), clock: H.sys().clocks?.input });
     }
     return trace;
   };
@@ -349,8 +350,15 @@ export class Game {
   }
 
   /** Real input: sweeps the right controller tip through `points`, one point per XR frame. */
-  sweepTip(points: Vec3[]): Promise<TipSample[]> {
-    return this.page.evaluate((pts) => (window as any).__e2e.sweepTip(pts), points);
+  async sweepTip(points: Vec3[]): Promise<TipSample[]> {
+    const trace: TipSample[] = await this.page.evaluate((pts) => (window as any).__e2e.sweepTip(pts), points);
+    const bad = trace.findIndex((s) => typeof s.clock !== 'number' || !Number.isFinite(s.clock));
+    if (bad >= 0) {
+      throw new Error(
+        `sweepTip sample ${bad} has no finite clock (${String(trace[bad].clock)}): CardsSystem.clocks.input missing or renamed?`,
+      );
+    }
+    return trace;
   }
 
   async screenshot(path: string): Promise<void> {
