@@ -29,6 +29,8 @@ export interface GameState {
   correct: number | null;
   /** Centre of the ultimate orb while it shows, else null. */
   ultimateOrb: Vec3 | null;
+  /** Whether the shown ultimate orb is lit (bright ready glow) rather than dim; null while no orb shows. */
+  ultimateGlow: boolean | null;
   /** Revealed enemy's distance from the player (metres), and the wave's spawn distance. */
   targetDistance: number | null;
   spawnDistance: number;
@@ -67,6 +69,17 @@ const PAGE_HELPERS = `
     if (n === 0) { obj.getWorldPosition(acc); return H.arr(acc); }
     return H.arr(acc.multiplyScalar(1 / n));
   };
+  // Drawn lightness (HSL, 0..1) of the first coloured mesh under obj: what the player sees as dim vs lit.
+  H.lightness = (obj) => {
+    let l = null;
+    obj.traverse((o) => {
+      if (l !== null || !o.isMesh || !o.material || !o.material.color) return;
+      l = o.material.color.getHSL({ h: 0, s: 0, l: 0 }).l;
+    });
+    return l;
+  };
+  // Dim orb is ~0.27 lightness, the ready glow ~0.53 and brighter while it pulses.
+  H.GLOW_LIGHTNESS = 0.4;
   H.hookEnd = () => {
     const s = H.sys();
     if (!s || s.__e2eHooked) return;
@@ -88,6 +101,8 @@ const PAGE_HELPERS = `
     const cardId = targetEnemy && targetEnemy.pool.cards.length > 0 ? targetEnemy.pool.cards[0] : null;
     const card = cardId === null ? undefined : s.cards.get(cardId);
     const run = s.session.run;
+    const orbObj = s.ultimate.orb && s.ultimate.orb.object3D;
+    const orbL = orbObj ? H.lightness(orbObj) : null;
     return {
       session: !!w.session,
       menuOpen: s.menuOpen,
@@ -105,7 +120,8 @@ const PAGE_HELPERS = `
       camForward: H.arr(fwd),
       charge: run && run.run ? run.run.charge : null,
       correct: run && run.run ? run.run.correct : null,
-      ultimateOrb: s.ultimate.orb && s.ultimate.orb.object3D ? H.center(s.ultimate.orb.object3D) : null,
+      ultimateOrb: orbObj ? H.center(orbObj) : null,
+      ultimateGlow: orbL === null ? null : orbL > H.GLOW_LIGHTNESS,
       targetDistance: targetEnemy ? targetEnemy.enc.distance : null,
       spawnDistance: s.wave.cfg.spawnDistance,
       pulses: s.__e2ePulses,
