@@ -129,6 +129,9 @@ Deferred to relay integration:
   Amended 2026-11-12 (Kev, plan D23): the enemy shows its top card by itself when it parks at the hold line; an early slash still
   reveals it; after a card falls the next card shows by itself. "Re-slash after a miss is valid at any distance" **Superseded by**
   ENC-006 D23 amendment (a slash on a revealed, not stunned enemy does nothing).
+  Build default 2026-11-12 (main session, not Kev's words; pending headset check, revisit after the capture stills; plan D23 (a)):
+  a card shown at the hold line pushes the enemy back to 2 m by the rule above, on first reveal and on each next card; that
+  push-back gives the 8 s answer window.
 - ENC-003: Panel ~70% opaque with dark backing, world/body-locked, never head-locked; ~1.0 m away, 20 deg below eye line, yaw-only
   lazy-follow with ~20 deg dead zone, anchored to the D7 baseline (dodge descoped 2026-11-07); never occludes the target enemy (CARDS-010). Text sized at ~1 m. "engaged enemy" **Superseded by** EN-3 (agent default, Kev to confirm).
   Amended 2026-11-11 (Kev, panel numbers from game-iwsdk `src/flashcards/panel-layout.ts`): the 0.28 m panel spans ~-12 to -28 deg;
@@ -156,6 +159,9 @@ Deferred to relay integration:
   stunned card. FSRS is written at the answer, not the slash (D4 unchanged): correct in time = Good; wrong or late (strike lands) =
   Again once per card plus player damage. Lives: `Cards <remaining>/<total>` on the enemy plus one card drawn per remaining card.
   "shatters the panel and peels a card" on a correct answer **Superseded by** this amendment.
+  Build defaults 2026-11-12 (main session, not Kev's words; pending headset check; plan D23 (b), (c)): after a wrong answer, a
+  miss or "didn't catch", the answer window stays open: the enemy keeps its answering loop (creep, wind-up, strike, repeat) until
+  a correct answer; no re-slash is needed or possible. Stun-then-slash applies to orb answers as well as voice.
 - ENC-007: Card-enemies show a cartoon face (eyes + mouth, angry/mischievous) on the player-facing side; it is not the card face:
   the prompt stays hidden until reveal. Theme: cards rising against the human.
 
@@ -176,13 +182,18 @@ CARDS-001..005 are prototype-local IDs in the game-iwsdk cards-proto tests; this
   slot (ENC-001); the next walks in only after it falls; no target choice. Stacks: regular 3 cards, final enemy (boss) 5. Packing N
   run cards: N >= 8 -> last stack 5, rest in 3s; N < 8 -> no boss, stacks of 3; leftover 1 joins the last regular stack (4); leftover
   2 is its own stack, placed first (12 -> 3,4,5; 13 -> 2,3,3,5; 8 -> 3,5; 7 -> 3,4). Peeling: ENC-006 D23 amendment.
+  Build defaults 2026-11-12 (main session, not Kev's words; pending headset check; plan D23 (e), (f), (g)): one wave = one stack
+  (cadence ramp, wreckage tier and "waves survived" count stacks); small runs N = 1 -> 1; 2 -> 2; 4 -> 4; 5 -> 2,3. The win screen
+  fires after the finishing slash on the last card of the last enemy, not on the last correct answer.
 - CARDS-011: Wall spawn picker: each active enemy gets its own wall spawn 1.2-3.5 m away within +/-35 deg of play-forward (plan
   D8); ring fallback (2.5 m, same arc) on no scene, permission denied, 5 s scene timeout, no qualifying wall, or head outside the
   loaded room. Fewer qualifying walls than active enemies (agent default, Kev to confirm): remaining spawns use the ring fallback across the same arc;
   wall spawns keep a minimum 15 deg bearing gap. IWSDK prototype: immersive-ar passthrough + plane detection (Quest 2: grayscale, walls only from manual Space
   Setup); on-device check = probe row f (device-spike ar-probe).
 - CARDS-012: Every correct answer gives feedback: visible (panel shatters, card peels, ENC-006) + short sound + controller/hand
-  haptic where available.
+  haptic where available. "panel shatters, card peels" on the correct answer **Superseded by** D23 (build default 2026-11-12, main
+  session, not Kev's words; pending headset check; plan D23 (d)): the shatter and peel happen on the finishing slash; the correct
+  answer shows the stun.
 
 ## Credits audit (plan M18, S1)
 

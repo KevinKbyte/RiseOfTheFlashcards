@@ -9,8 +9,9 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 - Plan/spec (Kev 2026-11-12, after an adversary review): one enemy at a time in the centre slot, the next walks in after it falls
   (no target choice); stacks of 3 cards, boss 5; the top card shows by itself at the hold line; a correct answer stuns the enemy
-  and any slash then knocks a card off; FSRS still written at the answer; lives shown as `Cards r/t` plus drawn cards (D23, ENC-001,
-  ENC-002, ENC-006, CARDS-010).
+  and any slash then knocks a card off; FSRS still written at the answer; lives shown as `Cards r/t` plus drawn cards. Build
+  defaults pending the headset check: reveal push-back to 2 m, answer window stays open after a miss, shatter/peel and win screen
+  on the finishing slash, one wave = one stack (D23, ENC-001, ENC-002, ENC-006, CARDS-010, CARDS-012).
 - Plan/spec (Kev 2026-11-11, after an adversary review): hold-line calibration range 0.67-0.8 m (was ~0.6-0.8, Kev to confirm),
   default 0.7 m; enemy glow frame padding `HALO_PAD` 0.10 m (was 0.18); ultimate orb moves beyond the hold line to ~(0.42, -0.34,
   -0.94) m from the eye, just right of the question panel, off the lap-rest pointing line to the right-side enemy (D22, ENC-002,

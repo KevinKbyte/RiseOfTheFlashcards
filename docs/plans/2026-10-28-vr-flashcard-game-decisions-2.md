@@ -121,7 +121,7 @@ D22 Hold range, glow frame, ultimate orb placement (Kev 2026-11-11, after an adv
   right-side enemy and swallowed the press. Palm push and grip squeeze do not depend on the orb position; the uncharged orb stays a
   selectable no-op (D17 / H-2 unchanged).
 D23 One stack at a time, stun then slash (Kev 2026-11-12, after an adversary review; amends D13, D4, D14, D19, D21 and spec ENC-001 /
-  ENC-002 / ENC-006 / CARDS-010). Kev: "multiple cards fight as one, and indicates how many lives it has before it falls. So it does slow
+  ENC-002 / ENC-006 / CARDS-010 / CARDS-012). Kev: "multiple cards fight as one, and indicates how many lives it has before it falls. So it does slow
   mo attack at user and if user doesnt answer correctly in time they get damaged. if they answer correctly in time they deal dmg to the
   cards, and one of the cards fall". Picked: "One stack at a time", "3 cards, boss 5", "Answer, then slash to finish".
   (1) One enemy active at a time, in the centre (0 deg) fan slot; the next walks in only after the current one falls. D13 / CARDS-010
@@ -148,6 +148,18 @@ D23 One stack at a time, stun then slash (Kev 2026-11-12, after an adversary rev
   shown 3/3; last card -> enemy falls 3/3; slash on revealed, not stunned -> no change 3/3; ultimate on stunned -> 0 cards removed
   1/1; FSRS write at the answer, 0 at the slash 3/3; `Cards r/t` label and r drawn cards correct after each fall 3/3.
   SIGNALS: headset check of the 2 s / 8 s timings.
+  D23 build defaults (main session 2026-11-12, not Kev's words; pending Kev's headset check):
+  (a) A card shown at the hold line pushes the enemy back to 2.0 m by the ENC-002 reveal rule, on first reveal and on each next
+  card; that push-back gives the 8 s answer window. Revisit after the capture stills.
+  (b) After a wrong answer, a miss or "didn't catch", the answer window stays open: the enemy keeps its answering loop (creep,
+  wind-up, strike, repeat) until a correct answer. No re-slash is needed or possible (game-iwsdk `src/flashcards/encounter.ts`
+  `slash` acts only while advancing or parked-unrevealed).
+  (c) Stun-then-slash applies to orb answers as well as voice.
+  (d) CARDS-012 panel shatter and card peel happen on the finishing slash; the correct answer shows the stun.
+  (e) One wave = one stack: D19 cadence ramp, D19 wreckage tier and "waves survived" count stacks.
+  (f) Packing for small runs: N = 1 -> 1; 2 -> 2; 4 -> 4; 5 -> 2,3.
+  (g) The win screen fires after the finishing slash on the last card of the last enemy, not on the last correct answer. D19 WIN
+  "checked after every answer" **Superseded by** this.
 
 ## UE spike debug checklist (SP-DBG)
 Kev 2026-11-07; spike repo C:/Users/Kev/ue-spike/MetaXRSpike.
