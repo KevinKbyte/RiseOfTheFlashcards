@@ -34,6 +34,7 @@ import { stepFrameClocks, type FrameClocks } from './flashcards/input-clock.js';
 import { finishGamepad, mergePendingEnemy, swingGamepad } from './flashcards/finish-haptic.js';
 import { mergeOrbPick, type OrbPick } from './flashcards/orb-pick.js';
 import { slashTargets } from './flashcards/slash-targets.js';
+import { panelPrompt, showsAnswerOrbs } from './flashcards/stun-look.js';
 import { resolveUltimate, ultimateOrb } from './flashcards/ultimate-input.js';
 import { WallTracker } from './card-wall-tracker.js';
 import { pickOrbs, type Card } from './flashcards/deck.js';
@@ -366,6 +367,17 @@ export class CardsSystem extends createSystem({
     const step = correctOrb(this.session, cardId);
     this.wave = answerTarget(this.wave, true);
     this.apply(step);
+    this.showStunLook();
+  }
+
+  // Stunned target (CARDS-012): its answer orbs go and the panel reads "SLASH IT" until the
+  // finishing slash; the next card's showPanel brings back the question and fresh orbs.
+  private showStunLook(): void {
+    if (this.menuOpen || !this.panel.isOpen) return;
+    if (!showsAnswerOrbs(this.targetEnemy()?.enc.phase ?? null)) {
+      for (const orb of [...this.panel.orbs()]) this.panel.removeOrb(orb);
+    }
+    this.panel.setLines(this.panelLines());
   }
 
   // Palm push, grip squeeze or orb select -> one fire per frame, only with a strike-slot target;
@@ -420,8 +432,10 @@ export class CardsSystem extends createSystem({
 
   private panelLines(): string[] {
     const id = this.currentCardId();
-    const prompt = id === null ? '' : (this.cards.get(id)?.prompt ?? '');
-    const pool = this.targetEnemy()?.pool;
+    const question = id === null ? '' : (this.cards.get(id)?.prompt ?? '');
+    const target = this.targetEnemy();
+    const prompt = panelPrompt(target?.enc.phase ?? null, question);
+    const pool = target?.pool;
     const cards = pool === undefined ? '' : `   ${livesLabel(hp(pool), pool.maxHp)}`;
     return [prompt, `Shields: ${this.pips}${cards}`];
   }

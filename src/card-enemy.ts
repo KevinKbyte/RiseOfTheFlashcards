@@ -22,11 +22,13 @@ const EDGE_IDLE = new Color(0x7c3aed);
 const EDGE_READY = new Color(0xfacc15);
 const EDGE_TARGET = new Color(0x22d3ee);
 const EDGE_RED = new Color(0xef4444);
+// Green reads apart from the answering cyan and every other glow, so a stun is visible at a glance.
+const EDGE_STUNNED = new Color(0x4ade80);
 // Faint for walkers so the target and enemies waiting at the reach line stand out.
 const HALO_FAINT = 0.12;
 const HALO_BRIGHT = 0.6;
 
-export type Glow = 'faint' | 'halted' | 'target' | 'telegraph';
+export type Glow = 'faint' | 'halted' | 'target' | 'telegraph' | 'stunned';
 
 export interface FaceParts {
   geometry: PlaneGeometry;
@@ -125,6 +127,10 @@ export function applyGlow(parts: EnemyParts, glow: Glow, pulse: number): number 
       break;
     case 'telegraph':
       color.lerpColors(EDGE_TARGET, EDGE_RED, pulse);
+      parts.halo.opacity = HALO_BRIGHT;
+      break;
+    case 'stunned':
+      color.copy(EDGE_STUNNED);
       parts.halo.opacity = HALO_BRIGHT;
       break;
   }

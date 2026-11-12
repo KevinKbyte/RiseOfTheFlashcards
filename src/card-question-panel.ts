@@ -136,6 +136,11 @@ export class QuestionPanel {
     this.repaint(lines);
   }
 
+  /** Repaints with the new lines without starting a flash. */
+  setLines(lines: readonly string[]): void {
+    this.repaint(lines);
+  }
+
   /** Counts down an active flash; repaints in the normal colour when it ends. */
   tickFlash(dt: number, lines: () => readonly string[]): void {
     if (this.flashLeft <= 0) return;

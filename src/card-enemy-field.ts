@@ -10,13 +10,13 @@ import {
   createFaceParts,
   type EnemyParts,
   type FaceParts,
-  type Glow,
   setCardCount,
 } from './card-enemy.js';
 import { type FanFrame, nextFanFrame, placeInFan, wrap } from './flashcards/fan.js';
 import { parkedEnemyCenter } from './flashcards/panel-layout.js';
 import { hp } from './flashcards/pool.js';
 import { pickSpawns, SPAWN_MIN_BEARING_GAP_DEG, type Wall } from './flashcards/spawn.js';
+import { enemyGlow } from './flashcards/stun-look.js';
 import type { Wave } from './flashcards/wave.js';
 
 // Emerge just in front of the wall surface rather than half inside it.
@@ -91,10 +91,7 @@ export class EnemyField {
       if (view === undefined || obj === undefined) continue;
       const t = span > 0 ? Math.min(Math.max((enc.distance - reachDistance) / span, 0), 1) : 0;
       obj.position.lerpVectors(view.goal, view.start, t);
-      let glow: Glow = 'faint';
-      if (id === wave.targetId) glow = enc.phase === 'telegraph' ? 'telegraph' : 'target';
-      else if (enc.phase === 'slashable') glow = 'halted';
-      const scale = applyGlow(view.parts, glow, pulse);
+      const scale = applyGlow(view.parts, enemyGlow(enc.phase, id === wave.targetId), pulse);
       // Pool-less waves (layout-only test fixtures) keep whatever stack the view already shows.
       if (pool !== undefined) setCardCount(view.parts, hp(pool));
       view.age += dt;
