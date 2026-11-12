@@ -11,9 +11,11 @@ import {
   type EnemyParts,
   type FaceParts,
   type Glow,
+  setCardCount,
 } from './card-enemy.js';
 import { type FanFrame, nextFanFrame, placeInFan, wrap } from './flashcards/fan.js';
 import { parkedEnemyCenter } from './flashcards/panel-layout.js';
+import { hp } from './flashcards/pool.js';
 import { pickSpawns, SPAWN_MIN_BEARING_GAP_DEG, type Wall } from './flashcards/spawn.js';
 import type { Wave } from './flashcards/wave.js';
 
@@ -83,7 +85,7 @@ export class EnemyField {
     const { spawnDistance, reachDistance } = wave.cfg;
     const span = spawnDistance - reachDistance;
     const pulse = 0.5 + 0.5 * Math.sin(clock * PULSE_RATE);
-    for (const { id, enc } of wave.active) {
+    for (const { id, enc, pool } of wave.active) {
       const view = this.views.get(id);
       const obj = view?.entity.object3D;
       if (view === undefined || obj === undefined) continue;
@@ -93,6 +95,8 @@ export class EnemyField {
       if (id === wave.targetId) glow = enc.phase === 'telegraph' ? 'telegraph' : 'target';
       else if (enc.phase === 'slashable') glow = 'halted';
       const scale = applyGlow(view.parts, glow, pulse);
+      // Pool-less waves (layout-only test fixtures) keep whatever stack the view already shows.
+      if (pool !== undefined) setCardCount(view.parts, hp(pool));
       view.age += dt;
       obj.scale.setScalar(scale * Math.min(view.age / EMERGE_SECONDS, 1));
     }
@@ -152,7 +156,10 @@ export class EnemyField {
     this.fanFrame = nextFanFrame(this.fanFrame, this.views.size, { eye: { x: eye.x, z: eye.z }, yawRad: headYaw });
     const occupied = new Set<number>();
     for (const view of this.views.values()) if (view.slot !== null) occupied.add(view.slot);
-    const placed = placeInFan(this.fanFrame, occupied, Math.atan2(-ux, -uz), reach);
+    // A lone enemy (one stack at a time) parks straight ahead in the centre slot, whatever wall it
+    // walked in from.
+    const aim = this.views.size === 0 ? this.fanFrame.yawRad : Math.atan2(-ux, -uz);
+    const placed = placeInFan(this.fanFrame, occupied, aim, reach);
     const slot = placed === null ? null : placed.slot;
     const g = placed ?? { x: eye.x + ux * reach, z: eye.z + uz * reach };
     // Rides above the eye line, clear of the below-eye question panel (panel-layout.ts).
