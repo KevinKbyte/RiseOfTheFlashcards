@@ -91,6 +91,16 @@ D20 Quest 3S compatibility (Kev 2026-10-28 "yes add the 3S compat decision to th
   Meta XR Simulator has a Quest 3S device profile (xrsim-intro); its UE 5.8 support UNVERIFIED = D18 premise check (7) in SP1; Devpost testing notes
   carry a 3S smoke checklist (S13); store review per declared device UNVERIFIED (only VRC.Quest.Packaging manifest checks found). Residual: real-3S
   frame time and comfort unprovable without a device (A4).
+D21 Fixed enemy fan (Kev 2026-11-11, "Fixed fan"; amends the D13 park position and spec ENC-001 / CARDS-010): an enemy that reaches the
+  player no longer parks at its spawn bearing on the ~0.6 m reach line; it parks in one of three fixed slots at -35 / 0 / +35 deg on a hold
+  line 0.7 m from the player. The fan is anchored to the head position and facing captured when the first enemy of a non-empty field
+  arrives, and stays put until the field is empty (it does not follow later head turns). Slot 0 is on the player's right at yaw 0. Enemy face
+  is 0.40 m wide; slot centres sit ~0.42 m apart (0.7 m chord at 35 deg), so neighbours stay >= 0.40 m apart. A hand slash still picks an
+  enemy (slash radius 0.20 m). The D8 15 deg minimum gap still governs SPAWN bearings on the walls; only the parked position changes.
+  Why: at 0.6 m with spawn bearings only 15 deg apart, faces sat 0.16 m apart, merged into one panel and covered the question panel (D13a).
+  Open question (Kev): the D13 strike slot (0.5 m default, calibrated 0.40-0.60 m, Q8) lies inside the 0.7 m hold line. Does a revealed
+  enemy leave its fan slot to creep to the strike slot, or does the strike slot move to the hold line (which changes the D13 creep speed
+  formula (2.0 - 0.5) m / 8 s)?
 
 ## UE spike debug checklist (SP-DBG)
 Kev 2026-11-07; spike repo C:/Users/Kev/ue-spike/MetaXRSpike.

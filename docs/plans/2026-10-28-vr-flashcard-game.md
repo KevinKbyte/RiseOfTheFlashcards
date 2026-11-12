@@ -206,7 +206,7 @@ D8 MR only. Play-forward yaw = tracking-space forward, recomputed on every recen
   passthrough + plane detection for wall spawns. Quest 2: grayscale passthrough, walls only from the user's manual Space Setup (A5);
   ring fallback otherwise. On-device check: probe row f (device-spike ar-probe).
   Fewer qualifying walls than active enemies (EN-3) (agent default, Kev to confirm): remaining spawns use the 2.5 m ring fallback across the same arc;
-  wall spawns keep a minimum 15 deg bearing gap from each other.
+  wall spawns keep a minimum 15 deg bearing gap from each other (spawn bearings only; parked positions: D21 fixed fan, decisions-2).
 D9 CREDITS.md from first commit; README credits GitHub KevinKbyte only, never the YouTube channel.
 D10 Secrets + signing: no STT secret ships (on-device, D2; Wit token handling **Superseded by** D2, ledgers V-1); ANTHROPIC_API_KEY (D3a)
   server-side only (GRADE-006), never in the APK or page bundle. gitleaks local
@@ -228,21 +228,21 @@ D13 Engagement distance = "slash, pop-out, creep" (Kev 2026-10-31, ledgers EN-1;
   the card enemy coming towards them so they have to answer it quickly". An enemy emerges at its wall spawn (D8, 1.2-3.5 m, keeps M15),
   advances along its spawn bearing toward a reach line ~0.6 m in front of the play-forward head (inside A15), inside the +/-35 deg arc.
   Reveal (EN-2, Kev 2026-10-31: "once the user clicks on the card no matter how far it is we can start to answer") = select or slash
-  (M1) the card-enemy at ANY distance -> card pops out (D13a) + mic opens (D2). An unrevealed enemy halts at the reach line.
+  (M1) the card-enemy at ANY distance -> card pops out (D13a) + mic opens (D2). An unrevealed enemy halts at the reach line (D21).
   After reveal it keeps coming, slower, no reset: revealed inside 2 m -> knocked back to 2 m (D4 Ultimate knockback mechanics);
   otherwise it continues from where it is. Creep speed fixed = (2.0 - 0.5) m / 8 s = 0.1875 m/s toward the strike slot 0.5 m in front
   of the head, so reveal -> strike slot >= 8 s (>= 6 s no-speech cap + 2 s grading timeout, D2, D3a); earlier reveal = more time.
-  Speed is the pacing knob (D14, Q8); needs one tune on Quest 3/3S. Grading (D3a) freezes the creep.
+  Speed is the pacing knob (D14, Q8); needs one tune on Quest 3/3S. Grading (D3a) freezes the creep. Arrivals: D21 fixed-fan slots (Kev 2026-11-11).
   Telegraphs and attacks happen only in the strike slot: arrived unanswered -> 2 s telegraph -> hit (D4 row) -> knockback to 2 m, repeat.
   A correct answer in any revealed phase (creep, telegraph, after knockback) shatters the panel and peels a card, with a short sound
   and a hand/controller haptic where available: feedback on EVERY correct answer (EN-3, Kev: "every time the user hits a card
   successfully (answers it successfully), there should be some feedback"); a multi-card enemy
   (M2) is knocked back per card by the reveal rule (to 2 m only if inside 2 m). Re-slash after a miss or Didn't catch (re-opens the
   answer window) is valid at any distance. Optional later: speed bonus by kill distance.
-  Q8 (2026-10-28): 0.5 m is the default; the slot is calibrated per player within 0.40-0.60 m (S9).
+  Q8 (2026-10-28): 0.5 m is the default; the slot is calibrated per player within 0.40-0.60 m (S9). Open question (Kev): inside the D21 hold line.
   Wave + choose target (EN-3, Kev 2026-10-31: "there should be multiple cards coming at the user, and user gets to choose which card to
   attack first"): up to maxActive (default 3; tuning knob like the D14 speed) card-enemies advance at once, each from its own D8 wall
-  spawn (ring fallback). Unrevealed ones halt at the reach line and never attack. The player picks the target: reveal any one at any
+  spawn (ring fallback). Unrevealed ones halt at the reach line (D21 slot) and never attack. The player picks the target: reveal any one at any
   distance (EN-2 rules apply to it). Exactly one revealed at a time (the voice-answer target); selecting another while one is revealed
   is ignored until that one resolves. Others keep advancing while you answer; Grading (D3a) freezes only the target. A multi-card
   (M2) target stays the target (revealed) until all its cards are peeled; each correct answer peels one card with the feedback above;
@@ -252,7 +252,7 @@ D13 Engagement distance = "slash, pop-out, creep" (Kev 2026-10-31, ledgers EN-1;
   **Superseded by** EN-3; verbatim in ledgers EN-3.
   Old wording (finisher, slash + attack both in the strike slot, card text for 0.5 m) **Superseded** 2026-10-31; verbatim in ledgers EN-1.
   EN-1 wording (slash only at the reach line, always knocked back to ~2 m, creep time default 8 s) **Superseded by** EN-2 2026-10-31;
-  verbatim in ledgers EN-2.
+  verbatim in ledgers EN-2. Spawn-bearing park at the ~0.6 m reach line **Superseded by** D21 fixed fan (0.7 m hold line), decisions-2.
 D13a Card panel (Kev 2026-10-31, EN-1; picked over "Stop + countdown ring" and head-locked "Stuck to screen"): on reveal (D13, EN-2;
   "on slash" **Superseded by** EN-2) the card face
   pops out as a semi-transparent panel (~70% opaque, dark backing), world/body-locked, never head-locked (comfort; would hide the enemy);
@@ -394,7 +394,7 @@ S2 >=40 matcher golden cases, all run with EMPTY reject lists unless the case te
   rejected, 3-char answer flagged, homophone answer without alias flagged 3/3, 3 starter decks pass 3/3; `// Covers: FEAT-ID` above every
   [TestFixture].
 S3 20/20 slashes register with hands, 2/2 hands (slash = fingertip speed >=1.0 m/s through the card
-  collider at the D13 reach line); 0 false triggers in 60 s idle; 5/5 unrevealed enemies travel wall -> reach line and halt there;
+  collider at the D13 reach line); 0 false triggers in 60 s idle; 5/5 unrevealed enemies travel wall -> reach line (D21) and halt there;
   EN-2: select reveals at 3 m, 1.5 m and the reach line 3/3 each, panel shown on reveal; reveal at 3 m -> 0 forward jump, creeps on
   from 3 m 3/3; reveal inside 2 m -> knockback to 2 m 3/3; creep speed 0.1875 m/s (+/-5%) and reveal -> strike slot >= 8 s 5/5;
   re-slash after a miss at > 2 m re-opens the window 3/3; correct while creeping at > 2 m clears 3/3; enemy face visible, prompt

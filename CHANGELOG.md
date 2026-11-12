@@ -7,6 +7,9 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Changed
 
+- Plan/spec (Kev 2026-11-11, "Fixed fan"): arrived enemies park in three fixed slots at -35 / 0 / +35 deg on a 0.7 m hold
+  line anchored at the first arrival, not at their spawn bearing on the ~0.6 m reach line, so 0.40 m enemy faces no longer
+  merge over the question panel (D21, ENC-001, CARDS-010); strike slot vs hold line left as an open question for Kev.
 - Docs: `docs/devpost-draft.md` and `docs/privacy-policy.md` now match the shipped IWSDK WebXR build (silent orb slash,
   localStorage-only data, no mic/relay/Claude/dodge); the old voice, relay, Claude grading and dodge commitments moved to an
   "If voice / relay grading is enabled later" section in each; owner-only facts marked `TBD (Kev)`.

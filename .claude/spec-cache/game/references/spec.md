@@ -109,11 +109,17 @@ Deferred to relay integration:
 - ENC-001: Enemy emerges at its wall spawn (D8), advances toward a reach line ~0.6 m in front of the play-forward head and halts
   there if unrevealed. Reveal = select or slash the card-enemy at ANY distance. EN-1 slash-only-at-reach-line wording
   **Superseded by** EN-2 (verbatim in ledgers EN-2). Max-1-engaged-enemy wording **Superseded by** CARDS-010 (EN-3; verbatim in
-  ledgers EN-3).
+  ledgers EN-3). Amended 2026-11-11 (Kev, "Fixed fan", plan D21): an arriving enemy parks in one of three fixed slots at
+  -35 / 0 / +35 deg on a hold line 0.7 m from the player; the fan is anchored to the head position and facing captured when the
+  first enemy of a non-empty field arrives and stays put until the field is empty (no follow on later head turns); slot 0 is on
+  the player's right at yaw 0; enemy face 0.40 m wide, neighbours >= 0.40 m apart; a hand slash still picks an enemy (slash
+  radius 0.20 m). "halts at its spawn bearing on the ~0.6 m reach line" **Superseded by** this amendment. CARDS-011 spawn
+  bearings unchanged.
 - ENC-002: Reveal -> card face pops out as the ENC-003 panel and the enemy keeps coming, no reset: revealed inside 2 m -> knocked
   back to 2 m (ultimate knockback mechanics), else continues from where it is, toward the 0.5 m strike slot (calibrated 0.40-0.60
   m); telegraphs and attacks happen only there. Re-slash after a miss is valid at any distance. EN-1 always-knockback-to-~2 m
-  wording **Superseded by** EN-2.
+  wording **Superseded by** EN-2. Open question (Kev): this strike slot lies inside the 0.7 m ENC-001 hold line; does a revealed
+  enemy leave its fan slot to strike, or does the strike slot move to the hold line (changes the ENC-004 creep formula)?
 - ENC-003: Panel ~70% opaque with dark backing, world/body-locked, never head-locked; ~1.0 m away, ~15 deg below eye line, yaw-only
   lazy-follow with ~20 deg dead zone, anchored to the D7 baseline (dodge descoped 2026-11-07); never occludes the target enemy (CARDS-010). Text sized at ~1 m. "engaged enemy" **Superseded by** EN-3 (agent default, Kev to confirm).
 - ENC-004: Creep speed fixed = (2.0 - 0.5) m / 8 s = 0.1875 m/s, so reveal -> strike slot >= 8 s (>= 6 s no-speech cap + 2 s
@@ -134,7 +140,8 @@ Deferred to relay integration:
 CARDS-001..005 are prototype-local IDs in the game-iwsdk cards-proto tests; this cache starts at CARDS-010.
 
 - CARDS-010: Up to maxActive (default 3, tuning knob) card-enemies advance at once, each from its own CARDS-011 spawn; unrevealed
-  ones halt at the reach line and never attack. Player picks the target: reveal any one at any distance (ENC-002 applies to it).
+  ones halt in their ENC-001 fan slot ("at the reach line" **Superseded** 2026-11-11) and never attack. Player picks the target:
+  reveal any one at any distance (ENC-002 applies to it).
   Exactly one revealed at a time (the voice-answer target); selecting another while one is revealed is ignored until it resolves.
   Others keep advancing while the target is answered; Grading (GRADE-004) freezes only the target. A multi-card target stays the
   target (revealed) until all its cards are peeled; each correct answer peels one card and triggers CARDS-012; knockback per card
