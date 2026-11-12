@@ -53,7 +53,14 @@ export type SlashInputState = Record<Source, SourceState>;
 export interface SlashInputStep {
   state: SlashInputState;
   picks: string[];
+  /** Which controller swung each controller-swing pick; fingertip and select picks are absent. */
+  controllerHands: Partial<Record<string, 'left' | 'right'>>;
 }
+
+const CONTROLLER_HAND: Partial<Record<Source, 'left' | 'right'>> = {
+  leftController: 'left',
+  rightController: 'right',
+};
 
 export function createSlashInput(): SlashInputState {
   return {
@@ -98,6 +105,7 @@ export function stepSlashInput(
   targets: SlashTarget[],
 ): SlashInputStep {
   const picks: string[] = [];
+  const controllerHands: SlashInputStep['controllerHands'] = {};
   if (frame.select) picks.push(frame.select);
   const positions = framePositions(frame);
   const next = {} as SlashInputState;
@@ -120,9 +128,11 @@ export function stepSlashInput(
     if (r.kind === 'hit') {
       next[src] = { samples, lastSlashAt: frame.t };
       if (!picks.includes(r.targetId)) picks.push(r.targetId);
+      const hand = CONTROLLER_HAND[src];
+      if (hand !== undefined && controllerHands[r.targetId] === undefined) controllerHands[r.targetId] = hand;
     } else {
       next[src] = { samples, lastSlashAt: last };
     }
   }
-  return { state: next, picks };
+  return { state: next, picks, controllerHands };
 }
