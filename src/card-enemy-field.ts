@@ -12,7 +12,7 @@ import {
   type FaceParts,
   type Glow,
 } from './card-enemy.js';
-import { assignFanSlot, fanSlotGoal } from './flashcards/fan.js';
+import { type FanFrame, nextFanFrame, placeInFan, wrap } from './flashcards/fan.js';
 import { pickSpawns, SPAWN_MIN_BEARING_GAP_DEG, type Wall } from './flashcards/spawn.js';
 import type { Wave } from './flashcards/wave.js';
 
@@ -37,13 +37,6 @@ interface EnemyView {
   age: number;
 }
 
-function wrap(a: number): number {
-  let r = a % (2 * Math.PI);
-  if (r > Math.PI) r -= 2 * Math.PI;
-  else if (r < -Math.PI) r += 2 * Math.PI;
-  return r;
-}
-
 // three.js yaw convention (yaw 0 faces -Z), matching spawn.ts.
 function bearing(fromX: number, fromZ: number, toX: number, toZ: number): number {
   return Math.atan2(-(toX - fromX), -(toZ - fromZ));
@@ -54,6 +47,9 @@ export class EnemyField {
   private readonly enemyIds = new Map<Entity, string>();
   // Built once and shared by every enemy; owned (and disposed) here, not by the enemy entities.
   private face: FaceParts | undefined;
+  // Captured when an enemy spawns into an empty field; held while any view is live. A slot is
+  // freed simply by remove() dropping its view.
+  private fanFrame: FanFrame | null = null;
 
   constructor(private readonly world: World) {}
 
@@ -153,12 +149,14 @@ export class EnemyField {
     const uz = dist > 0 ? dz / dist : -Math.cos(headYaw);
     const startDist = Math.max(dist - WALL_INSET, reach);
     const start = new Vector3(eye.x + ux * startDist, chosen.y, eye.z + uz * startDist);
-    // Park in the free fan slot nearest the spawn bearing so arrived faces never overlap.
+    // Park in the free fan slot nearest the spawn bearing so arrived faces never overlap. Slots are
+    // placed from the shared fan frame, not the live head, so refills never drift onto a neighbour.
+    this.fanFrame = nextFanFrame(this.fanFrame, this.views.size, { eye: { x: eye.x, z: eye.z }, yawRad: headYaw });
     const occupied = new Set<number>();
     for (const view of this.views.values()) if (view.slot !== null) occupied.add(view.slot);
-    const slot = assignFanSlot(occupied, wrap(Math.atan2(-ux, -uz) - headYaw));
-    const g =
-      slot === null ? { x: eye.x + ux * reach, z: eye.z + uz * reach } : fanSlotGoal(slot, eye, headYaw, reach);
+    const placed = placeInFan(this.fanFrame, occupied, Math.atan2(-ux, -uz), reach);
+    const slot = placed === null ? null : placed.slot;
+    const g = placed ?? { x: eye.x + ux * reach, z: eye.z + uz * reach };
     const goal = new Vector3(g.x, eye.y + ENEMY_RISE, g.z);
 
     this.face ??= createFaceParts();
