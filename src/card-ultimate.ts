@@ -24,7 +24,8 @@ import {
   type UltimateRequest,
 } from './flashcards/ultimate-input.js';
 import type { Vec3 } from './flashcards/spawn.js';
-import { orbPosition, shouldPlaceOrb, type OrbView } from './flashcards/ultimate-orb-place.js';
+import { ultimateOrbPosition } from './flashcards/panel-layout.js';
+import { shouldPlaceOrb, type OrbView } from './flashcards/ultimate-orb-place.js';
 
 type Hand = 'left' | 'right';
 
@@ -107,7 +108,8 @@ export class UltimateInput {
     const material = this.orbMaterial;
     if (obj === undefined || material === undefined) return;
     if (shouldPlaceOrb(prev, view)) {
-      const p = orbPosition(eye, headYaw);
+      // A lost head pose keeps the old fallback (yaw 0) instead of throwing in the frame loop.
+      const p = ultimateOrbPosition(eye, Number.isFinite(headYaw) ? headYaw : 0);
       obj.position.set(p.x, p.y, p.z);
     }
     const pulse = view.glowing ? 0.5 + 0.5 * Math.sin(clock * GLOW_RATE) : 0;

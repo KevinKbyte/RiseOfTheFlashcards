@@ -57,6 +57,20 @@ export function parkedEnemyCenter(eye: Vec3, slotGoal: { x: number; z: number })
   return { x: slotGoal.x, y: eye.y + ENEMY_RISE_M, z: slotGoal.z };
 }
 
+// Right of the question panel edge (half width 0.3 m) and past the 0.7 m hold line, so a hand reaching
+// for a parked enemy never passes through the orb (w8 capture: the old eye-relative spot did).
+const ULTIMATE_ORB_RIGHT_M = 0.42;
+
+/** The ultimate orb: panel centre + ULTIMATE_ORB_RIGHT_M to the yaw-frame right. */
+export function ultimateOrbPosition(eye: Vec3, yawRad: number): Vec3 {
+  const { center } = panelPlacement(eye, yawRad);
+  return {
+    x: center.x + ULTIMATE_ORB_RIGHT_M * Math.cos(yawRad),
+    y: center.y,
+    z: center.z - ULTIMATE_ORB_RIGHT_M * Math.sin(yawRad),
+  };
+}
+
 export function orbPositions(eye: Vec3, yawRad: number, count: number): Vec3[] {
   assertFinite(eye.x, eye.y, eye.z, yawRad);
   const sin = Math.sin(yawRad);

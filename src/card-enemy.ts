@@ -11,11 +11,12 @@ import {
 } from '@iwsdk/core';
 import { paintFace } from './card-paint.js';
 
-const ENEMY_W = 0.36;
-const ENEMY_H = 0.5;
+export const ENEMY_W = 0.36;
+export const ENEMY_H = 0.5;
 const ENEMY_EDGE = 0.04;
-const HALO_PAD = 0.18;
-const HALTED_SCALE = 1.08;
+// 0.10 keeps a halted side-slot glow inside the Quest 3 half FOV and 5 deg clear of the panel top.
+export const HALO_PAD = 0.1;
+export const HALTED_SCALE = 1.08;
 
 const EDGE_IDLE = new Color(0x7c3aed);
 const EDGE_READY = new Color(0xfacc15);
