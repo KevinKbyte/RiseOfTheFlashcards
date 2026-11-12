@@ -35,8 +35,8 @@ import { mergeOrbPick, type OrbPick } from './flashcards/orb-pick.js';
 import { resolveUltimate, ultimateOrb } from './flashcards/ultimate-input.js';
 import { WallTracker } from './card-wall-tracker.js';
 import { pickOrbs, type Card } from './flashcards/deck.js';
-import { currentCard } from './flashcards/pool.js';
-import { correctOutcome } from './flashcards/peel-present.js';
+import { currentCard, hp, livesLabel } from './flashcards/pool.js';
+import { cardToPresent, correctOutcome } from './flashcards/peel-present.js';
 import {
   correctOrb,
   enemyHit,
@@ -56,9 +56,10 @@ import {
   answerTarget,
   createWave,
   isWaveCleared,
-  revealEnemy,
+  slashEnemy,
   tickWave,
   type Wave,
+  type WaveEnemy,
 } from './flashcards/wave.js';
 
 // Decks imported on the 2D page panel; every VR deck menu opening reads them from here.
@@ -132,7 +133,7 @@ export class CardsSystem extends createSystem({
     this.clocks = clocks;
     this.walls.refresh(this.queries.planes.entities);
     this.collectSlash();
-    this.applyReveal();
+    this.applySlash();
     this.applyOrb();
     this.applyUltimate(dt);
     this.feedback.update(dt);
@@ -143,7 +144,10 @@ export class CardsSystem extends createSystem({
     }
 
     const prevHits = this.targetHits();
-    this.wave = tickWave(this.wave, dt);
+    const before = this.wave;
+    this.wave = tickWave(before, dt);
+    // An enemy parked at the hold line reveals itself (auto-reveal): its card is presented here.
+    if (cardToPresent(before, this.wave) !== null) this.presentTarget();
     if (this.wave.targetId !== null && this.targetHits() > prevHits) {
       // A strike landed: game-session costs the pip (may end the run). apply() flashes on a pip
       // change; flash here only when none came (pip cap), so one hit is one flash. A target with no
@@ -260,9 +264,12 @@ export class CardsSystem extends createSystem({
   }
 
   // Slashes fill the same pending slots as trigger select, so a same-frame slash and select on one
-  // target count once. Enemies are slash targets only while none is revealed.
+  // target count once. Enemies are slash targets while none is revealed (reveal early), and the
+  // target only while stunned (knock its card off).
   private collectSlash(): void {
-    const enemyIds = this.wave.targetId === null ? this.wave.active.map((e) => e.id) : [];
+    const target = this.targetEnemy();
+    const enemyIds =
+      target === undefined ? this.wave.active.map((e) => e.id) : target.enc.phase === 'stunned' ? [target.id] : [];
     const hits = this.slash.step(this.clocks.input,this.panel.orbs(), enemyIds, (id, out) =>
       this.enemies.worldPosition(id, out),
     );
@@ -272,16 +279,28 @@ export class CardsSystem extends createSystem({
     }
   }
 
-  // Selecting an enemy (or slashing it, see collectSlash) reveals it. revealEnemy()
-  // returns the same wave when another enemy is already the target or the phase does not allow it.
-  private applyReveal(): void {
+  // Selecting an enemy or slashing it (see collectSlash) reveals an advancing one, or knocks the top
+  // card off the stunned target. slashEnemy() returns the same wave when neither applies.
+  private applySlash(): void {
     const id = this.pendingEnemyId;
     if (id === null) return;
     this.pendingEnemyId = null;
-    const next = revealEnemy(this.wave, id);
-    if (next === this.wave) return;
+    const before = this.wave;
+    const next = slashEnemy(before, id);
+    if (next === before) return;
     this.wave = next;
-    this.presentTarget();
+    if (before.targetId !== id) {
+      this.presentTarget();
+      return;
+    }
+    // Finishing slash: the question panel shatters (CARDS-012) and the next card, or enemy, follows.
+    const outcome = correctOutcome(before, next);
+    if (!this.enemies.worldPosition(id, this.fxAt)) this.fxAt.copy(this.eye);
+    this.feedback.play(this.fxAt);
+    this.panel.clear();
+    if (outcome.kind === 'defeated') this.enemies.remove(id);
+    if (outcome.kind === 'peeled') this.presentTarget();
+    else if (isWaveCleared(this.wave)) this.onWaveCleared();
   }
 
   // Reported once per reveal or pool peel; panel repaints (hit flash) never re-present the card.
@@ -295,16 +314,20 @@ export class CardsSystem extends createSystem({
 
   /** The target's current pool card: the one shown, graded and struck for. */
   private currentCardId(): string | null {
-    const id = this.wave.targetId;
-    const target = id === null ? undefined : this.wave.active.find((e) => e.id === id);
+    const target = this.targetEnemy();
     return target === undefined ? null : currentCard(target.pool);
+  }
+
+  private targetEnemy(): WaveEnemy | undefined {
+    const id = this.wave.targetId;
+    return id === null ? undefined : this.wave.active.find((e) => e.id === id);
   }
 
   private applyOrb(): void {
     const pick = this.pendingOrb;
     if (pick === null) return;
     this.pendingOrb = null;
-    const { orb, gamepad } = pick;
+    const { orb } = pick;
     const label = this.panel.labelOf(orb);
     if (label === undefined) return;
     if (this.menuOpen) {
@@ -316,12 +339,12 @@ export class CardsSystem extends createSystem({
       }
       return;
     }
-    const targetId = this.wave.targetId;
     const cardId = this.currentCardId();
     const card = cardId === null ? undefined : this.cards.get(cardId);
-    if (targetId === null || cardId === null || card === undefined) return;
+    // A stunned card is already answered; its orbs wait out the finishing slash.
+    if (cardId === null || card === undefined || this.targetEnemy()?.enc.phase === 'stunned') return;
     if (label !== card.answer) this.onWrongAnswer(orb, cardId, label);
-    else this.onCorrectAnswer(targetId, cardId, gamepad);
+    else this.onCorrectAnswer(cardId);
   }
 
   // Wrong orb: game-session costs a pip (once per encounter) and writes one Again rating.
@@ -331,21 +354,12 @@ export class CardsSystem extends createSystem({
     this.apply(wrongOrb(this.session, targetId, label));
   }
 
-  // Correct orb: game-session clears the card and writes its rating; the last card is the WIN.
-  // A multi-card enemy stays the target after a peel; its next card is presented as a new encounter.
-  private onCorrectAnswer(targetId: string, cardId: string, gamepad: Gamepad | undefined): void {
+  // Correct orb: game-session writes the rating now; the target is stunned (attack stopped, no time
+  // limit) until a slash knocks the card off (applySlash). The last card's WIN waits for that slash.
+  private onCorrectAnswer(cardId: string): void {
     const step = correctOrb(this.session, cardId);
-    const before = this.wave;
-    this.wave = answerTarget(before, true);
-    const outcome = correctOutcome(before, this.wave);
-    if (!this.enemies.worldPosition(targetId, this.fxAt)) this.fxAt.copy(this.eye);
-    this.feedback.play(this.fxAt, gamepad);
-    this.panel.clear();
-    if (outcome.kind === 'defeated') this.enemies.remove(targetId);
+    this.wave = answerTarget(this.wave, true);
     this.apply(step);
-    // apply() may end the run and reset the wave, so the peeled target must still be the target.
-    if (outcome.kind === 'peeled' && this.wave.targetId === outcome.enemyId) this.presentTarget();
-    else if (isWaveCleared(this.wave)) this.onWaveCleared();
   }
 
   // Palm push, grip squeeze or orb select -> one fire per frame, only with a strike-slot target;
@@ -355,7 +369,9 @@ export class CardsSystem extends createSystem({
     this.pendingUltimateOrb = false;
     const requests = this.ultimate.collect(this.world.xrFrame, this.world.xrReferenceSpace, this.clocks.input, orbSelected);
     const targetId = this.wave.targetId;
-    const r = resolveUltimate(this.session, this.wave, requests, { spawnDistance: this.wave.cfg.spawnDistance });
+    // A stunned card has no attack to push back, so the ultimate neither fires nor spends its charge.
+    const live = this.targetEnemy()?.enc.phase === 'stunned' ? [] : requests;
+    const r = resolveUltimate(this.session, this.wave, live, { spawnDistance: this.wave.cfg.spawnDistance });
     this.wave = r.wave;
     this.apply({ session: r.session, effects: r.effects });
     if (targetId !== null && r.effects.some((e) => e.type === 'ultimate')) {
@@ -399,7 +415,9 @@ export class CardsSystem extends createSystem({
   private panelLines(): string[] {
     const id = this.currentCardId();
     const prompt = id === null ? '' : (this.cards.get(id)?.prompt ?? '');
-    return [prompt, `Shields: ${this.pips}   Hits: ${this.targetHits()}`];
+    const pool = this.targetEnemy()?.pool;
+    const cards = pool === undefined ? '' : `   ${livesLabel(hp(pool), pool.maxHp)}`;
+    return [prompt, `Shields: ${this.pips}${cards}`];
   }
 }
 
