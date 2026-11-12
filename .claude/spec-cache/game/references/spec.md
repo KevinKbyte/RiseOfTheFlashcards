@@ -167,7 +167,17 @@ Deferred to relay integration:
 
 ## Card-enemy wave, spawns, hit feedback (plan D8, D13; Kev 2026-10-31, ledgers EN-3)
 
-CARDS-001..005 are prototype-local IDs in the game-iwsdk cards-proto tests; this cache starts at CARDS-010.
+CARDS-001..005: pure-logic units of the game-iwsdk cards-proto (`src/flashcards/deck.ts`, `encounter.ts`).
+
+- CARDS-001: Deck draw: one card shown at a time, each card exactly once, seeded-deterministic order; empty deck = finished.
+- CARDS-002: Answer orbs: correct answer + 3 distractors from other cards' answers (fewer if the deck is smaller), no duplicate
+  labels, seeded shuffle.
+- CARDS-003: Answer outcome: correct orb clears the card and shows the next with fresh orbs; wrong orb removes only that orb, card
+  stays; unknown orb or finished deck is ignored.
+- CARDS-004: Single-enemy encounter loop (ENC-001, ENC-002, ENC-004, ENC-005, ENC-006 numbers): walk-in, reveal at any distance,
+  knockback to 2 m, fixed-speed creep, 2 s telegraph and strike at the 0.7 m hold line, max 1 hit per encounter, stun on a correct
+  answer; a creep duration that is zero, negative or non-finite is rejected.
+- CARDS-005: Answer panel = ENC-003: 1 m away, 20 deg below eye level, 70% opaque, yaw turns only past a 20 deg dead zone.
 
 - CARDS-010: Up to maxActive (default 3, tuning knob) card-enemies advance at once, each from its own CARDS-011 spawn; unrevealed
   ones halt in their ENC-001 fan slot ("at the reach line" **Superseded** 2026-11-11) and never attack. Player picks the target:
