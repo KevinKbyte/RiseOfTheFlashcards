@@ -162,6 +162,10 @@ Deferred to relay integration:
   Build defaults 2026-11-12 (main session, not Kev's words; pending headset check; plan D23 (b), (c)): after a wrong answer, a
   miss or "didn't catch", the answer window stays open: the enemy keeps its answering loop (creep, wind-up, strike, repeat) until
   a correct answer; no re-slash is needed or possible. Stun-then-slash applies to orb answers as well as voice.
+  Amended 2026-11-12 (Kev, plan D23 (h), "Lunge to 0.7 m on stun"): on stun the enemy lunges with a short ease from where it
+  stands (where the ENC-002 2.0 m push-back left it) to the 0.7 m hold line, so a hand slash (0.20 m slash sphere) always reaches
+  it; the stunned enemy still cannot strike; the 8 s answer window and all other numbers are unchanged.
+  Build default 2026-11-12 (main session, not Kev's words; judge on the headset): lunge duration 0.3 s, eased.
 - ENC-007: Card-enemies show a cartoon face (eyes + mouth, angry/mischievous) on the player-facing side; it is not the card face:
   the prompt stays hidden until reveal. Theme: cards rising against the human.
 
@@ -176,7 +180,7 @@ CARDS-001..005: pure-logic units of the game-iwsdk cards-proto (`src/flashcards/
   stays; unknown orb or finished deck is ignored.
 - CARDS-004: Single-enemy encounter loop (ENC-001, ENC-002, ENC-004, ENC-005, ENC-006 numbers): walk-in, reveal at any distance,
   knockback to 2 m, fixed-speed creep, 2 s telegraph and strike at the 0.7 m hold line, max 1 hit per encounter, stun on a correct
-  answer; a creep duration that is zero, negative or non-finite is rejected.
+  answer (lunge to the hold line, stun cue: ENC-006, CARDS-012 D23 amendments); a creep duration that is zero, negative or non-finite is rejected.
 - CARDS-005: Answer panel = ENC-003: 1 m away, 20 deg below eye level, 70% opaque, yaw turns only past a 20 deg dead zone.
 
 - CARDS-010: Up to maxActive (default 3, tuning knob) card-enemies advance at once, each from its own CARDS-011 spawn; unrevealed
@@ -204,6 +208,9 @@ CARDS-001..005: pure-logic units of the game-iwsdk cards-proto (`src/flashcards/
   haptic where available. "panel shatters, card peels" on the correct answer **Superseded by** D23 (build default 2026-11-12, main
   session, not Kev's words; pending headset check; plan D23 (d)): the shatter and peel happen on the finishing slash; the correct
   answer shows the stun.
+  Amended 2026-11-12 (Kev, plan D23 (i), "Stun glow + clear orbs + SLASH IT"): "the correct answer shows the stun" = on a correct
+  answer the stunned enemy's glow switches to a stun colour distinct from the answering glow (both cyan before), its answer orbs
+  are removed, and the answer panel text changes from the question to "SLASH IT".
 
 ## Credits audit (plan M18, S1)
 

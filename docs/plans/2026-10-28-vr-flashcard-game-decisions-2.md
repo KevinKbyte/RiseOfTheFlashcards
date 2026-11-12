@@ -160,6 +160,19 @@ D23 One stack at a time, stun then slash (Kev 2026-11-12, after an adversary rev
   (f) Packing for small runs: N = 1 -> 1; 2 -> 2; 4 -> 4; 5 -> 2,3.
   (g) The win screen fires after the finishing slash on the last card of the last enemy, not on the last correct answer. D19 WIN
   "checked after every answer" **Superseded by** this.
+  D23 stun reach and look (Kev 2026-11-12; amends spec ENC-006, CARDS-004, CARDS-012):
+  (h) Picked "Lunge to 0.7 m on stun": on stun the enemy lunges with a short ease from where the (a) push-back left it (2.0 m; it
+  froze there before) to the 0.7 m hold line, so a hand slash (0.20 m slash sphere) always reaches it. The stunned enemy still
+  cannot strike; the 8 s answer window and all other numbers unchanged. Lunge duration 0.3 s eased = build default (main session,
+  not Kev's words; judge on the headset). Rejected: shorter push-back (~1.2 m) with slower creep (still out of hand reach); pure
+  timer at the hold line (redesign); leave as is.
+  (i) Picked "Stun glow + clear orbs + SLASH IT", which is what (d) "the correct answer shows the stun" means: on a correct answer
+  the stunned enemy's glow switches to a stun colour distinct from the answering glow (both cyan before), its answer orbs are
+  removed, and the answer panel text changes from the question to "SLASH IT". Rejected: glow colour only; auto-finish on a correct
+  answer (drops "Answer, then slash to finish"); leave as is.
+  CRITERIA (pre-code): correct -> enemy at 0.7 m hold line after the lunge 3/3; stunned -> 0 strikes 3/3; stun glow colour !=
+  answering glow colour 1/1; 0 answer orbs while stunned 3/3; panel text "SLASH IT" while stunned 3/3.
+  SIGNALS: headset check of the lunge duration and stun colour.
 
 ## UE spike debug checklist (SP-DBG)
 Kev 2026-11-07; spike repo C:/Users/Kev/ue-spike/MetaXRSpike.

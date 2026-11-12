@@ -7,6 +7,9 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Changed
 
+- Plan/spec (Kev 2026-11-12, stun cue and reach): a stunned enemy lunges (short ease, 0.3 s build default) from the 2 m push-back
+  to the 0.7 m hold line so a hand slash reaches it; its glow switches to a distinct stun colour, its answer orbs are removed and
+  the panel reads "SLASH IT" (D23 (h), (i), ENC-006, CARDS-004, CARDS-012).
 - Plan/spec (Kev 2026-11-12, after an adversary review): one enemy at a time in the centre slot, the next walks in after it falls
   (no target choice); stacks of 3 cards, boss 5; the top card shows by itself at the hold line; a correct answer stuns the enemy
   and any slash then knocks a card off; FSRS still written at the answer; lives shown as `Cards r/t` plus drawn cards. Build
