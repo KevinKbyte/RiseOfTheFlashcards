@@ -13,12 +13,10 @@ import {
   type Glow,
 } from './card-enemy.js';
 import { type FanFrame, nextFanFrame, placeInFan, wrap } from './flashcards/fan.js';
+import { parkedEnemyCenter } from './flashcards/panel-layout.js';
 import { pickSpawns, SPAWN_MIN_BEARING_GAP_DEG, type Wall } from './flashcards/spawn.js';
 import type { Wave } from './flashcards/wave.js';
 
-// At the reach line the enemy centre rides slightly above the eye line so the below-eye panel
-// never hides it.
-const ENEMY_RISE = 0.15;
 // Emerge just in front of the wall surface rather than half inside it.
 const WALL_INSET = 0.1;
 const EMERGE_SECONDS = 0.6;
@@ -157,7 +155,9 @@ export class EnemyField {
     const placed = placeInFan(this.fanFrame, occupied, Math.atan2(-ux, -uz), reach);
     const slot = placed === null ? null : placed.slot;
     const g = placed ?? { x: eye.x + ux * reach, z: eye.z + uz * reach };
-    const goal = new Vector3(g.x, eye.y + ENEMY_RISE, g.z);
+    // Rides above the eye line, clear of the below-eye question panel (panel-layout.ts).
+    const c = parkedEnemyCenter(eye, g);
+    const goal = new Vector3(c.x, c.y, c.z);
 
     this.face ??= createFaceParts();
     const parts = buildEnemy(this.face);
