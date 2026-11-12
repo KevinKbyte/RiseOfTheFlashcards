@@ -8,6 +8,10 @@ import { Game, type GameState, type TipSample, type Vec3 } from './harness.js';
 
 /** src/flashcards/slash.ts SLASH_MIN_SPEED. */
 const SLASH_MIN_SPEED = 1.0;
+/** src/flashcards/slash.ts SLASH_MAX_SAMPLE_GAP_S: the classifier cuts the tip path at larger gaps. */
+const SLASH_MAX_SAMPLE_GAP_S = 0.1;
+/** Fast swings tried before a run of frame hitches fails the test. */
+const MAX_SWINGS = 3;
 /** Answer orb radius (src/card-question-panel.ts ORB_RADIUS); the collider adds a 0.02 m tip margin. */
 const ORB_RADIUS = 0.05;
 
@@ -37,18 +41,24 @@ function segDist(a: Vec3, b: Vec3, c: Vec3): number {
   return Math.hypot(f[0] - t * d[0], f[1] - t * d[1], f[2] - t * d[2]);
 }
 
-/** Tip speed (m/s, slash input clock) of each consecutive trace segment that passes through the orb. */
-function crossingSpeeds(trace: TipSample[], orb: Vec3): number[] {
-  const out: number[] = [];
+/**
+ * Each consecutive trace segment that passes through the orb: its tip speed (m/s) and clock gap
+ * (s), both on the slash input clock.
+ */
+function crossingSegments(trace: TipSample[], orb: Vec3): { speed: number; gap: number }[] {
+  const out: { speed: number; gap: number }[] = [];
   for (let i = 1; i < trace.length; i++) {
-    const a = trace[i - 1];
-    const b = trace[i];
-    if (segDist(a.tip, b.tip, orb) > ORB_RADIUS) continue;
-    const len = Math.hypot(b.tip[0] - a.tip[0], b.tip[1] - a.tip[1], b.tip[2] - a.tip[2]);
-    if (len > 0) out.push(len / (b.clock - a.clock));
+    const a = trace[i - 1].tip;
+    const b = trace[i].tip;
+    if (a === null || b === null || segDist(a, b, orb) > ORB_RADIUS) continue;
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+    const gap = trace[i].clock - trace[i - 1].clock;
+    if (len > 0) out.push({ speed: len / gap, gap });
   }
   return out;
 }
+
+const crossingSpeeds = (trace: TipSample[], orb: Vec3): number[] => crossingSegments(trace, orb).map((c) => c.speed);
 
 /**
  * Tip path to a point `lead` above the orb that never passes near an orb: up from the current tip
@@ -71,17 +81,30 @@ describe('controller tip slash on the emulated Quest 3 (IWER set_transform input
   it('a fast tip swing through the correct orb answers the card like selecting it', async () => {
     const g = await openRun();
     const shown = await revealNext(g);
-    const orb = (await g.orbPivot(shown.answer!))!;
-    expect(orb, `pivot of the correct orb ${shown.answer}`).not.toBeNull();
+    const cleared = (x: GameState) => x.cardId !== shown.cardId || x.message;
     // 0.25 m per frame on the uncapped input clock. The classifier cuts the path at sample gaps
     // over 0.1 s (SLASH_MAX_SAMPLE_GAP_S), so any frame that can land a slash measures >= 2.5 m/s.
-    const swing: Vec3[] = [add(orb, 0.125), add(orb, -0.125), add(orb, -0.375)];
-    const trace = await g.sweepTip([...(await approachAbove(g, orb, 0.375)), ...swing]);
-    const speeds = crossingSpeeds(trace, orb);
-    expect(speeds.length, `tip never crossed the orb; trace ${JSON.stringify(trace)}`).toBeGreaterThan(0);
-    expect(Math.max(...speeds)).toBeGreaterThanOrEqual(SLASH_MIN_SPEED);
+    // A frame hitch on the crossing segment (gap > 0.1 s) means that swing could not slash by
+    // design; redo it, bounded, and judge speed and outcome only on a hitch-free swing.
+    const hitched: string[] = [];
+    for (let attempt = 1; ; attempt++) {
+      const orb = (await g.orbPivot(shown.answer!))!;
+      expect(orb, `pivot of the correct orb ${shown.answer}`).not.toBeNull();
+      const swing: Vec3[] = [add(orb, 0.125), add(orb, -0.125), add(orb, -0.375)];
+      const trace = await g.sweepTip([...(await approachAbove(g, orb, 0.375)), ...swing]);
+      const crossing = crossingSegments(trace, orb);
+      expect(crossing.length, `tip never crossed the orb; trace ${JSON.stringify(trace)}`).toBeGreaterThan(0);
+      if (crossing.every((c) => c.gap <= SLASH_MAX_SAMPLE_GAP_S)) {
+        expect(Math.max(...crossing.map((c) => c.speed))).toBeGreaterThanOrEqual(SLASH_MIN_SPEED);
+        break;
+      }
+      hitched.push(JSON.stringify(trace));
+      await g.frames(10);
+      expect(cleared(await g.state()), `card cleared by a swing with a frame gap > ${SLASH_MAX_SAMPLE_GAP_S} s`).toBeFalsy();
+      if (attempt >= MAX_SWINGS) throw new Error(`all ${MAX_SWINGS} swings hitched on the crossing frame; traces ${hitched.join(' | ')}`);
+    }
+    if (hitched.length) console.warn(`[e2e] slash swing redone after ${hitched.length} hitched crossing frame(s)`);
 
-    const cleared = (x: GameState) => x.cardId !== shown.cardId || x.message;
     const after = await g.until(cleared, `card ${shown.cardId} cleared by the slash`, 5000);
     expect(after.correct).toBe((shown.correct ?? 0) + 1);
     expect(after.charge).toBe((shown.charge ?? 0) + 1);

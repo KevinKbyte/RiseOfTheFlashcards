@@ -36,13 +36,19 @@ export interface GameState {
   spawnDistance: number;
   /** Ultimate shockwaves played so far (knockback feedback). */
   pulses: number;
+  /** Revealed target and its distance captured in the frame of the latest shockwave, or null before any. */
+  lastPulse: { targetId: string | null; targetDistance: number | null } | null;
 }
 
 export type Target = { kind: 'orb'; label: string } | { kind: 'enemy'; id: string } | { kind: 'ultimate' };
 
-/** One sweep step: the controller tip (grip + 0.12 m along grip -Z) and the system clock (s). */
+/**
+ * One slash classifier step: the controller tip it sampled (grip + 0.12 m along grip -Z) and the
+ * slash input clock (s). `tip` is null on a step that kept no sample (post-slash cooldown or
+ * untracked controller), which also resets the classifier's path.
+ */
 export interface TipSample {
-  tip: Vec3;
+  tip: Vec3 | null;
   clock: number;
 }
 
@@ -86,9 +92,17 @@ const PAGE_HELPERS = `
     s.__e2eHooked = true; s.__e2eEndTexts = [];
     const orig = s.endRun;
     s.endRun = function (text) { this.__e2eEndTexts.push(text); return orig.call(this, text); };
-    s.__e2ePulses = 0;
+    s.__e2ePulses = 0; s.__e2eLastPulse = null;
     const u = s.ultimate; const origPulse = u.pulse;
-    u.pulse = function (at) { s.__e2ePulses++; return origPulse.call(this, at); };
+    // pulse() runs in the firing frame right after the knockback is applied to s.wave, so the
+    // target distance read here is the knockback result before any later creep.
+    u.pulse = function (at) {
+      s.__e2ePulses++;
+      const id = s.wave.targetId;
+      const e = id === null ? undefined : s.wave.active.find((x) => x.id === id);
+      s.__e2eLastPulse = { targetId: id, targetDistance: e ? e.enc.distance : null };
+      return origPulse.call(this, at);
+    };
   };
   H.state = () => {
     const w = H.world(); const s = H.sys(); const V = H.V();
@@ -125,6 +139,7 @@ const PAGE_HELPERS = `
       targetDistance: targetEnemy ? targetEnemy.enc.distance : null,
       spawnDistance: s.wave.cfg.spawnDistance,
       pulses: s.__e2ePulses,
+      lastPulse: s.__e2eLastPulse,
     };
   };
   H.targetPos = (t) => {
@@ -178,8 +193,10 @@ const PAGE_HELPERS = `
     return H.arr(p.add(new V(0, 0, -0.12).applyQuaternion(q)));
   };
   // Moves the right controller so its tip visits each world point, one IWER set_transform per XR
-  // frame at a fixed orientation; returns the tip and the slash input clock (CardsSystem
-  // clocks.input, real elapsed seconds) sampled after each step.
+  // frame at a fixed orientation. Returns the right-controller samples the slash classifier itself
+  // recorded during the sweep (tip in world space, slash input clock = CardsSystem clocks.input,
+  // real elapsed seconds), read from CardSlash state right after each step(), so the trace is
+  // exactly the path and timing the classifier judged, not a separate read that can straddle frames.
   H.sweepTip = async (points) => {
     const dev = window.IWER_DEVICE; const c = dev.controllers.right; const V = H.V();
     const orientation = { x: 0, y: 0, z: 0, w: 1 };
@@ -189,12 +206,24 @@ const PAGE_HELPERS = `
     const inv = origin.clone().invert();
     const lifted = new V(c.position.x, c.position.y, c.position.z).applyMatrix4(origin);
     const delta = new V(...H.tip()).sub(lifted);
+    const slash = H.sys().slash; const origStep = slash.step;
     const trace = [];
-    for (const p of points) {
-      const r = new V(p[0], p[1], p[2]).sub(delta).applyMatrix4(inv);
-      await dev.remote.dispatch('set_transform', { device: 'controller-right', position: { x: r.x, y: r.y, z: r.z }, orientation });
+    slash.step = function (...args) {
+      const hits = origStep.apply(this, args);
+      const ss = this.state && this.state.rightController && this.state.rightController.samples;
+      const last = ss && ss.length ? ss[ss.length - 1] : null;
+      trace.push(last ? { tip: [last.pos.x, last.pos.y, last.pos.z], clock: last.t } : { tip: null, clock: args[0] });
+      return hits;
+    };
+    try {
+      for (const p of points) {
+        const r = new V(p[0], p[1], p[2]).sub(delta).applyMatrix4(inv);
+        await dev.remote.dispatch('set_transform', { device: 'controller-right', position: { x: r.x, y: r.y, z: r.z }, orientation });
+        await H.frames(1);
+      }
       await H.frames(1);
-      trace.push({ tip: H.tip(), clock: H.sys().clocks?.input });
+    } finally {
+      slash.step = origStep;
     }
     return trace;
   };
@@ -372,6 +401,7 @@ export class Game {
         `sweepTip sample ${bad} has no finite clock (${String(trace[bad].clock)}): CardsSystem.clocks.input missing or renamed?`,
       );
     }
+    if (trace.length === 0) throw new Error('sweepTip: CardSlash.step never ran during the sweep (CardsSystem.slash renamed?)');
     return trace;
   }
 
@@ -379,8 +409,22 @@ export class Game {
     await this.page.screenshot({ path });
   }
 
+  /**
+   * Closes the page first (stops the XR render loop that keeps SwiftShader busy), then the browser.
+   * Each step is bounded: on a loaded machine browser.close() has hung past the 120 s hook timeout,
+   * failing a test that had already passed. A browser still closing after the bound is left to
+   * Playwright's exit cleanup, with a warning.
+   */
   async close(): Promise<void> {
-    await this.browser.close();
+    const bounded = async (what: string, p: Promise<unknown>, ms: number): Promise<void> => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const late = new Promise<'late'>((done) => (timer = setTimeout(() => done('late'), ms)));
+      const r = await Promise.race([p.then(() => 'ok' as const, () => 'ok' as const), late]);
+      clearTimeout(timer);
+      if (r === 'late') console.warn(`[e2e] ${what} still pending after ${ms} ms; left to process exit`);
+    };
+    await bounded('page.close', this.page.close({ runBeforeUnload: false }), 30_000);
+    await bounded('browser.close', this.browser.close(), 60_000);
   }
 }
 

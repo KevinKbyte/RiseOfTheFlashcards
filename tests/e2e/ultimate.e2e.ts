@@ -70,9 +70,13 @@ describe('ultimate on the emulated Quest 3 (real controller input)', () => {
     const fired = await g.state();
     expect(fired.charge).toBe(0);
     expect(fired.targetId).toBe(ready.targetId);
-    // Knocked back to spawn (3 m); a few frames of creep afterwards cost centimetres at most.
-    expect(fired.targetDistance!).toBeGreaterThan(fired.spawnDistance - 0.2);
+    // Knocked back to spawn (3 m), read in the firing frame itself: the enemy creeps in again
+    // afterwards, so a later read would race that creep on a slow machine.
     expect(fired.pulses).toBe(pulsesBefore + 1);
+    expect(fired.lastPulse, 'shockwave frame captured').not.toBeNull();
+    expect(fired.lastPulse!.targetId).toBe(ready.targetId);
+    expect(fired.lastPulse!.targetDistance!).toBeGreaterThan(ready.targetDistance!);
+    expect(fired.lastPulse!.targetDistance!).toBeCloseTo(fired.spawnDistance, 3);
     expect(fired.ultimateOrb, 'orb still shown after firing').not.toBeNull();
     expect(fired.ultimateGlow, 'orb dim again after firing').toBe(false);
     expect(fired.pips).toBe(ready.pips);
