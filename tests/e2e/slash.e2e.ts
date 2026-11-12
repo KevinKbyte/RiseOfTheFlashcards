@@ -1,7 +1,7 @@
 // Requirement: on an emulated Quest 3 the controller works as a blade: sweeping the right
 // controller tip (grip + 0.12 m along grip -Z) through the correct answer orb at 1.0 m/s or faster
-// answers it exactly like selecting it (the card clears, no shield pip is lost), while a slow
-// crossing picks nothing.
+// answers it exactly like selecting it (the enemy is stunned: answer counted, no shield pip lost, the
+// card and its orbs stay up until the finishing slash), while a slow crossing picks nothing.
 import { afterEach, describe, expect, inject, it } from 'vitest';
 import { pickDeck, pressStart, revealNext } from './flow.js';
 import { Game, type GameState, type TipSample, type Vec3 } from './harness.js';
@@ -76,12 +76,12 @@ async function approachAbove(g: Game, orb: Vec3, lead: number): Promise<Vec3[]> 
   ];
 }
 
-// Covers: M1, M6, S3
+// Covers: M1, M6, S3, CARDS-010
 describe('controller tip slash on the emulated Quest 3 (IWER set_transform input)', () => {
-  it('a fast tip swing through the correct orb answers the card like selecting it', async () => {
+  it('a fast tip swing through the correct orb answers the card like selecting it (stun)', async () => {
     const g = await openRun();
     const shown = await revealNext(g);
-    const cleared = (x: GameState) => x.cardId !== shown.cardId || x.message;
+    const cleared = (x: GameState) => x.stunned || x.message;
     // 0.25 m per frame on the uncapped input clock. The classifier cuts the path at sample gaps
     // over 0.1 s (SLASH_MAX_SAMPLE_GAP_S), so any frame that can land a slash measures >= 2.5 m/s.
     // A frame hitch on the crossing segment (gap > 0.1 s) means that swing could not slash by
@@ -105,11 +105,14 @@ describe('controller tip slash on the emulated Quest 3 (IWER set_transform input
     }
     if (hitched.length) console.warn(`[e2e] slash swing redone after ${hitched.length} hitched crossing frame(s)`);
 
-    const after = await g.until(cleared, `card ${shown.cardId} cleared by the slash`, 5000);
+    const after = await g.until(cleared, `target stunned by the slash on card ${shown.cardId}`, 5000);
+    expect(after.stunned).toBe(true);
     expect(after.correct).toBe((shown.correct ?? 0) + 1);
     expect(after.charge).toBe((shown.charge ?? 0) + 1);
     expect(after.pips).toBe(shown.pips);
-    expect(after.active.flatMap((e) => e.cards)).not.toContain(shown.cardId);
+    expect(after.cardId).toBe(shown.cardId);
+    expect(after.active.flatMap((e) => e.cards)).toContain(shown.cardId);
+    expect(after.orbs.map((o) => o.label).sort()).toEqual(shown.orbs.map((o) => o.label).sort());
     expect(g.errors).toEqual([]);
   });
 
@@ -131,6 +134,7 @@ describe('controller tip slash on the emulated Quest 3 (IWER set_transform input
     expect(after.cardId).toBe(shown.cardId);
     expect(after.targetId).toBe(shown.targetId);
     expect(after.correct).toBe(shown.correct);
+    expect(after.stunned).toBe(false);
     expect(after.orbs.map((o) => o.label).sort()).toEqual(shown.orbs.map((o) => o.label).sort());
     expect(after.message).toBe(false);
     expect(g.errors).toEqual([]);

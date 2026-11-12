@@ -16,8 +16,16 @@ export interface GameState {
   cardId: string | null;
   /** Card ids of the current wave (spawned + queued). */
   waveCards: string[];
-  /** `cards`: the enemy's remaining pool cards, current first. */
-  active: { id: string; pos: Vec3 | null; cards: string[] }[];
+  /** `cards`: the enemy's remaining pool cards, current first; `total`: its starting card count; `phase`: its encounter phase. */
+  active: { id: string; pos: Vec3 | null; cards: string[]; total: number; phase: string }[];
+  /** Card ids still queued behind the field (later stacks), in spawn order. */
+  queue: string[];
+  /** Card count of every stack still to fight: field stacks' starting counts, then the queued stacks. */
+  stacks: number[];
+  /** The revealed target answered correctly and waiting for the finishing slash. */
+  stunned: boolean;
+  /** Text lines last painted on the question panel (show or repaint); null while no question panel is drawn. */
+  panelText: string[] | null;
   orbs: { label: string; pos: Vec3 }[];
   answer: string | null;
   runStatus: string | null;
@@ -93,6 +101,13 @@ const PAGE_HELPERS = `
     const orig = s.endRun;
     s.endRun = function (text) { this.__e2eEndTexts.push(text); return orig.call(this, text); };
     s.__e2ePulses = 0; s.__e2eLastPulse = null;
+    // Lines the question panel actually painted: show() paints them, repaint() re-paints (hit flash),
+    // clear() removes the panel.
+    const p = s.panel; s.__e2ePanelText = null;
+    const origShow = p.show; const origRepaint = p.repaint; const origClear = p.clear;
+    p.show = function (eye, yaw, lines, ...rest) { s.__e2ePanelText = [...lines]; return origShow.call(this, eye, yaw, lines, ...rest); };
+    p.repaint = function (lines) { if (this.panelMesh) s.__e2ePanelText = [...lines]; return origRepaint.call(this, lines); };
+    p.clear = function () { s.__e2ePanelText = null; return origClear.call(this); };
     const u = s.ultimate; const origPulse = u.pulse;
     // pulse() runs in the firing frame right after the knockback is applied to s.wave, so the
     // target distance read here is the knockback result before any later creep.
@@ -125,7 +140,11 @@ const PAGE_HELPERS = `
       targetId: target,
       cardId,
       waveCards: [...s.cards.keys()],
-      active: s.wave.active.map((e) => { const v = views.get(e.id); return { id: e.id, pos: v && v.entity.object3D ? H.center(v.entity.object3D) : null, cards: [...e.pool.cards] }; }),
+      active: s.wave.active.map((e) => { const v = views.get(e.id); return { id: e.id, pos: v && v.entity.object3D ? H.center(v.entity.object3D) : null, cards: [...e.pool.cards], total: e.pool.maxHp, phase: e.enc.phase }; }),
+      queue: [...s.wave.queue],
+      stacks: [...s.wave.active.map((e) => e.pool.maxHp), ...s.wave.queueSizes],
+      stunned: !!targetEnemy && targetEnemy.enc.phase === 'stunned',
+      panelText: s.menuOpen || !s.__e2ePanelText ? null : s.__e2ePanelText.slice(),
       orbs: [...s.panel.orbLabels.entries()].map(([e, label]) => ({ label, pos: H.center(e.object3D) })),
       answer: card ? card.answer : null,
       runStatus: run && run.run ? run.run.status : null,
@@ -248,9 +267,19 @@ export interface LaunchOptions {
 
 export const LAUNCH_ARGS = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
 
+/** Right controller rest pose (local position, identity orientation): just in front of the head. */
+export const REST_POSE: Vec3 = [0, 1.55, -0.05];
+
 export class Game {
   readonly errors: string[] = [];
   readonly retriedPresses: string[] = [];
+  /**
+   * Where every aimed select starts: the right controller returns here (identity orientation) before
+   * it is turned toward a target, so a press never aims from wherever a slash sweep left the hand.
+   * From IWER's default hand position (0.25,1.5,-0.4) the ray starts beside enemies standing at
+   * reach (0.7 m) and misses them.
+   */
+  restPose: Vec3 = REST_POSE;
 
   private constructor(
     readonly browser: Browser,
@@ -305,15 +334,22 @@ export class Game {
         .then(() => true, () => false);
       if (ok) break;
     }
-    // Hold the right controller just in front of the head: from IWER's default hand position
-    // (0.25,1.5,-0.4) the ray starts beside enemies standing at reach (0.7 m) and misses them.
-    await this.page.evaluate(() =>
-      (window as any).IWER_DEVICE.remote.dispatch('set_transform', {
-        device: 'controller-right',
-        position: { x: 0, y: 1.55, z: -0.05 },
-      }),
+    await this.rest(5);
+  }
+
+  /** Right controller to `restPose` with identity orientation, settled for `frames` XR frames. */
+  async rest(frames = 2): Promise<void> {
+    const [x, y, z] = this.restPose;
+    await this.page.evaluate(
+      (p) =>
+        (window as any).IWER_DEVICE.remote.dispatch('set_transform', {
+          device: 'controller-right',
+          position: p,
+          orientation: { x: 0, y: 0, z: 0, w: 1 },
+        }),
+      { x, y, z },
     );
-    await this.frames(5);
+    await this.frames(frames);
   }
 
   state(): Promise<GameState> {
@@ -337,7 +373,8 @@ export class Game {
   }
 
   /**
-   * Real input: points the right controller ray at the target and clicks the trigger. With `done`,
+   * Real input: returns the right controller to its rest pose, points its ray at the target and
+   * clicks the trigger. With `done`,
    * clicks again (up to `maxPresses`) until the predicate holds; every click beyond the first is
    * logged in `retriedPresses` so a swallowed press stays visible in the report.
    */
@@ -359,6 +396,7 @@ export class Game {
 
   private async pressAt(target: Target): Promise<void> {
     const page = this.page;
+    await this.rest();
     const aimed = await page.evaluate((t) => (window as any).__e2e.aim(t), target);
     if (!aimed) throw new Error(`aimAndSelect: target not found ${JSON.stringify(target)}`);
     const deadline = Date.now() + 10_000;
