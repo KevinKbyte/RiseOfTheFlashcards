@@ -16,7 +16,10 @@ const TIP_MARGIN_M = 0.02;
 // Card-enemies are 0.40 m wide faces; ENEMY_SLASH_RADIUS_M (half that) keeps neighbouring fan
 // slots' hit spheres apart.
 
-export type SlashHit = { kind: 'orb'; orb: Entity } | { kind: 'enemy'; id: string };
+/** `handedness`: the controller that swung; absent for fingertip picks (no haptic actuator). */
+export type SlashHit = ({ kind: 'orb'; orb: Entity } | { kind: 'enemy'; id: string }) & {
+  handedness?: 'left' | 'right';
+};
 
 export class CardSlash {
   private state = createSlashInput();
@@ -51,7 +54,12 @@ export class CardSlash {
     }
     const r = stepSlashInput(this.state, this.readFrame(t), targets);
     this.state = r.state;
-    return r.picks.flatMap((id) => hits.get(id) ?? []);
+    return r.picks.flatMap((id) => {
+      const hit = hits.get(id);
+      if (hit === undefined) return [];
+      const handedness = r.controllerHands[id];
+      return handedness === undefined ? [hit] : [{ ...hit, handedness }];
+    });
   }
 
   // Poses come in the session reference space, which is the XR origin's local space; the origin's

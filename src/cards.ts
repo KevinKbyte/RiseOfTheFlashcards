@@ -31,7 +31,9 @@ import { browserSession, shuffled } from './card-session.js';
 import { CardSlash } from './card-slash.js';
 import { UltimateInput } from './card-ultimate.js';
 import { stepFrameClocks, type FrameClocks } from './flashcards/input-clock.js';
+import { finishGamepad, swingGamepad } from './flashcards/finish-haptic.js';
 import { mergeOrbPick, type OrbPick } from './flashcards/orb-pick.js';
+import { slashTargets } from './flashcards/slash-targets.js';
 import { resolveUltimate, ultimateOrb } from './flashcards/ultimate-input.js';
 import { WallTracker } from './card-wall-tracker.js';
 import { pickOrbs, type Card } from './flashcards/deck.js';
@@ -100,8 +102,9 @@ export class CardsSystem extends createSystem({
   // disposed while the input system is still dispatching to them.
   // One slot per kind per frame. Of two same-frame enemy presses only the last is kept (acceptable);
   // the first orb hit wins (mergeOrbPick) so a second hand cannot overwrite an answer.
-  private pendingEnemyId: string | null = null;
-  // The gamepad is captured in the press callback, while the answering trigger or pinch is still held.
+  // The gamepad is captured in the press callback (trigger still held) or from the swinging hand; it
+  // rumbles only if this turns out to be the finishing slash (finishGamepad). Hand tracking has none.
+  private pendingEnemy: { id: string; gamepad: Gamepad | undefined } | null = null;
   private pendingOrb: OrbPick<Entity, Gamepad> | null = null;
   private pendingUltimateOrb = false;
   private ultimate!: UltimateInput;
@@ -255,36 +258,36 @@ export class CardsSystem extends createSystem({
     this.feedback.unlockAudio();
     const id = this.enemies.idOf(entity);
     if (this.ultimate.isOrb(entity)) this.pendingUltimateOrb = true;
-    else if (id !== undefined) this.pendingEnemyId = id;
-    else if (this.panel.hasOrb(entity)) {
+    else if (id !== undefined) {
       const { left, right } = this.input.xr.gamepads;
       const pad = left?.getSelecting() ? left : right?.getSelecting() ? right : undefined;
-      this.pendingOrb = mergeOrbPick(this.pendingOrb, { orb: entity, gamepad: pad?.gamepad });
+      this.pendingEnemy = { id, gamepad: pad?.gamepad };
+    } else if (this.panel.hasOrb(entity)) {
+      this.pendingOrb = mergeOrbPick(this.pendingOrb, { orb: entity, gamepad: undefined });
     }
   }
 
   // Slashes fill the same pending slots as trigger select, so a same-frame slash and select on one
-  // target count once. Enemies are slash targets while none is revealed (reveal early), and the
-  // target only while stunned (knock its card off).
+  // target count once. Which enemies and orbs are slash targets this frame: slashTargets.
   private collectSlash(): void {
-    const target = this.targetEnemy();
-    const enemyIds =
-      target === undefined ? this.wave.active.map((e) => e.id) : target.enc.phase === 'stunned' ? [target.id] : [];
-    const hits = this.slash.step(this.clocks.input,this.panel.orbs(), enemyIds, (id, out) =>
+    const { orbs, enemyIds } = slashTargets(this.wave, [...this.panel.orbs()]);
+    const hits = this.slash.step(this.clocks.input, orbs, enemyIds, (id, out) =>
       this.enemies.worldPosition(id, out),
     );
     for (const hit of hits) {
-      if (hit.kind === 'enemy') this.pendingEnemyId = hit.id;
-      else this.pendingOrb = mergeOrbPick(this.pendingOrb, { orb: hit.orb, gamepad: undefined });
+      if (hit.kind === 'enemy') {
+        this.pendingEnemy = { id: hit.id, gamepad: swingGamepad(hit.handedness, this.input.xr.gamepads) };
+      } else this.pendingOrb = mergeOrbPick(this.pendingOrb, { orb: hit.orb, gamepad: undefined });
     }
   }
 
   // Selecting an enemy or slashing it (see collectSlash) reveals an advancing one, or knocks the top
   // card off the stunned target. slashEnemy() returns the same wave when neither applies.
   private applySlash(): void {
-    const id = this.pendingEnemyId;
-    if (id === null) return;
-    this.pendingEnemyId = null;
+    const pending = this.pendingEnemy;
+    if (pending === null) return;
+    this.pendingEnemy = null;
+    const { id, gamepad } = pending;
     const before = this.wave;
     const next = slashEnemy(before, id);
     if (next === before) return;
@@ -296,7 +299,7 @@ export class CardsSystem extends createSystem({
     // Finishing slash: the question panel shatters (CARDS-012) and the next card, or enemy, follows.
     const outcome = correctOutcome(before, next);
     if (!this.enemies.worldPosition(id, this.fxAt)) this.fxAt.copy(this.eye);
-    this.feedback.play(this.fxAt);
+    this.feedback.play(this.fxAt, finishGamepad(before, next, id, gamepad));
     this.panel.clear();
     if (outcome.kind === 'defeated') this.enemies.remove(id);
     if (outcome.kind === 'peeled') this.presentTarget();
