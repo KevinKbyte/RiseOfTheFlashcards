@@ -86,6 +86,27 @@ export function buildEnemy(face: FaceParts): EnemyParts {
   return { root, edge, halo };
 }
 
+// Each card behind the front one peeks this far above the previous, so the stack height reads as
+// the cards left; card 0 sits right behind the face.
+const STACK_STEP_Y = 0.03;
+const STACK_STEP_Z = 0.004;
+
+/** Shows exactly `n` stack card meshes (one per card still held), building more on demand. */
+export function setCardCount(parts: EnemyParts, n: number): void {
+  const stack = parts.root.children.filter((c) => c.userData.stackCard === true);
+  for (let i = stack.length; i < n; i++) {
+    const card = new Mesh(
+      new PlaneGeometry(ENEMY_W, ENEMY_H),
+      new MeshBasicMaterial({ color: 0x312e81, side: DoubleSide }),
+    );
+    card.position.set(0, i * STACK_STEP_Y, -0.008 - i * STACK_STEP_Z);
+    card.userData.stackCard = true;
+    parts.root.add(card);
+    stack.push(card);
+  }
+  stack.forEach((card, i) => (card.visible = i < n));
+}
+
 /** `pulse` in [0, 1] drives the telegraph colour swing. Returns the glow's scale multiplier. */
 export function applyGlow(parts: EnemyParts, glow: Glow, pulse: number): number {
   const color = parts.edge.color;
