@@ -17,14 +17,11 @@ import {
 import type { OrbKind } from './card-menu.js';
 import { paintText, textPlane } from './card-paint.js';
 import { PANEL, panelYaw } from './flashcards/encounter.js';
+import { orbPositions, PANEL_LAYOUT, panelPlacement } from './flashcards/panel-layout.js';
 
-// Orbs sit below the panel inside seated reach; offsets are in the yaw-only panel anchor's frame.
 const ORB_RADIUS = 0.05;
-const ORB_SPACING = 0.16;
-const ORB_DOWN = 0.38;
-const ORB_FORWARD = 0.5;
-const PANEL_W = 0.6;
-const PANEL_H = 0.28;
+// Panel and orb offsets in the yaw-only anchor's frame (eye at the origin, yaw 0).
+const ANCHOR_ORIGIN = { x: 0, y: 0, z: 0 };
 const MESSAGE_DISTANCE = 1.2;
 const FLASH_SECONDS = 0.4;
 
@@ -95,26 +92,24 @@ export class QuestionPanel {
   ): Entity[] {
     this.anchorYaw = Number.isFinite(headYaw) ? headYaw : 0;
     const root = new Group();
-    const pitch = (PANEL.pitchBelowDeg * Math.PI) / 180;
-    this.panelMesh = textPlane(lines, PANEL_W, PANEL_H, PANEL_BG, PANEL.opacity);
-    this.panelMesh.position.set(
-      0,
-      -PANEL.distance * Math.sin(pitch),
-      -PANEL.distance * Math.cos(pitch),
-    );
+    const pitch = (PANEL_LAYOUT.pitchBelowDeg * Math.PI) / 180;
+    this.panelMesh = textPlane(lines, PANEL_LAYOUT.widthM, PANEL_LAYOUT.heightM, PANEL_BG, PANEL.opacity);
+    const { center } = panelPlacement(ANCHOR_ORIGIN, 0);
+    this.panelMesh.position.set(center.x, center.y, center.z);
     this.panelMesh.rotation.x = -pitch;
     root.add(this.panelMesh);
     root.position.copy(eye);
     root.rotation.set(0, this.anchorYaw, 0);
     this.anchor = this.world.createTransformEntity(root);
 
+    const orbAt = orbPositions(ANCHOR_ORIGIN, 0, labels.length);
     return labels.map((text, i) => {
       const style = ORB_STYLE[kinds[i] ?? 'deck'];
       const sphere = new Mesh(
         new SphereGeometry(style.radius, 24, 16),
         new MeshBasicMaterial({ color: style.color }),
       );
-      sphere.position.set((i - (labels.length - 1) / 2) * ORB_SPACING, -ORB_DOWN, -ORB_FORWARD);
+      sphere.position.set(orbAt[i].x, orbAt[i].y, orbAt[i].z);
       const label = textPlane([text], 0.15, 0.04, '#0f172a');
       label.position.set(0, ORB_RADIUS + 0.03, 0);
       sphere.add(label);

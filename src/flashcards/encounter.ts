@@ -2,6 +2,8 @@
 // environment. Time advances only through explicit tick(dt) calls; every function returns a new
 // state (or the same object when the action does not apply) and never mutates its input.
 
+import { PANEL_LAYOUT } from './panel-layout.js';
+
 export type EncounterPhase = 'advancing' | 'slashable' | 'answering' | 'telegraph' | 'cleared';
 
 export interface EncounterConfig {
@@ -36,8 +38,8 @@ export const ENCOUNTER_DEFAULTS: Readonly<EncounterConfig> = Object.freeze({
 });
 
 export const PANEL = Object.freeze({
-  distance: 1.0,
-  pitchBelowDeg: 15,
+  distance: PANEL_LAYOUT.distanceM,
+  pitchBelowDeg: PANEL_LAYOUT.pitchBelowDeg,
   opacity: 0.7,
   deadzoneDeg: 20,
 });

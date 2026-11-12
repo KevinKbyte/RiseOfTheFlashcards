@@ -434,8 +434,8 @@ describe('full encounter loop with defaults', () => {
 
 // Covers: CARDS-005
 describe('PANEL constants', () => {
-  it('panel sits 1 m away, 15 deg below eye level, 70% opaque, 20 deg yaw deadzone', () => {
-    expect(PANEL).toEqual({ distance: 1.0, pitchBelowDeg: 15, opacity: 0.7, deadzoneDeg: 20 });
+  it('panel sits 1 m away, 20 deg below eye level (clear of parked enemy faces, tests/panel-layout.test.ts), 70% opaque, 20 deg yaw deadzone', () => {
+    expect(PANEL).toEqual({ distance: 1.0, pitchBelowDeg: 20, opacity: 0.7, deadzoneDeg: 20 });
   });
 });
 
