@@ -9,6 +9,11 @@
 // orb of a full 4-orb row is within ~0.6 m seated arm reach of the eye. The clearances are the
 // same at any eye height (seated ~1.1 m, standing ~1.7 m) and any head yaw. A non-finite eye or
 // yaw is rejected with a RangeError rather than placing anything at NaN.
+// Glow frame (w8): a halted side-slot enemy's glow stays inside the Quest 3 view, its outer
+// horizontal edge at most 55 deg from centre (half field of view), and sits at least 5 deg above
+// the question panel's top edge; the halo pad is 0.10 m (was 0.18 m: outer edge 57.6 deg, gap
+// 2.48 deg). The glow sizes come from src/card-enemy.ts, never re-typed here.
+// (Ultimate orb placement: tests/panel-layout-ultimate-orb.test.ts.)
 // Regression (w7 capture stills): the centre-slot enemy's face+halo bottom sat at about -15.2 deg
 // (-17.2 deg halted, ENEMY_RISE 0.15) while the panel top edge sat at about -7.0 deg (1.0 m,
 // 15 deg below, 0.28 m tall): an 8-10 deg overlap, so only the "Shields/Hits" line showed.
@@ -30,8 +35,14 @@
 //     orb i at local (x = (i - (count-1)/2) * spacingM, y = -downM, z = -forwardM) in the yaw-only
 //     frame at the eye.
 //   Every function throws RangeError on a non-finite eye component, yaw or slot goal.
+// src/card-enemy.ts exports ENEMY_W, ENEMY_H, HALO_PAD, HALTED_SCALE (glow quad =
+// (ENEMY_W + HALO_PAD) x (ENEMY_H + HALO_PAD), x HALTED_SCALE when halted).
 // CARDS-* IDs are prototype-local; ENC-003 is the panel placement spec line.
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('@iwsdk/core', async () => await import('three'));
+
+import { ENEMY_H, ENEMY_W, HALO_PAD, HALTED_SCALE } from '../src/card-enemy.js';
 import { ENCOUNTER_DEFAULTS, PANEL } from '../src/flashcards/encounter.js';
 import { FAN_SLOT_BEARINGS_DEG, fanSlotGoal } from '../src/flashcards/fan.js';
 import {
@@ -51,8 +62,10 @@ const MIN_GAP_DEG = 2;
 const LOWEST_COMFORT_DEG = -35;
 /** Seated arm reach from the eye (plan ~0.6 m). */
 const MAX_REACH_M = 0.6;
-/** src/card-enemy.ts ENEMY_H + HALO_PAD, scaled by HALTED_SCALE (the largest a parked enemy draws). */
-const FACE_HALO_HALF_H = ((0.5 + 0.18) / 2) * 1.08;
+/** Glow quad half height, scaled by HALTED_SCALE (the largest a parked enemy draws). */
+const FACE_HALO_HALF_H = ((ENEMY_H + HALO_PAD) / 2) * HALTED_SCALE;
+/** Glow quad half width, halted. */
+const FACE_HALO_HALF_W = ((ENEMY_W + HALO_PAD) / 2) * HALTED_SCALE;
 /** src/card-question-panel.ts ORB_RADIUS (deck-orb look used by answer orbs). */
 const ORB_RADIUS = 0.05;
 /** src/flashcards/deck.ts MAX_ORBS: a full answer row. */
@@ -242,6 +255,63 @@ describe('panel layout: eye height and bad input', () => {
       expect(() => orbPositions(eyeAt(1.6), v, 4)).toThrow(RangeError);
       expect(() => parkedEnemyCenter(eyeAt(v), { x: 0, z: -0.7 })).toThrow(RangeError);
       expect(() => parkedEnemyCenter(eyeAt(1.6), { x: v, z: -0.7 })).toThrow(RangeError);
+    }
+  });
+});
+
+/** Quest 3 half horizontal field of view. */
+const HALF_FOV_DEG = 55;
+/** Minimum clear band between a side-slot glow bottom and the panel top, as seen from the eye. */
+const MIN_SIDE_GLOW_GAP_DEG = 5;
+const SIDE_SLOTS = FAN_SLOT_BEARINGS_DEG.flatMap((b, slot) => (b === 0 ? [] : [slot]));
+
+/** Horizontal angle (deg) of `p` from the yaw-forward ray at the eye; + is to the right. */
+function azimuthDeg(eye: Vec3, yaw: number, p: Vec3): number {
+  const dx = p.x - eye.x;
+  const dz = p.z - eye.z;
+  const right = Math.cos(yaw) * dx - Math.sin(yaw) * dz;
+  const fwd = -(Math.sin(yaw) * dx + Math.cos(yaw) * dz);
+  return Math.atan2(right, fwd) / DEG;
+}
+
+// Covers: ENC-003, CARDS-010
+describe('panel layout: thinner glow frame keeps side slots in view and clear of the panel', () => {
+  it('src/card-enemy.ts exports the glow sizes: 0.36 x 0.5 face, 0.10 m halo pad, x1.08 halted', () => {
+    expect(ENEMY_W).toBe(0.36);
+    expect(ENEMY_H).toBe(0.5);
+    expect(HALO_PAD).toBe(0.1);
+    expect(HALTED_SCALE).toBe(1.08);
+  });
+
+  it('a halted side-slot glow outer edge is within 55 deg of centre (Quest 3 half FOV)', () => {
+    expect(SIDE_SLOTS.length).toBeGreaterThan(0);
+    for (const yaw of YAWS) {
+      const eye = eyeAt(STANDING);
+      for (const slot of SIDE_SLOTS) {
+        const c = parkedEnemyCenter(eye, fanSlotGoal(slot, eye, yaw, HOLD));
+        const dist = Math.hypot(c.x - eye.x, c.z - eye.z);
+        // The card faces the eye, so its outer edge is half a glow width beside the centre.
+        const outer = Math.abs(azimuthDeg(eye, yaw, c)) + Math.atan2(FACE_HALO_HALF_W, dist) / DEG;
+        expect(outer, `slot ${slot} yaw ${yaw}: outer glow edge ${outer.toFixed(2)} deg`).toBeLessThanOrEqual(
+          HALF_FOV_DEG,
+        );
+      }
+    }
+  });
+
+  it('a halted side-slot glow bottom sits at least 5 deg above the question panel top', () => {
+    for (const y of [SEATED, STANDING]) {
+      for (const yaw of YAWS) {
+        const eye = eyeAt(y);
+        const panelTop = panelBandDeg(eye, yaw).top;
+        for (const slot of SIDE_SLOTS) {
+          const glowBottom = enemyBandDeg(eye, yaw, slot).bottom;
+          expect(
+            glowBottom - panelTop,
+            `slot ${slot} eye ${y} yaw ${yaw}: glow bottom ${glowBottom.toFixed(2)} vs panel top ${panelTop.toFixed(2)} deg`,
+          ).toBeGreaterThanOrEqual(MIN_SIDE_GLOW_GAP_DEG);
+        }
+      }
     }
   });
 });
