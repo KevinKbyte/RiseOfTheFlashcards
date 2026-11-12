@@ -14,6 +14,7 @@ import {
   presented,
   startRun,
   updateMenu,
+  waveCleared,
   wrongOrb,
   type GameSession,
   type SessionEffect,
@@ -137,8 +138,9 @@ describe('game-session: answer mode (silent default, toggle, mic-denial latch)',
 
 // Covers: M10, D4, D14
 // Requirement: in silent mode (the default) a correct first-pick orb rates Good, so a player who
-// answers every card with a first-pick correct orb clears all 12 reserved cards and reaches the WIN
-// screen through the game session with 12 Good writes (plan test ledger: "silent-mode first-pick
+// answers every card with a first-pick correct orb clears all 12 reserved cards and, once the wave
+// is cleared (the finishing slash), reaches the WIN screen through the game session with 12 Good
+// writes (plan test ledger: "silent-mode first-pick
 // orbs -> WIN reachable"). In voice mode, orbs appear only after misses or a hard STT error; a
 // correct orb with no miss or Didn't catch recorded in the encounter (the Hard-STT-only path) clears
 // the card but writes no rating, while a wrong orb still writes Again as the first scored attempt.
@@ -155,9 +157,9 @@ describe('game-session: orb grading by answer mode', () => {
       s = presented(s, id, `e${i}`).session;
       last = correctOrb(s, id);
       s = last.session;
-      if (i < ids.length - 1) expect(endScreens(last.effects)).toEqual([]);
+      expect(endScreens(last.effects)).toEqual([]);
     });
-    const ends = endScreens(last.effects);
+    const ends = endScreens(waveCleared(s).effects);
     expect(ends).toHaveLength(1);
     expect(ends[0].kind).toBe('win');
     expect(storage.writes).toHaveLength(12);
