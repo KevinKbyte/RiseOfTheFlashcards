@@ -291,18 +291,16 @@ describe('shared fan frame across refills (regression: w7 crowding)', () => {
   });
 
   it('once the field is empty the next spawn re-captures the frame from the head', () => {
-    let current: FanFrame | null = nextFanFrame(null, 0, frame(0, 0, 0));
+    type Placed = { slot: number; x: number; z: number };
+    let current: FanFrame | null = null;
+    let live: Placed[] = [];
+    current = nextFanFrame(current, live.length, frame(0, 0, 0));
+    live.push(placeInFan(current, new Set(live.map((e) => e.slot)), 0, REACH) as Placed);
     const first = current;
-    let live: Array<{ slot: number; x: number; z: number }> = [];
-    for (let i = 0; i < 2; i++) {
-      current = nextFanFrame(current, live.length, frame(9, 9, 1));
-      live.push(placeInFan(current, new Set(live.map((e) => e.slot)), 0, REACH) as {
-        slot: number;
-        x: number;
-        z: number;
-      });
-    }
+    current = nextFanFrame(current, live.length, frame(9, 9, 1));
+    live.push(placeInFan(current, new Set(live.map((e) => e.slot)), 0, REACH) as Placed);
     expect(current).toBe(first);
+    expect(live).toHaveLength(2);
 
     live = [];
     const turned = frame(0.4, -0.6, 35 * DEG);
