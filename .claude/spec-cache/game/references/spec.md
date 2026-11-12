@@ -115,6 +115,8 @@ Deferred to relay integration:
   the player's right at yaw 0; enemy face 0.40 m wide, neighbours >= 0.40 m apart; a hand slash still picks an enemy (slash
   radius 0.20 m). "halts at its spawn bearing on the ~0.6 m reach line" **Superseded by** this amendment. CARDS-011 spawn
   bearings unchanged.
+  Amended 2026-11-12 (Kev, plan D23): one enemy active at a time, parked in the centre (0 deg) slot; the next walks in only after it
+  falls. The -35 / +35 deg slots stay specified but the default run does not use them.
 - ENC-002: Reveal -> card face pops out as the ENC-003 panel and the enemy keeps coming, no reset: revealed inside 2 m -> knocked
   back to 2 m (ultimate knockback mechanics), else continues from where it is, toward its strike slot = its ENC-001 fan slot on
   the 0.7 m hold line; it strikes from there and never leaves it; telegraphs and attacks happen only there. Per-player hold-line
@@ -124,6 +126,9 @@ Deferred to relay integration:
   Amended 2026-11-11 (Kev, plan D22): hold-line calibration range 0.67-0.8 m, default 0.7 m. Adjacent fan slots (35 deg apart) sit
   2R*sin(17.5 deg) ~ 0.60R apart, so R >= 0.67 m keeps neighbours >= 0.40 m apart (ENC-001); the 0.8 m end, with faces raised
   0.25 m (ENC-003), is to be confirmed on the headset. "~0.6-0.8 m (range: Kev to confirm)" **Superseded by** this amendment.
+  Amended 2026-11-12 (Kev, plan D23): the enemy shows its top card by itself when it parks at the hold line; an early slash still
+  reveals it; after a card falls the next card shows by itself. "Re-slash after a miss is valid at any distance" **Superseded by**
+  ENC-006 D23 amendment (a slash on a revealed, not stunned enemy does nothing).
 - ENC-003: Panel ~70% opaque with dark backing, world/body-locked, never head-locked; ~1.0 m away, 20 deg below eye line, yaw-only
   lazy-follow with ~20 deg dead zone, anchored to the D7 baseline (dodge descoped 2026-11-07); never occludes the target enemy (CARDS-010). Text sized at ~1 m. "engaged enemy" **Superseded by** EN-3 (agent default, Kev to confirm).
   Amended 2026-11-11 (Kev, panel numbers from game-iwsdk `src/flashcards/panel-layout.ts`): the 0.28 m panel spans ~-12 to -28 deg;
@@ -145,6 +150,12 @@ Deferred to relay integration:
 - ENC-006: Correct answer in any revealed phase (creep, telegraph, after knockback) shatters the panel and peels a card; a
   multi-card enemy is knocked back per card by the ENC-002 rule. Ultimate on a creeping enemy pushes it back further, panel kept,
   creep resumes from there. EN-1 "also during the telegraph" scope **Superseded by** EN-2. Sound + haptic: CARDS-012.
+  Amended 2026-11-12 (Kev, plan D23, "Answer, then slash to finish"): a correct answer in time stuns the enemy (attack timer stops,
+  no strike, no time limit); any slash (hand, controller swing, trigger fallback) then knocks the top card off: lives -1, next card
+  shows, or the enemy falls on its last card. A slash on a revealed, not stunned enemy does nothing; the ultimate does not finish a
+  stunned card. FSRS is written at the answer, not the slash (D4 unchanged): correct in time = Good; wrong or late (strike lands) =
+  Again once per card plus player damage. Lives: `Cards <remaining>/<total>` on the enemy plus one card drawn per remaining card.
+  "shatters the panel and peels a card" on a correct answer **Superseded by** this amendment.
 - ENC-007: Card-enemies show a cartoon face (eyes + mouth, angry/mischievous) on the player-facing side; it is not the card face:
   the prompt stays hidden until reveal. Theme: cards rising against the human.
 
@@ -161,6 +172,10 @@ CARDS-001..005 are prototype-local IDs in the game-iwsdk cards-proto tests; this
   (ENC-006) unchanged (agent default, Kev to confirm). Defeating the target (last card peeled) refills active from the deck up to maxActive. Deck cleared =
   deck empty and 0 active enemies. "Correct answer defeats the target" and "Multi-card enemies unchanged" **Superseded by** EN-3
   follow-up (verbatim in ledgers EN-3).
+  **Superseded by** plan D23 (Kev 2026-11-12, "One stack at a time", "3 cards, boss 5"): one enemy active at a time in the centre
+  slot (ENC-001); the next walks in only after it falls; no target choice. Stacks: regular 3 cards, final enemy (boss) 5. Packing N
+  run cards: N >= 8 -> last stack 5, rest in 3s; N < 8 -> no boss, stacks of 3; leftover 1 joins the last regular stack (4); leftover
+  2 is its own stack, placed first (12 -> 3,4,5; 13 -> 2,3,3,5; 8 -> 3,5; 7 -> 3,4). Peeling: ENC-006 D23 amendment.
 - CARDS-011: Wall spawn picker: each active enemy gets its own wall spawn 1.2-3.5 m away within +/-35 deg of play-forward (plan
   D8); ring fallback (2.5 m, same arc) on no scene, permission denied, 5 s scene timeout, no qualifying wall, or head outside the
   loaded room. Fewer qualifying walls than active enemies (agent default, Kev to confirm): remaining spawns use the ring fallback across the same arc;

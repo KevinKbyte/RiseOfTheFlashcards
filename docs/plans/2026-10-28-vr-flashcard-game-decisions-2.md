@@ -6,7 +6,8 @@ D14 Run loop (finisher-added; rules.md:126,128 "Satisfying in <=10 minutes", bus
   queue) graded cards at start (uncovered = a today's-queue card with last_review_day < run_day, D5); reserved cards the run never reaches return to
   the queue unspent. Fillers top the run up to 12: cards graded today (lapses first), then introduced not-due cards by lowest retrievability;
   fillers are ungraded (0 FSRS writes, 0 budget), never New, never uncovered queue cards. Cards are packed into enemies of 1, 2 or 3 cards (M2; any
-  n 1..12), graded cards first in queue order, as D19 graded waves, then D19 Overtime. Study-ahead removed (it would overrun the daily budget).
+  n 1..12; **Superseded by** D23: stacks of 3, boss 5), graded cards first in queue order, as D19 graded waves, then D19 Overtime.
+  Study-ahead removed (it would overrun the daily budget).
   Player has 5 shield pips; a hit removes 1, capped at 1 hit per encounter (Q8); the run ends at 0 pips, on WIN or on Retreat (D19; Endless only at
   0 pips). First run = 6 cards, no-fail (0 pips does not end it), no Overtime: it ends after its graded waves. Every run ends in the mastery screen;
   FSRS ratings are saved per encounter (D5), so an early end loses no progress. Target graded-phase length 4-8 min; Overtime and Endless are
@@ -58,7 +59,8 @@ D18 Agent validation loop + reusable E2E suite (Kev, 2026-10-28; M22, M23): the 
     OVR CSV), each a SP1/Nov 2 spike check with a fallback: ledgers MV-2.
 D19 Wave survival + win (Kev, 2026-10-28; M24, Q11, Q12; FSRS pass E-FS-6, E-FS-7): per round the player picks deck(s), incl. "all decks" (starter
   decks + non-hidden imports, snapshotted at round start); Endless is an explicit opt-in (default off). Graded waves = the D14 run cards, 3 cards
-  per wave (12 -> 4 waves, 6 -> 2); pool size ramps 1 -> 2 -> 3 (M2), attack cadence ramps, last graded wave = one 3-card boss. Overtime waves
+  per wave (12 -> 4 waves, 6 -> 2); pool size ramps 1 -> 2 -> 3 (M2), attack cadence ramps, last graded wave = one 3-card boss
+  (wave packing, pool sizes and boss **Superseded by** D23: stacks of 3, boss 5). Overtime waves
   follow until 0 pips: tonight's misses (not-clean encounters) first, then the D14 filler order, then recycled seen cards; zero FSRS writes
   (ungraded relearn, D5); each wave faster. Encounter result (computed, never written): clean = its first scored attempt would rate Good under D4
   (voice correct with only Didn't catch before it, or a silent-mode first-pick orb); not clean = any other scored end; excluded = any Hard STT error
@@ -72,7 +74,8 @@ D19 Wave survival + win (Kev, 2026-10-28; M24, Q11, Q12; FSRS pass E-FS-6, E-FS-
   Any other empty queue = practice run, no WIN (blocks a free WIN at limits 0). Endless: neither tier; ends only at 0 pips. Retreat any time ->
   mastery screen. Mastery screen: waves survived, tier won, personal best per (mode, selection) in the D5 save, next-due count worded "next
   uprising: N cards" (rolls at the local 04:00 study-day boundary, D5). Grade lock: D5. First run (D14) stays 6 cards, no-fail, no Overtime. Horde =
-  the deck queue beyond maxActive, not yet spawned (D13, EN-3 (agent default, Kev to confirm); "the D13 wall queue" **Superseded by** EN-3). Wreckage = the D17 wall-crack persists and grows one tier per wave on MRUK wall planes; ring fallback (D8) = a barricade
+  the deck queue beyond maxActive, not yet spawned (D13, EN-3 (agent default, Kev to confirm); "the D13 wall queue" **Superseded by** EN-3;
+  maxActive is 1 under D23). Wreckage = the D17 wall-crack persists and grows one tier per wave on MRUK wall planes; ring fallback (D8) = a barricade
   taking the same tiers; decal count capped, checked at S11 >=60 fps. Built: S2 packing + budget + queue + grade lock + Overtime + win check, S6 run
   end, S6a mastery fields + PB save, S8 wreckage + barricade, S9 deck select + limit steppers + Endless + Retreat + window tuning, S11 decal cap.
 D20 Quest 3S compatibility (Kev 2026-10-28 "yes add the 3S compat decision to the plan", ledgers E-K-d): Quest 2 baseline, Quest 3S compatible, one
@@ -117,6 +120,34 @@ D22 Hold range, glow frame, ultimate orb placement (Kev 2026-11-11, after an adv
   panel), positioned from the panel anchor. Why: at eye + (0.35, -0.2, -0.45) it sat on the pointing line from a lap-rest hand to the
   right-side enemy and swallowed the press. Palm push and grip squeeze do not depend on the orb position; the uncharged orb stays a
   selectable no-op (D17 / H-2 unchanged).
+D23 One stack at a time, stun then slash (Kev 2026-11-12, after an adversary review; amends D13, D4, D14, D19, D21 and spec ENC-001 /
+  ENC-002 / ENC-006 / CARDS-010). Kev: "multiple cards fight as one, and indicates how many lives it has before it falls. So it does slow
+  mo attack at user and if user doesnt answer correctly in time they get damaged. if they answer correctly in time they deal dmg to the
+  cards, and one of the cards fall". Picked: "One stack at a time", "3 cards, boss 5", "Answer, then slash to finish".
+  (1) One enemy active at a time, in the centre (0 deg) fan slot; the next walks in only after the current one falls. D13 / CARDS-010
+  "up to maxActive (default 3) ... the player picks the target" **Superseded by** this; the D21 side slots stay written but the default run
+  does not use them. Why: crowding, and the "stolen slash" (a walking-in enemy passed 0.145-0.281 m from a parked one; slash spheres
+  0.20 m). Rejected: keep 3 enemies + a 0.40 m slash filter (hidden rule, clutter stays; remains the fallback); one enemy for the whole
+  run (monotone).
+  (2) Stack sizes: regular 3 cards, final enemy (boss) 5. Packing N run cards: N >= 8 -> last stack 5, rest in 3s; N < 8 -> no boss,
+  stacks of 3. Leftover 1 joins the last regular stack (4); leftover 2 is its own stack, placed first. Examples: 12 -> 3,4,5;
+  13 -> 2,3,3,5; 11 -> 3,3,5; 8 -> 3,5; 7 -> 3,4; 20 -> 3,3,3,3,3,5. D14 "enemies of 1, 2 or 3 cards" and D19 "pool size ramps
+  1 -> 2 -> 3 ... last graded wave = one 3-card boss" **Superseded by** this.
+  (3) The enemy shows its top card by itself when it parks at the hold line; an early slash still reveals it. After a card falls the
+  next card shows by itself.
+  (4) A correct answer in time stuns the enemy: attack timer stops, no strike, no time limit. Any slash (hand, controller swing, trigger
+  fallback; S3b) then knocks the top card off: lives -1, next card shows, or the enemy falls on its last card. A slash on a revealed,
+  not stunned enemy does nothing. The ultimate does not finish a stunned card. D13 "a correct answer ... peels a card" and "re-slash
+  after a miss ... re-opens the answer window" **Superseded by** this.
+  (5) Grading unchanged (D4, D5), written at the answer, not the slash: correct in time = Good; wrong or late (strike lands) = Again
+  once per card plus player damage.
+  (6) Lives: `Cards <remaining>/<total>` on the active enemy plus one card drawn per remaining card.
+  Wind-up 2 s and creep 8 s unchanged, pending the headset check.
+  CRITERIA (pre-code): packing N = 1..20 20/20 incl. the 6 examples; 1 active enemy, next walks in only after it falls 3/3; parked
+  enemy shows its top card with no input 3/3; correct -> stunned, 0 strikes in 30 s 3/3; slash on stunned -> lives -1 + next card
+  shown 3/3; last card -> enemy falls 3/3; slash on revealed, not stunned -> no change 3/3; ultimate on stunned -> 0 cards removed
+  1/1; FSRS write at the answer, 0 at the slash 3/3; `Cards r/t` label and r drawn cards correct after each fall 3/3.
+  SIGNALS: headset check of the 2 s / 8 s timings.
 
 ## UE spike debug checklist (SP-DBG)
 Kev 2026-11-07; spike repo C:/Users/Kev/ue-spike/MetaXRSpike.

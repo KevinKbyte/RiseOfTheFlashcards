@@ -127,15 +127,15 @@ D4 Answer outcomes (single table; "encounter" = one card-enemy's card until it i
 
 | Outcome | Classified when | Enemy | Player | FSRS rating (D5) |
 |---|---|---|---|---|
-| Voice correct | D3 correct | -1 card | none | Good if first scored attempt with only Didn't catch before it; Hard after a miss; none if Again was already written |
+| Voice correct | D3 correct | -1 card **Superseded by** D23: stun, then a slash removes 1 card | none | Good if first scored attempt with only Didn't catch before it; Hard after a miss; none if Again was already written |
 | Voice wrong | D3 wrong | none | hit | Again (written at once) if first scored attempt; else none |
 | Voice miss | non-empty, not correct/wrong (ratio, margin, prefix, length fails) | none | none | none; caps a later correct at Hard; counts toward 2-attempt orb trigger |
 | Grading (D3a toggle ON) | D3 miss on a free-form transcript, never empty/[unk] | advance/creep (D13) + attack timer frozen | none | Claude correct -> Voice correct row; wrong/error/2 s timeout/offline -> Voice miss row (orb trigger unchanged) |
 | Didn't catch | empty transcript or 6 s cap | none | none | none; counts toward 2-attempt orb trigger |
 | Arrived unanswered (D13) | creeping enemy reaches its strike slot (its D21 fan slot, 0.7 m hold line) with no correct answer yet | 2 s telegraph, then knockback + creep repeat | hit (no dodge, D7 descoped; 1-hit cap, D14) | Again (written at once) unless an Again was already written; max one Again per encounter, shared with Voice wrong / Orb wrong; arrival adds no orb-trigger attempt |
 | Hard STT error | error callback or no final transcript 3 s after end of speech | none | none | none (a Hard-STT-only encounter writes nothing; card stays due/uncovered); orbs immediately for THIS card only; next card tries voice again |
-| Orb correct (voice mode, after misses/errors) | slash correct orb | -1 card | none | Hard if a miss or Didn't catch preceded and no Again was written; else none |
-| Orb correct (silent mode, first pick) | slash correct orb | -1 card | none | Good (Q3) |
+| Orb correct (voice mode, after misses/errors) | slash correct orb | -1 card **Superseded by** D23: stun, then a slash removes 1 card | none | Hard if a miss or Didn't catch preceded and no Again was written; else none |
+| Orb correct (silent mode, first pick) | slash correct orb | -1 card **Superseded by** D23: stun, then a slash removes 1 card | none | Good (Q3) |
 | Orb wrong | slash distractor | none | hit | Again if first scored attempt; picked orb removed |
 | Ultimate (knockback) | ultimate fires (D7 input) | strike-slot enemy pushed back toward its wall spawn (max to wall/ring); its in-flight attack cancelled (the only allowed cancel), telegraph reset; 0 cards removed; a creeping (D13) enemy is pushed the same way, panel kept, creep resumes from there | none | none; encounter state kept (hit cap, attempt + orb counters, strike-slot reservation); an open mic window is left alone |
 
@@ -238,7 +238,7 @@ D13 Engagement distance = "slash, pop-out, creep" (Kev 2026-10-31, ledgers EN-1;
   and a hand/controller haptic where available: feedback on EVERY correct answer (EN-3, Kev: "every time the user hits a card
   successfully (answers it successfully), there should be some feedback"); a multi-card enemy
   (M2) is knocked back per card by the reveal rule (to 2 m only if inside 2 m). Re-slash after a miss or Didn't catch (re-opens the
-  answer window) is valid at any distance. Optional later: speed bonus by kill distance.
+  answer window) is valid at any distance. Optional later: speed bonus by kill distance. Peel-on-correct + re-slash **Superseded by** D23.
   Q8 0.5 m slot, per-player 0.40-0.60 m (S9), 0.1875 m/s creep **Superseded by** D21 closure (hold-line calibration 0.67-0.8 m, D22).
   Wave + choose target (EN-3, Kev 2026-10-31: "there should be multiple cards coming at the user, and user gets to choose which card to
   attack first"): up to maxActive (default 3; tuning knob like the D14 speed) card-enemies advance at once, each from its own D8 wall
@@ -249,7 +249,7 @@ D13 Engagement distance = "slash, pop-out, creep" (Kev 2026-10-31, ledgers EN-1;
   knockback per card unchanged (agent default, Kev to confirm). Defeating the target (last card peeled) refills active from the deck up to maxActive. Deck
   cleared = deck empty and 0 active enemies. "A correct answer defeats the target" and "Multi-card enemies (M2) unchanged"
   **Superseded by** EN-3 follow-up 2026-10-31; verbatim in ledgers EN-3. "Max 1 engaged enemy (revealed, or halted at the reach line) at a time; others queue at their walls"
-  **Superseded by** EN-3; verbatim in ledgers EN-3.
+  **Superseded by** EN-3; verbatim in ledgers EN-3. Wave + choose target **Superseded by** D23 (one stack at a time), decisions-2.
   Old wording (finisher, slash + attack both in the strike slot, card text for 0.5 m) **Superseded** 2026-10-31; verbatim in ledgers EN-1.
   EN-1 wording (slash only at the reach line, always knocked back to ~2 m, creep time default 8 s) **Superseded by** EN-2 2026-10-31;
   verbatim in ledgers EN-2. Spawn-bearing park at the ~0.6 m reach line **Superseded by** D21 fixed fan (0.7 m hold line), decisions-2.
@@ -317,7 +317,7 @@ S3 Nov 6 slash + card enemy (wall emerge -> reveal at any distance, unrevealed h
   scenario. Pre-G1 IWSDK prototype of the same loop: D13a. EN-1 "reach line -> slash knockback" **Superseded by** EN-2.
   Real hand swing gesture at a distance: later slice (reveal by select works now).
   S3b (Amended 2026-11-07 Kev, H-2; promoted from SX): one slash classifier fed by fingertip AND controller-tip swing; trigger select on an orb = accessibility fallback.
-  EN-3: multi-enemy wave (maxActive 3) + choose target + correct-answer sound/haptic feedback (D13).
+  EN-3: multi-enemy wave (maxActive 3) + choose target + correct-answer sound/haptic feedback (D13). Wave/target **Superseded by** D23.
 S4 Nov 7 voice via IAnswerRecognizer + D4 outcomes (per-card fallback, 3 s timeout) + earcon + mic re-acquire on resume + D17 cue + D18 scenario.
 S5 Nov 8 silent orbs + toggle + D17 cue + D18 scenario.
 S6a Nov 9 (half day, MemriPal finals) FSRS persistence (D5 save: card state, daily counters, queue snapshot, run_day) + on-device golden vectors +
@@ -392,13 +392,13 @@ S2 >=40 matcher golden cases, all run with EMPTY reject lists unless the case te
   before the pause -> no WIN 1/1 (E-N2), all-Hard-STT window -> no WIN 1/1, silent-mode first-pick orbs -> WIN reachable 1/1, orb after 2 silences
   -> not clean 1/1, hidden deck -> 0 of its cards in an all-decks round 1/1, PB kept per (mode, selection) 2/2; deck-lint (Q4): numeric answer
   rejected, 3-char answer flagged, homophone answer without alias flagged 3/3, 3 starter decks pass 3/3; `// Covers: FEAT-ID` above every
-  [TestFixture].
+  [TestFixture]. Pool sizes 1-3 + D19 wave packing **Superseded by** D23 CRITERIA (decisions-2).
 S3 20/20 slashes register with hands, 2/2 hands (slash = fingertip speed >=1.0 m/s through the card
   collider at the D13 reach line); 0 false triggers in 60 s idle; 5/5 unrevealed enemies travel wall -> reach line (D21) and halt there;
   EN-2: select reveals at 3 m, 1.5 m and the reach line 3/3 each, panel shown on reveal; reveal at 3 m -> 0 forward jump, creeps on
   from 3 m 3/3; reveal inside 2 m -> knockback to 2 m 3/3; creep speed 0.1625 m/s (+/-5%) and reveal -> strike slot >= 8 s 5/5;
   re-slash after a miss at > 2 m re-opens the window 3/3; correct while creeping at > 2 m clears 3/3; enemy face visible, prompt
-  hidden before reveal 5/5; arrived unanswered -> 2 s telegraph then hit then knockback to 2 m 3/3;
+  hidden before reveal 5/5; arrived unanswered -> 2 s telegraph then hit then knockback to 2 m 3/3; clear/knockback/EN-3 **Superseded by** D23;
   correct during the telegraph -> panel shattered, 0 hits 3/3; 2-card enemy -> knockback per card 2/2; panel never occludes the enemy 5/5.
   EN-3: 3 enemies advance at once, each from its own spawn 3/3; select a 2nd while one is revealed -> ignored 3/3; non-targets keep
   advancing during the answer window and Grading 3/3; correct -> active refilled to maxActive 3/3; deck empty + 0 active -> deck
@@ -489,7 +489,7 @@ Resolved 2026-10-28 (Kev): ENGINE, Q1-Q12, D15, D19, G0a, G0b in
 - Resolved 2026-10-31 (Kev, EN-2): "after a miss the enemy is out of reach, so the re-slash point is undefined" -> re-slash valid at any
   distance (D13).
 - Resolved 2026-10-31 (Kev, EN-3): multi-enemy wave + choose target, feedback on every correct answer (D13); prototype passthrough
-  wall spawns via immersive-ar + plane detection (D8).
+  wall spawns via immersive-ar + plane detection (D8). Wave + choose target **Superseded by** D23 (decisions-2).
 - Open (2026-11-07): D7 says dodge = "lateral or downward" displacement but measures Euclidean distance in the lateral/vertical
   plane, so >=20 cm upward also passes. Does upward head movement count as a dodge? Closed 2026-11-07 (Kev: "Too much head
   movement is bad isn't it" -> "Drop dodging"): moot, dodge descoped; strikes always hit unless the card is answered (D7, M3).
