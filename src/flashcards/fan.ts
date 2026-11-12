@@ -10,11 +10,37 @@ export const ENEMY_SLASH_RADIUS_M = 0.2;
 
 const DEG = Math.PI / 180;
 
-function wrap(a: number): number {
+/** Shared placement frame for every enemy alive at once: eye x/z plus play-forward yaw. */
+export type FanFrame = { eye: { x: number; z: number }; yawRad: number };
+
+/** Folds an angle into [-PI, PI]; both endpoints are kept as given. */
+export function wrap(a: number): number {
   let r = a % (2 * Math.PI);
   if (r > Math.PI) r -= 2 * Math.PI;
   else if (r < -Math.PI) r += 2 * Math.PI;
   return r;
+}
+
+// Held while any enemy is live so a refill after a head turn lands in the freed slot, not on a
+// neighbour; a degenerate head never replaces a good frame.
+export function nextFanFrame(current: FanFrame | null, liveCount: number, head: FanFrame): FanFrame {
+  if (![head.eye.x, head.eye.z, head.yawRad].every(Number.isFinite)) {
+    return current ?? { eye: { x: 0, z: 0 }, yawRad: 0 };
+  }
+  if (current !== null && liveCount > 0) return current;
+  return { eye: { x: head.eye.x, z: head.eye.z }, yawRad: head.yawRad };
+}
+
+/** Free slot nearest the world spawn bearing, placed on the frame's hold line; null when full. */
+export function placeInFan(
+  frame: FanFrame,
+  occupied: ReadonlySet<number>,
+  spawnBearingWorldRad: number,
+  reach: number,
+): { slot: number; x: number; z: number } | null {
+  const slot = assignFanSlot(occupied, wrap(spawnBearingWorldRad - frame.yawRad));
+  if (slot === null) return null;
+  return { slot, ...fanSlotGoal(slot, frame.eye, frame.yawRad, reach) };
 }
 
 /** Free slot nearest the spawn bearing (ties -> lowest index); null when every slot is taken. */
