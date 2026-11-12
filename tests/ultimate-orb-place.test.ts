@@ -208,3 +208,51 @@ describe('card-ultimate places the orb at ultimateOrbPosition from the current h
     ult.destroy();
   });
 });
+
+// Regression (w8 review): a lost head pose (camera.getWorldPosition on a degenerate matrix) gives a
+// non-finite eye; syncOrb must not throw in the frame loop, must never put the orb at a NaN spot,
+// and must retry the skipped placement on the next frame whose eye is finite.
+const BAD_EYES: [string, Vec3][] = [];
+for (const axis of ['x', 'y', 'z'] as const) {
+  for (const v of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+    BAD_EYES.push([`${axis}=${v}`, { x: 0, y: 1.6, z: 0, [axis]: v }]);
+  }
+}
+
+function expectFinite(p: Vec3, label: string): void {
+  for (const k of ['x', 'y', 'z'] as const) expect(Number.isFinite(p[k]), `${label} ${k}=${p[k]}`).toBe(true);
+}
+
+// Covers: S7, H-2
+describe('card-ultimate orb placement survives a lost head pose (non-finite eye)', () => {
+  for (const [name, bad] of BAD_EYES) {
+    it(`run start with eye ${name}: no throw, no NaN orb, placed once the eye is finite`, () => {
+      const [eye, yaw] = POSES[1];
+      const { world, created } = fakeWorld();
+      const ult = new UltimateInput(world);
+      expect(() => ult.syncOrb(DIM, new Vector3(bad.x, bad.y, bad.z), yaw, 0)).not.toThrow();
+      expectFinite(orbAt(created), 'orb after lost pose');
+      ult.syncOrb(DIM, new Vector3(eye.x, eye.y, eye.z), yaw, 0.1);
+      expectVec(orbAt(created), ultimateOrbPosition(eye, yaw), 'retried placement');
+      ult.destroy();
+    });
+  }
+
+  it('charge reaching 5 during a lost pose re-places on the next finite frame', () => {
+    const [e0, y0] = POSES[0];
+    const [e2, y2] = POSES[2];
+    const { world, created } = fakeWorld();
+    const ult = new UltimateInput(world);
+    ult.syncOrb(DIM, new Vector3(e0.x, e0.y, e0.z), y0, 0);
+    const start = ultimateOrbPosition(e0, y0);
+    expect(() => ult.syncOrb(GLOW, new Vector3(Number.NaN, Number.NaN, Number.NaN), y2, 0.1)).not.toThrow();
+    const held = orbAt(created);
+    expectFinite(held, 'orb after lost pose');
+    expectVec(held, start, 'orb keeps its last good spot');
+    ult.syncOrb(GLOW, new Vector3(e2.x, e2.y, e2.z), y2, 0.2);
+    expectVec(orbAt(created), ultimateOrbPosition(e2, y2), 'retried placement');
+    ult.syncOrb(GLOW, new Vector3(e0.x, e0.y, e0.z), y0, 0.3);
+    expectVec(orbAt(created), ultimateOrbPosition(e2, y2), 'retry done, stays put while glowing');
+    ult.destroy();
+  });
+});

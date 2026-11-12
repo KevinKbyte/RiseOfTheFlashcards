@@ -285,16 +285,19 @@ describe('panel layout: thinner glow frame keeps side slots in view and clear of
 
   it('a halted side-slot glow outer edge is within 55 deg of centre (Quest 3 half FOV)', () => {
     expect(SIDE_SLOTS.length).toBeGreaterThan(0);
-    for (const yaw of YAWS) {
-      const eye = eyeAt(STANDING);
-      for (const slot of SIDE_SLOTS) {
-        const c = parkedEnemyCenter(eye, fanSlotGoal(slot, eye, yaw, HOLD));
-        const dist = Math.hypot(c.x - eye.x, c.z - eye.z);
-        // The card faces the eye, so its outer edge is half a glow width beside the centre.
-        const outer = Math.abs(azimuthDeg(eye, yaw, c)) + Math.atan2(FACE_HALO_HALF_W, dist) / DEG;
-        expect(outer, `slot ${slot} yaw ${yaw}: outer glow edge ${outer.toFixed(2)} deg`).toBeLessThanOrEqual(
-          HALF_FOV_DEG,
-        );
+    for (const y of [SEATED, STANDING]) {
+      for (const yaw of YAWS) {
+        const eye = eyeAt(y);
+        for (const slot of SIDE_SLOTS) {
+          const c = parkedEnemyCenter(eye, fanSlotGoal(slot, eye, yaw, HOLD));
+          const dist = Math.hypot(c.x - eye.x, c.z - eye.z);
+          // The card faces the eye, so its outer edge is half a glow width beside the centre.
+          const outer = Math.abs(azimuthDeg(eye, yaw, c)) + Math.atan2(FACE_HALO_HALF_W, dist) / DEG;
+          expect(
+            outer,
+            `eye y ${y} slot ${slot} yaw ${yaw}: outer glow edge ${outer.toFixed(2)} deg`,
+          ).toBeLessThanOrEqual(HALF_FOV_DEG);
+        }
       }
     }
   });

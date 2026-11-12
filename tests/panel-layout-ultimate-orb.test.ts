@@ -179,7 +179,7 @@ describe('ultimate orb beyond the hold line (regression: orb in the reach path)'
         const orb = sphereQuad(eye, yaw, ultimateOrbPosition(eye, yaw), ULT_PICK_RADIUS);
         expect(convexOverlap(orb, panelQuad(eye, yaw)), `panel, eye y ${eye.y} yaw ${yaw}`).toBe(false);
         for (const a of orbPositions(eye, yaw, MAX_ANSWER_ORBS)) {
-          expect(convexOverlap(orb, sphereQuad(eye, yaw, a, ORB_RADIUS)), `answer orb, yaw ${yaw}`).toBe(false);
+          expect(convexOverlap(orb, sphereQuad(eye, yaw, a, ORB_RADIUS)), `answer orb, eye y ${eye.y} yaw ${yaw}`).toBe(false);
         }
       }
     }
