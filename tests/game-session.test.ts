@@ -460,7 +460,7 @@ describe('game-session: spawnWave carries health-pool sizes', () => {
     expect(ids).toHaveLength(12);
     expect(w.poolSizes).toEqual(planPoolSizes(12));
     expect(w.poolSizes?.reduce((a, b) => a + b, 0)).toBe(12);
-    expect(w.poolSizes?.at(-1)).toBe(5);
+    expect(w.poolSizes?.[w.poolSizes.length - 1]).toBe(5);
   });
 
   it('a 4-card deck (under 8 cards, no boss) spawns one 4-card stack, every card used once', () => {

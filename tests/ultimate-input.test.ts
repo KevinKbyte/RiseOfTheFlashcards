@@ -259,7 +259,7 @@ function sessionWithCorrect(n: number): { session: GameSession; ids: string[] } 
   let s = createSession({ decks: [BIG], storage: memoryStorage(), clock: () => NOW });
   s = updateMenu(updateMenu(s, openDeckSelect), (m) => selectDeck(m, BIG.id));
   const step = startRun(s);
-  const spawn = step.effects.find((e) => e.type === 'spawnWave') as { cards: { id: string }[] };
+  const spawn = step.effects.find((e) => e.type === 'spawnWave') as { cards: readonly { id: string }[] };
   const ids = spawn.cards.map((c) => c.id);
   let out = step.session;
   for (let i = 0; i < n; i++) {

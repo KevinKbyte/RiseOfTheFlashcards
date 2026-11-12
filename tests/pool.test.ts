@@ -147,7 +147,7 @@ describe('pool: planned stack sizes for a run (one stack at a time, 5-card boss)
 
   it.each(RUN_SIZES.filter((n) => n >= 8))('n=%i: the last stack is the 5-card boss, the only one', (n) => {
     const sizes = planPoolSizes(n);
-    expect(sizes.at(-1)).toBe(5);
+    expect(sizes[sizes.length - 1]).toBe(5);
     expect(sizes.filter((x) => x === 5)).toHaveLength(1);
   });
 
