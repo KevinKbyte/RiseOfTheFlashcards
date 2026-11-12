@@ -7,6 +7,9 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Changed
 
+- Plan/spec (Kev 2026-11-11, "Strike from 0.7 m"): a revealed enemy strikes from its fan slot on the 0.7 m hold line and never
+  leaves it; creep speed (2.0 - 0.7) m / 8 s = 0.1625 m/s (was 0.1875 to a 0.5 m strike slot); per-player calibration moves
+  to the hold line, ~0.6-0.8 m, range for Kev to confirm (D21, ENC-002, ENC-004).
 - Plan/spec (Kev 2026-11-11, "Fixed fan"): arrived enemies park in three fixed slots at -35 / 0 / +35 deg on a 0.7 m hold
   line anchored at the first arrival, not at their spawn bearing on the ~0.6 m reach line, so 0.40 m enemy faces no longer
   merge over the question panel (D21, ENC-001, CARDS-010); strike slot vs hold line left as an open question for Kev.

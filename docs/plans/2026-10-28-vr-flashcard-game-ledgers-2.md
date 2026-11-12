@@ -40,7 +40,7 @@ below live in [2026-10-28-vr-flashcard-game.md](2026-10-28-vr-flashcard-game.md)
 | D17 ultimate | palms or controllers glow when charged; ghost demo of the player's input on first charge only |
 | D20 input | Input: OpenXR actions on the classic Touch profile /interaction_profiles/oculus/touch_controller, never device-specific; runtime type via UOculusXRFunctionLibrary::GetControllerType() (https://developers.meta.com/horizon/documentation/unreal/unreal-touch-controller/); Touch Plus profile /interaction_profiles/meta/touch_controller_plus (XR_META_touch_controller_plus) and classic-binding fallback on 3S UNVERIFIED. |
 | S7 slice | ultimates (charge >=5; two-palm push, A+X, or one-controller A/X hold, D7) |
-| S3 CRITERIA | 20/20 slashes register per input, hands and controllers 2/2 (slash = fingertip or controller-tip speed >=1.0 m/s through the card collider in the strike slot) |
+| S3 CRITERIA | 20/20 slashes register per input, hands and controllers 2/2 (slash = fingertip or controller-tip speed >=1.0 m/s through the card collider of an enemy that strikes from its fan slot on the 0.7 m hold line, D21) |
 | S6 CRITERIA | no pose tracked mid-telegraph -> prompt, freeze, fresh baseline, one replay, lands at its hit frame 3/3 per input (hands, controllers); controller-only run -> attacks land 3/3 |
 | S7 CRITERIA | A+X charged -> ultimate 3/3, uncharged -> 0 3/3; one controller + one hand, 0.5 s A/X hold -> ultimate 3/3 (only if SIG-1 shows mixed input); 0 ultimate triggers in 60 s of charged slashing, hands and controllers 2/2 |
 | SX CRITERIA | S1-S7 hands-only CRITERIA still pass with SX on 1/1; full run with no controller paired still passes 1/1 |

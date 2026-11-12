@@ -92,7 +92,7 @@ A14 EditMode tests run on Mono in the Editor; the device runs IL2CPP with manage
   Under Unreal (2026-10-28): A14 is N/A (C++ on desktop and device); kept for the Unity fallback.
 A15 Seated hand reach: a slash within the 30 cm hand radius only reaches ~0.4-0.65 m in front of the head; enemies at the 1.2-3.5 m wall spawn are out of reach until they advance (D13).
   Resolved 2026-10-31 (Kev, EN-1): slash at the D13 reach line (~0.6 m), then knockback + creep to the 0.5 m strike slot.
-  **Superseded by** EN-2 (Kev 2026-10-31): reveal (select/slash) works at any distance; the reach line only halts an unrevealed enemy (D13).
+  **Superseded by** EN-2 (Kev 2026-10-31): reveal at any distance; reach line only halts unrevealed (D13). Reach vs 0.7 m hold: open, headset (D21).
 A16 **Superseded by** D2 (Wit per-app limits vs judge concurrency; on-device has no shared quota). Ledgers V-1.
 
 ## Design decisions
@@ -132,7 +132,7 @@ D4 Answer outcomes (single table; "encounter" = one card-enemy's card until it i
 | Voice miss | non-empty, not correct/wrong (ratio, margin, prefix, length fails) | none | none | none; caps a later correct at Hard; counts toward 2-attempt orb trigger |
 | Grading (D3a toggle ON) | D3 miss on a free-form transcript, never empty/[unk] | advance/creep (D13) + attack timer frozen | none | Claude correct -> Voice correct row; wrong/error/2 s timeout/offline -> Voice miss row (orb trigger unchanged) |
 | Didn't catch | empty transcript or 6 s cap | none | none | none; counts toward 2-attempt orb trigger |
-| Arrived unanswered (D13) | creeping enemy reaches the strike slot with no correct answer yet | 2 s telegraph, then knockback + creep repeat | hit (no dodge, D7 descoped; 1-hit cap, D14) | Again (written at once) unless an Again was already written; max one Again per encounter, shared with Voice wrong / Orb wrong; arrival adds no orb-trigger attempt |
+| Arrived unanswered (D13) | creeping enemy reaches its strike slot (its D21 fan slot, 0.7 m hold line) with no correct answer yet | 2 s telegraph, then knockback + creep repeat | hit (no dodge, D7 descoped; 1-hit cap, D14) | Again (written at once) unless an Again was already written; max one Again per encounter, shared with Voice wrong / Orb wrong; arrival adds no orb-trigger attempt |
 | Hard STT error | error callback or no final transcript 3 s after end of speech | none | none | none (a Hard-STT-only encounter writes nothing; card stays due/uncovered); orbs immediately for THIS card only; next card tries voice again |
 | Orb correct (voice mode, after misses/errors) | slash correct orb | -1 card | none | Hard if a miss or Didn't catch preceded and no Again was written; else none |
 | Orb correct (silent mode, first pick) | slash correct orb | -1 card | none | Good (Q3) |
@@ -230,16 +230,16 @@ D13 Engagement distance = "slash, pop-out, creep" (Kev 2026-10-31, ledgers EN-1;
   Reveal (EN-2, Kev 2026-10-31: "once the user clicks on the card no matter how far it is we can start to answer") = select or slash
   (M1) the card-enemy at ANY distance -> card pops out (D13a) + mic opens (D2). An unrevealed enemy halts at the reach line (D21).
   After reveal it keeps coming, slower, no reset: revealed inside 2 m -> knocked back to 2 m (D4 Ultimate knockback mechanics);
-  otherwise it continues from where it is. Creep speed fixed = (2.0 - 0.5) m / 8 s = 0.1875 m/s toward the strike slot 0.5 m in front
-  of the head, so reveal -> strike slot >= 8 s (>= 6 s no-speech cap + 2 s grading timeout, D2, D3a); earlier reveal = more time.
-  Speed is the pacing knob (D14, Q8); needs one tune on Quest 3/3S. Grading (D3a) freezes the creep. Arrivals: D21 fixed-fan slots (Kev 2026-11-11).
+  otherwise it continues from where it is. Creep speed fixed = (2.0 - 0.7) m / 8 s = 0.1625 m/s toward its strike slot = its D21 fan
+  slot on the 0.7 m hold line (never leaves it), so reveal -> strike slot >= 8 s (>= 6 s no-speech cap + 2 s grading timeout, D2, D3a);
+  earlier reveal = more time. Speed is the pacing knob (D14, Q8); needs one tune on Quest 3/3S. Grading (D3a) freezes the creep.
   Telegraphs and attacks happen only in the strike slot: arrived unanswered -> 2 s telegraph -> hit (D4 row) -> knockback to 2 m, repeat.
   A correct answer in any revealed phase (creep, telegraph, after knockback) shatters the panel and peels a card, with a short sound
   and a hand/controller haptic where available: feedback on EVERY correct answer (EN-3, Kev: "every time the user hits a card
   successfully (answers it successfully), there should be some feedback"); a multi-card enemy
   (M2) is knocked back per card by the reveal rule (to 2 m only if inside 2 m). Re-slash after a miss or Didn't catch (re-opens the
   answer window) is valid at any distance. Optional later: speed bonus by kill distance.
-  Q8 (2026-10-28): 0.5 m is the default; the slot is calibrated per player within 0.40-0.60 m (S9). Open question (Kev): inside the D21 hold line.
+  Q8 0.5 m slot, per-player 0.40-0.60 m (S9), 0.1875 m/s creep **Superseded by** D21 closure (hold-line calibration ~0.6-0.8 m, Kev to confirm).
   Wave + choose target (EN-3, Kev 2026-10-31: "there should be multiple cards coming at the user, and user gets to choose which card to
   attack first"): up to maxActive (default 3; tuning knob like the D14 speed) card-enemies advance at once, each from its own D8 wall
   spawn (ring fallback). Unrevealed ones halt at the reach line (D21 slot) and never attack. The player picks the target: reveal any one at any
@@ -330,7 +330,7 @@ SX OPTIONAL STRETCH, controllers (H-1; no date): only after hands-only S1-S7 pas
   Controller slash (controller-tip), A+X ultimate, one-controller A/X hold (SIG-1) **Superseded by** H-2 (S3b, S7 grip squeeze), controller pose in the input-loss pause, controller
   ghost + glow cues (D17), Touch / Touch Plus profiles (D20); detail + criteria verbatim in ledgers H-1.
 S8 Nov 12 MR walls + arc + fallback + test matrix. CHECKPOINT Nov 12 evening: D18 T2 run; apply constraint ladder if any of S1-S8 open.
-S9 Nov 13 first-five-minutes tutorial (incl. per-player strike-slot calibration, D13), pause/resume (voice re-arm), accessibility pass, D5
+S9 Nov 13 first-five-minutes tutorial (incl. per-player hold-line calibration, D21), pause/resume (voice re-arm), accessibility pass, D5
   daily-limit steppers on deck select, D15 Experimental pane + gaze-dwell select, on/off calibration of each D15 toggle, D16 phone-breakout intro
   (cuttable).
 S10 Nov 14 relay (D6) + automated function tests + headset pairing + imported-deck list + privacy policy final; relay circuit
@@ -396,7 +396,7 @@ S2 >=40 matcher golden cases, all run with EMPTY reject lists unless the case te
 S3 20/20 slashes register with hands, 2/2 hands (slash = fingertip speed >=1.0 m/s through the card
   collider at the D13 reach line); 0 false triggers in 60 s idle; 5/5 unrevealed enemies travel wall -> reach line (D21) and halt there;
   EN-2: select reveals at 3 m, 1.5 m and the reach line 3/3 each, panel shown on reveal; reveal at 3 m -> 0 forward jump, creeps on
-  from 3 m 3/3; reveal inside 2 m -> knockback to 2 m 3/3; creep speed 0.1875 m/s (+/-5%) and reveal -> strike slot >= 8 s 5/5;
+  from 3 m 3/3; reveal inside 2 m -> knockback to 2 m 3/3; creep speed 0.1625 m/s (+/-5%) and reveal -> strike slot >= 8 s 5/5;
   re-slash after a miss at > 2 m re-opens the window 3/3; correct while creeping at > 2 m clears 3/3; enemy face visible, prompt
   hidden before reveal 5/5; arrived unanswered -> 2 s telegraph then hit then knockback to 2 m 3/3;
   correct during the telegraph -> panel shattered, 0 hits 3/3; 2-card enemy -> knockback per card 2/2; panel never occludes the enemy 5/5.
@@ -404,7 +404,7 @@ S3 20/20 slashes register with hands, 2/2 hands (slash = fingertip speed >=1.0 m
   advancing during the answer window and Grading 3/3; correct -> active refilled to maxActive 3/3; deck empty + 0 active -> deck
   cleared 1/1; every correct answer -> visible + sound + haptic (where available) 5/5. S3b CRITERIA (controller slash, orb trigger fallback): ledgers H-2.
   EN-1 "5/5 enemies travel wall -> reach line and no slash registers before arrival", "slash -> knockback to ~2 m + panel shown 5/5",
-  "creep to strike slot >= 8 s 5/5" **Superseded by** EN-2.
+  "creep to strike slot >= 8 s 5/5" **Superseded by** EN-2. EN-2 "creep speed 0.1875 m/s" **Superseded by** D21 closure (2026-11-11).
 S4 0 mic opens outside window; 3/3 forced hard STT errors -> orbs <1 s AND next card's voice answer works 3/3; empty transcript -> 0 damage 3/3; 2 non-correct attempts -> orbs 3/3; 6 s silence -> didn't catch 3/3; Wi-Fi off: voice answers still graded by the D3 matcher (D3a live grading -> miss, GRADE-003) 3/3 and the run completes 1/1; silent mode not auto-latched by any error except mic denial 1/1.
 S5 full run with mic off 1/1.
 S6a EditMode: fresh dir first save then load 1/1; corrupt primary -> .bak 1/1; truncated primary + missing .bak -> fresh state 1/1; FSRS card state,
@@ -431,8 +431,8 @@ S9 first correct kill <90 s, timed from D16 intro end or skip (2 testers who hav
   logged); 3 runs: graded phase median 4-8 min, max <=10 min, first cleared wave <=2 min 3/3, early-end rate (runs ended at 0 pips before Overtime /
   runs) recorded (Q8); D19 WIN on a starter deck: 3 runs, time-to-WIN recorded 3/3; 0/3 WIN or median >15 min -> window 60 s, re-run (E-FIN-15);
   daily-limit steppers change new/reviews, applied next study day 1/1; Retreat -> mastery screen 3/3;
-  pause/resume 3/3 AND voice answer works after resume 3/3; system menu open/close then voice works 3/3; cold start <10 s; strike slot
-  calibrates within 0.40-0.60 m 3/3; gaze-dwell ON: 1.2 s dwell selects 3/3, shorter glance selects 0/3;
+  pause/resume 3/3 AND voice answer works after resume 3/3; system menu open/close then voice works 3/3; cold start <10 s; hold line
+  calibrates in ~0.6-0.8 m 3/3 (D21, Kev to confirm; was slot 0.40-0.60 m); gaze-dwell ON: 1.2 s dwell selects 3/3, shorter glance selects 0/3;
   Experimental pane lists 2/2 toggles, each flips live and persists across restart 2/2; each toggle run on and off against these S9
   metrics with the result logged 2/2; every underperformer is OFF in the RC build and absent from Devpost + video (D15).
 S10 round-trip 3/3 (headset shows code, page posts, deck in headset <=5 s after POST); oversize/malformed/<4-answers/expired/

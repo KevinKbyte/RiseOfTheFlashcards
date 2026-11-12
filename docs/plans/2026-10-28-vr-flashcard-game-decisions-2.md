@@ -100,7 +100,13 @@ D21 Fixed enemy fan (Kev 2026-11-11, "Fixed fan"; amends the D13 park position a
   Why: at 0.6 m with spawn bearings only 15 deg apart, faces sat 0.16 m apart, merged into one panel and covered the question panel (D13a).
   Open question (Kev): the D13 strike slot (0.5 m default, calibrated 0.40-0.60 m, Q8) lies inside the 0.7 m hold line. Does a revealed
   enemy leave its fan slot to creep to the strike slot, or does the strike slot move to the hold line (which changes the D13 creep speed
-  formula (2.0 - 0.5) m / 8 s)?
+  formula (2.0 - 0.5) m / 8 s)? Closed 2026-11-11 (Kev, "Strike from 0.7 m (Recommended)"): a revealed enemy strikes from its fan slot on
+  the 0.7 m hold line and never leaves it; strike slot = that fan slot. Creep still takes 8 s: speed = (2.0 - 0.7) m / 8 s = 0.1625 m/s.
+  D13 strike slot 0.5 m and creep (2.0 - 0.5) m / 8 s = 0.1875 m/s **Superseded by** this. Why: the logic crept 0.7 -> 0.5 m while the
+  view held the enemy at 0.7 m (an invisible ~1.07 s stall); staying in the slot keeps faces off neighbours and the question panel.
+  Rejected: move in to 0.5 m (overlap, comfort minimum, new view path); 0.7 m plus a ~0.15 m visual lunge (extra overlap and code).
+  Q8 per-player strike-slot calibration 0.40-0.60 m (S9) **Superseded by** a per-player hold-line calibration, ~0.6-0.8 m, moving the fan
+  and the strike together (range needs Kev's confirmation). Open (headset check): A15 seated reach ~0.4-0.65 m vs the 0.7 m hold line.
 
 ## UE spike debug checklist (SP-DBG)
 Kev 2026-11-07; spike repo C:/Users/Kev/ue-spike/MetaXRSpike.

@@ -116,15 +116,16 @@ Deferred to relay integration:
   radius 0.20 m). "halts at its spawn bearing on the ~0.6 m reach line" **Superseded by** this amendment. CARDS-011 spawn
   bearings unchanged.
 - ENC-002: Reveal -> card face pops out as the ENC-003 panel and the enemy keeps coming, no reset: revealed inside 2 m -> knocked
-  back to 2 m (ultimate knockback mechanics), else continues from where it is, toward the 0.5 m strike slot (calibrated 0.40-0.60
-  m); telegraphs and attacks happen only there. Re-slash after a miss is valid at any distance. EN-1 always-knockback-to-~2 m
-  wording **Superseded by** EN-2. Open question (Kev): this strike slot lies inside the 0.7 m ENC-001 hold line; does a revealed
-  enemy leave its fan slot to strike, or does the strike slot move to the hold line (changes the ENC-004 creep formula)?
+  back to 2 m (ultimate knockback mechanics), else continues from where it is, toward its strike slot = its ENC-001 fan slot on
+  the 0.7 m hold line; it strikes from there and never leaves it; telegraphs and attacks happen only there. Per-player hold-line
+  calibration ~0.6-0.8 m moves fan and strike together (range: Kev to confirm). Re-slash after a miss is valid at any distance.
+  EN-1 always-knockback-to-~2 m wording **Superseded by** EN-2. "toward the 0.5 m strike slot (calibrated 0.40-0.60 m)" and the
+  strike-slot-vs-hold-line open question **Superseded by** plan D21 closure (Kev 2026-11-11, "Strike from 0.7 m").
 - ENC-003: Panel ~70% opaque with dark backing, world/body-locked, never head-locked; ~1.0 m away, ~15 deg below eye line, yaw-only
   lazy-follow with ~20 deg dead zone, anchored to the D7 baseline (dodge descoped 2026-11-07); never occludes the target enemy (CARDS-010). Text sized at ~1 m. "engaged enemy" **Superseded by** EN-3 (agent default, Kev to confirm).
-- ENC-004: Creep speed fixed = (2.0 - 0.5) m / 8 s = 0.1875 m/s, so reveal -> strike slot >= 8 s (>= 6 s no-speech cap + 2 s
+- ENC-004: Creep speed fixed = (2.0 - 0.7) m / 8 s = 0.1625 m/s, so reveal -> strike slot >= 8 s (>= 6 s no-speech cap + 2 s
   grading timeout); earlier reveal = more time; the pacing knob. Grading (GRADE-004) freezes it. EN-1 "creep time, default 8 s"
-  **Superseded by** EN-2.
+  **Superseded by** EN-2. "(2.0 - 0.5) m / 8 s = 0.1875 m/s" **Superseded by** plan D21 closure (Kev 2026-11-11).
 - ENC-005: Arrived unanswered -> 2 s telegraph -> hit (1 hit per encounter);
   "dodgeable" **Descoped 2026-11-07 (Kev): too much head movement; strikes resolve without a dodge check.** writes FSRS Again unless already written
   (max one Again per encounter, shared with a wrong voice/orb answer; plan D4); no orb-trigger attempt of its own; then knockback to
