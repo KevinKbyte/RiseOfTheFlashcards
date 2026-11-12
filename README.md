@@ -1,18 +1,93 @@
-# IWSDK App
+# Flashcard Defense (game-iwsdk)
 
-This project uses `iwsdk.config.json` for declarative scene, asset, component,
-XR, and emulator configuration. Application systems remain explicit in
-`src/index.ts`.
+WebXR flashcard game for Meta Quest, built on the Meta Immersive Web SDK (IWSDK) and
+three.js. Two pages: `cards.html` (the game, `src/cards.ts`) and `index.html` (the
+device-premises probe board, `src/probe/`). Asset and dependency licenses: `CREDITS.md`.
+
+## The game (`cards.html`)
+
+Passthrough (`immersive-ar`) session with plane detection.
+
+- **Start screen**: Start (pick a deck) or Mastery (per-deck learning/mastered counts).
+  Deck orbs are re-placed in front of the head when the XR session starts.
+- **Card enemies**: a wave of cartoon-faced cards emerges from detected walls (or an even
+  ring when no walls are known) and walks toward you. A run reserves up to 12 cards.
+- **Reveal and answer**: slash an enemy with a hand or controller tip to reveal it, or
+  select it (controller trigger, hand pinch ray, or mouse). Its question opens on a
+  see-through panel with answer orbs below; slash or select the right orb. A correct
+  answer flashes green, throws shards, plays a tone and pulses controller haptics.
+- **Shield pips**: you start with 5; each enemy strike costs one; the run is lost at 0.
+- **Ultimate**: charges after 5 correct answers; the ultimate orb glows when ready. Fire
+  with a two-palm push, a controller grip squeeze, or by selecting the orb; it knocks
+  enemies back.
+- **Progress**: FSRS scheduling (`ts-fsrs`) per deck, saved in `localStorage`
+  (`flashcards.fsrs.save`); the FSRS queue of the selected deck picks which cards spawn.
+- **Decks**: three bundled starter decks (`src/flashcards/starter-decks.ts`), plus
+  decks imported on the 2D page before entering XR.
+
+### Deck import (2D page)
+
+The panel at the top-left of `cards.html` takes pasted deck JSON or a file
+(`src/import-panel.ts`); it is hidden during an XR session. Imported decks persist in
+`localStorage` (`flashcards.decks`).
+
+```json
+{ "id": "my-deck", "title": "My Deck",
+  "cards": [{ "id": "c1", "prompt": "Capital of Peru?", "answer": "Lima", "aliases": ["lima peru"] }] }
+```
+
+Every deck passes `parseDeck` (`src/flashcards/deck-schema.ts`): caps on size and field
+length, and at least 4 distinct answers so each card can show 4 orbs. Duplicate card ids
+open a resolver (pick a copy per id or keep first), applied only after an explicit
+confirm, with Undo. Importing a deck whose id already exists asks to replace it, also
+with Undo.
+
+## Run on the desktop emulator
 
 ```sh
 npm install
-npm run dev
+npx vite --port 8081 --strictPort
 ```
 
-Use the Runtime and Editor controls in the managed browser to switch between
-the running experience and its authored scene.
+Open `https://localhost:8081/cards.html` and accept the self-signed certificate
+(`iwsdkDev` serves HTTPS; cert cached in `.iwsdk/https/`). The `iwsdkDev` vite plugin
+injects the IWER emulator on localhost, so Enter XR works without a headset.
 
-## Device-premises probe board
+`npm run dev` instead starts the managed IWSDK dev runtime (Runtime and Editor controls
+in the managed browser). IWSDK allows one dev runtime per checkout.
+
+## Run on a Quest
+
+Open `https://<LAN-IP>:8081/cards.html` on the Quest and accept the certificate warning.
+Fallback over USB: `adb reverse tcp:8081 tcp:8081`, then open
+`https://localhost:8081/cards.html` (localhost is a secure context).
+
+## Tests
+
+```sh
+npx vitest run tests/<file>.test.ts   # one file; `npm test` runs all unit tests
+npx tsc --noEmit
+npm run build
+python -m pytest scripts/fsrs
+```
+
+End-to-end playthrough (about 5-8 min; headless Chromium + the IWER-emulated Quest 3,
+real controller input via IWER's remote-control interface):
+
+```sh
+npm run test:e2e
+```
+
+It plays against `E2E_BASE_URL` if set, else this checkout's own live IWSDK dev runtime
+(`.iwsdk/runtime/session.json`), else it spawns vite on a free port. IWSDK allows one dev
+runtime per checkout, so a running `npm run dev` is reused, never duplicated.
+Screenshots go to `E2E_SCREENSHOT_DIR` (default: OS temp `flashcards-e2e/`).
+
+The pytest suite checks that `scripts/fsrs/gen_vectors.py` regenerates
+`tests/fixtures/fsrs/vectors.json` byte-for-byte; the fixture is pinned to py-fsrs 6.3.2
+(`scripts/fsrs/requirements.txt`). Regenerate with `python scripts/fsrs/gen_vectors.py`.
+
+## Device-premises probe board (`index.html`)
 
 A spike board (`src/probe/`) that checks on a real headset whether each premise
 the game depends on holds. Each row shows a verdict plus evidence; every update
@@ -40,7 +115,10 @@ use Quest 3/3S).
 The in-VR `Re-run audio` button re-runs rows a and b; it works only inside an
 XR session (outside it, a still-PENDING row a shows `enter XR to re-run audio`).
 
-### Run on a Quest
+The probe scene keeps the IWSDK starter's studio props, built in code in
+`src/scene-assets/` (no model downloads), and the `public/ui/*.uikitml` panels.
+
+### Probe on a Quest
 
 Use a production build; row g needs the service worker, which dev builds never
 register, so g stays PENDING under `npm run dev`.
@@ -49,11 +127,7 @@ register, so g stays PENDING under `npm run dev`.
 npm run build && npx vite preview --host 0.0.0.0 --port 8081
 ```
 
-`iwsdkDev` serves HTTPS with a self-signed certificate (cached in
-`.iwsdk/https/`), so open `https://<LAN-IP>:8081` on the Quest and accept the
-certificate warning. Fallback over USB: `adb reverse tcp:8081 tcp:8081`, then
-open `http://localhost:8081` (localhost is a secure context).
-
+Open `https://<LAN-IP>:8081` (or `https://localhost:8081` after `adb reverse`, as above).
 For row g: load once online, enable airplane mode, reload.
 
 ### Offline notes
@@ -66,61 +140,7 @@ For row g: load once online, enable airplane mode, reload.
   (`@iwsdk/xr-input` default), and Whisper weights download from Hugging Face on
   first run (then served from the transformers.js browser cache).
 
-### Tests
-
-```sh
-node_modules/.bin/vitest run
-node_modules/.bin/tsc --noEmit
-python -m pytest scripts/fsrs
-```
-
-End-to-end playthrough (headless Chromium + the IWER-emulated Quest 3, real
-controller input via IWER's remote-control interface):
-
-```sh
-npm run test:e2e
-```
-
-It plays against `E2E_BASE_URL` if set, else this worktree's own live IWSDK dev
-runtime (`.iwsdk/runtime/session.json`), else it spawns vite on a free port.
-IWSDK allows one dev runtime per worktree, so a running `npm run dev` is reused,
-never duplicated. Screenshots go to `E2E_SCREENSHOT_DIR` (default: OS temp
-`flashcards-e2e/`). "deck menu faces the player after entering XR" is a known
-RED test until the deck menu is re-placed when the XR session starts.
-
-The pytest suite checks that `scripts/fsrs/gen_vectors.py` regenerates
-`tests/fixtures/fsrs/vectors.json` byte-for-byte; the fixture is pinned to
-py-fsrs 6.3.2 (`scripts/fsrs/requirements.txt`). Regenerate with
-`python scripts/fsrs/gen_vectors.py`.
-
-## Starter content
-
-The robot and welcome panel are small examples of authored scene content plus
-runtime systems. The robot turns toward the player's head and plays a sound
-when pressed. To remove the robot, delete its scene node, its `RobotSystem`
-registration from `src/index.ts` or `src/index.js`, and its `Robot` registration
-from `src/components.ts` or `src/components.js`; you can then delete the unused
-robot component and system files. To remove the welcome panel, delete its scene
-node and its `PanelSystem` registration from the application entry point.
-
-The robot stands on the second of three numbered stations. The first holds dark
-pieces you can grab and move, and the third holds a ring you can spin in place.
-The studio props (the plinths and the dark pieces, plus the floor and stage in VR
-and Desktop 3D) are built in code in `src/scene-assets/studio.scene-asset.ts` or
-`.js`. The VR and Desktop 3D background furniture is built the same way in
-`src/scene-assets/decor.scene-asset.ts` or `.js`, so the starter downloads no
-extra models. To remove any of them, delete their scene nodes and their entries
-in `src/assets.ts` or `src/assets.js`, then delete the files you no longer use.
-The station labels are `public/ui/label-*.uikitml`.
-
-The rest of the look is built-in components in the scene, which you can edit in
-the editor without code. The soft light on every object is the scene root's
-`IBLGradient` (select the Level Root to edit it), and the soft shadows under
-each object are `ContactShadow` nodes. In VR and Desktop 3D, the sky is the
-scene root's `DomeGradient` (its colors, tilt and dither are also on the Level
-Root), and the floor fades into it through the `DomeFade` on the floor node. AR
-projects have no sky or floor, so passthrough stays visible, and a
-`ShadowCatcher` node grounds the stations.
+## References
 
 - Minimal scene walkthrough: https://iwsdk.dev/guides/01b-minimal-scene.html
-- XR-enabled projects — IWER emulator controls: https://iwsdk.dev/guides/02-testing-experience.html#iwer-controls
+- IWER emulator controls: https://iwsdk.dev/guides/02-testing-experience.html#iwer-controls
