@@ -4,7 +4,7 @@
 
 import { PANEL_LAYOUT } from './panel-layout.js';
 
-export type EncounterPhase = 'advancing' | 'slashable' | 'answering' | 'telegraph' | 'cleared';
+export type EncounterPhase = 'advancing' | 'slashable' | 'answering' | 'telegraph' | 'stunned' | 'cleared';
 
 export interface EncounterConfig {
   spawnDistance: number;
@@ -98,6 +98,7 @@ export function tick(enc: Encounter, dt: number): Encounter {
       return { ...enc, telegraphLeft };
     }
     case 'slashable':
+    case 'stunned':
     case 'cleared':
       return enc;
   }
@@ -112,6 +113,15 @@ export function slash(enc: Encounter): Encounter {
   if (enc.phase !== 'advancing' && enc.phase !== 'slashable') return enc;
   const distance = Math.max(enc.distance, enc.cfg.knockbackDistance);
   return { ...enc, phase: 'answering', distance };
+}
+
+/**
+ * Correct answer in time: the attack stops (a pending telegraph is cancelled) and the card waits,
+ * with no time limit, for the slash that knocks it off.
+ */
+export function stun(enc: Encounter): Encounter {
+  if (enc.phase !== 'answering' && enc.phase !== 'telegraph') return enc;
+  return { ...enc, phase: 'stunned', telegraphLeft: 0 };
 }
 
 /** Correct answer; during the telegraph this cancels the pending hit. */
