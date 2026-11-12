@@ -5,6 +5,7 @@
  * existing Pressed path in cards.ts as the accessibility fallback.
  */
 import { Vector3, type Entity, type Mesh, type World } from '@iwsdk/core';
+import { ENEMY_SLASH_RADIUS_M } from './flashcards/fan.js';
 import { poseToWorld } from './flashcards/pose-world.js';
 import { createSlashInput, stepSlashInput, type InputFrame } from './flashcards/slash-input.js';
 import type { SlashTarget } from './flashcards/slash.js';
@@ -12,8 +13,8 @@ import type { Vec3 } from './flashcards/spawn.js';
 
 // A fingertip or controller tip has physical width; the orb collider grows by this much.
 const TIP_MARGIN_M = 0.02;
-// Card-enemies are 0.36 x 0.5 m planes; a sphere of half their height stands in for the collider.
-const ENEMY_RADIUS_M = 0.25;
+// Card-enemies are 0.40 m wide faces; ENEMY_SLASH_RADIUS_M (half that) keeps neighbouring fan
+// slots' hit spheres apart.
 
 export type SlashHit = { kind: 'orb'; orb: Entity } | { kind: 'enemy'; id: string };
 
@@ -46,7 +47,7 @@ export class CardSlash {
       if (!enemyPosition(enemyId, this.pos)) continue;
       const id = `enemy:${enemyId}`;
       hits.set(id, { kind: 'enemy', id: enemyId });
-      targets.push({ id, pos: toVec(this.pos), radius: ENEMY_RADIUS_M });
+      targets.push({ id, pos: toVec(this.pos), radius: ENEMY_SLASH_RADIUS_M });
     }
     const r = stepSlashInput(this.state, this.readFrame(t), targets);
     this.state = r.state;

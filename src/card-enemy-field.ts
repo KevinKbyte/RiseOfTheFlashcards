@@ -1,6 +1,6 @@
 /**
  * The live enemy views for a wave: spawning each new enemy at a wall point spaced away from the
- * others, walking it along its own bearing toward the reach line, glowing it per phase, and
+ * others, walking it to its own fan slot on the reach line, glowing it per phase, and
  * mapping ray-selected entities back to enemy ids.
  */
 import { RayInteractable, Vector3, type Entity, type World } from '@iwsdk/core';
@@ -12,6 +12,7 @@ import {
   type FaceParts,
   type Glow,
 } from './card-enemy.js';
+import { type FanFrame, nextFanFrame, placeInFan, wrap } from './flashcards/fan.js';
 import { pickSpawns, SPAWN_MIN_BEARING_GAP_DEG, type Wall } from './flashcards/spawn.js';
 import type { Wave } from './flashcards/wave.js';
 
@@ -29,16 +30,11 @@ interface EnemyView {
   parts: EnemyParts;
   /** Emerge point (encounter at spawnDistance). */
   start: Vector3;
-  /** Reach-line point (encounter at reachDistance), in front of the player on the same bearing. */
+  /** Reach-line point (encounter at reachDistance): its fan slot, fixed at spawn. */
   goal: Vector3;
+  /** Fan slot held until the view is removed; null only on the no-free-slot fallback. */
+  slot: number | null;
   age: number;
-}
-
-function wrap(a: number): number {
-  let r = a % (2 * Math.PI);
-  if (r > Math.PI) r -= 2 * Math.PI;
-  else if (r < -Math.PI) r += 2 * Math.PI;
-  return r;
 }
 
 // three.js yaw convention (yaw 0 faces -Z), matching spawn.ts.
@@ -51,6 +47,9 @@ export class EnemyField {
   private readonly enemyIds = new Map<Entity, string>();
   // Built once and shared by every enemy; owned (and disposed) here, not by the enemy entities.
   private face: FaceParts | undefined;
+  // Captured when an enemy spawns into an empty field; held while any view is live. A slot is
+  // freed simply by remove() dropping its view.
+  private fanFrame: FanFrame | null = null;
 
   constructor(private readonly world: World) {}
 
@@ -150,17 +149,25 @@ export class EnemyField {
     const uz = dist > 0 ? dz / dist : -Math.cos(headYaw);
     const startDist = Math.max(dist - WALL_INSET, reach);
     const start = new Vector3(eye.x + ux * startDist, chosen.y, eye.z + uz * startDist);
-    const goal = new Vector3(eye.x + ux * reach, eye.y + ENEMY_RISE, eye.z + uz * reach);
+    // Park in the free fan slot nearest the spawn bearing so arrived faces never overlap. Slots are
+    // placed from the shared fan frame, not the live head, so refills never drift onto a neighbour.
+    this.fanFrame = nextFanFrame(this.fanFrame, this.views.size, { eye: { x: eye.x, z: eye.z }, yawRad: headYaw });
+    const occupied = new Set<number>();
+    for (const view of this.views.values()) if (view.slot !== null) occupied.add(view.slot);
+    const placed = placeInFan(this.fanFrame, occupied, Math.atan2(-ux, -uz), reach);
+    const slot = placed === null ? null : placed.slot;
+    const g = placed ?? { x: eye.x + ux * reach, z: eye.z + uz * reach };
+    const goal = new Vector3(g.x, eye.y + ENEMY_RISE, g.z);
 
     this.face ??= createFaceParts();
     const parts = buildEnemy(this.face);
-    // Face the player for the whole walk; the bearing never changes.
-    parts.root.rotation.set(0, Math.atan2(-ux, -uz), 0);
+    // Fixed for the whole walk, squared to the eye from the slot where the face is read.
+    parts.root.rotation.set(0, Math.atan2(eye.x - goal.x, eye.z - goal.z), 0);
     parts.root.position.copy(start);
     parts.root.scale.setScalar(0);
     const entity = this.world.createTransformEntity(parts.root);
     entity.addComponent(RayInteractable);
-    this.views.set(id, { entity, parts, start, goal, age: 0 });
+    this.views.set(id, { entity, parts, start, goal, slot, age: 0 });
     this.enemyIds.set(entity, id);
   }
 
