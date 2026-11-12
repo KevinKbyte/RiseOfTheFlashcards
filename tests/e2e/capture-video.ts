@@ -82,6 +82,18 @@ async function slash(g: Game, label: string, onSwing?: (phase: 'mid' | 'after') 
   await onSwing('after');
 }
 
+/** Right controller to its low-ahead rest pose (identity orientation), settled for 2 frames. */
+async function restRight(g: Game): Promise<void> {
+  await g.page.evaluate(() =>
+    (window as any).IWER_DEVICE.remote.dispatch('set_transform', {
+      device: 'controller-right',
+      position: { x: 0.15, y: 1.1, z: -0.35 },
+      orientation: { x: 0, y: 0, z: 0, w: 1 },
+    }),
+  );
+  await g.frames(2);
+}
+
 async function slashRight(g: Game, s: GameState, onSwing?: (phase: 'mid' | 'after') => Promise<void>): Promise<GameState> {
   const card = s.cardId;
   const cleared = (x: GameState) => x.cardId !== card || x.message;
@@ -294,13 +306,8 @@ export async function main(): Promise<number> {
     let s = await pickDeck(g);
     log(`run started: ${s.waveCards.length} cards, ${s.pips} pips`);
     // Rest the right controller low and ahead: Game.enterXR holds it 5 cm before the eye (the menu
-    // presses need that), where it fills the bottom of the frame. Enemy reveals aim from anywhere.
-    await g.page.evaluate(() =>
-      (window as any).IWER_DEVICE.remote.dispatch('set_transform', {
-        device: 'controller-right',
-        position: { x: 0.15, y: 1.1, z: -0.35 },
-      }),
-    );
+    // presses need that), where it fills the bottom of the frame. Each enemy reveal aims from here.
+    await restRight(g);
     await beat(2500);
     await shoot(g, dir, 'enemies', shots);
     s = await g.state();
@@ -310,6 +317,10 @@ export async function main(): Promise<number> {
     let ultimateDone = false;
     let swingDone = false;
     for (let i = 0; i < 40 && !s.message; i++) {
+      // Back to the rest pose first: a slash leaves the hand at its swing end below the orb row, and
+      // from the low right the ray up to a right-side enemy passes through the ultimate orb
+      // (eye + (0.35, -0.2, -0.45)), which takes the press instead.
+      await restRight(g);
       s = await revealNext(g);
       log(`revealed ${s.cardId} (answer ${s.answer}); charge ${s.charge}, pips ${s.pips}`);
       await beat(1400);
