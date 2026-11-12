@@ -7,6 +7,9 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Changed
 
+- Plan/spec (Kev 2026-11-11, panel numbers from game-iwsdk `panel-layout.ts`): question panel 20 deg below eye line (was ~15);
+  fan-slot enemy faces 0.25 m above eye height (was 0.15 in code); answer orbs 0.35 m down / 0.42 m forward, 0.16 m apart
+  (ENC-003, D13a).
 - Plan/spec (Kev 2026-11-11, "Strike from 0.7 m"): a revealed enemy strikes from its fan slot on the 0.7 m hold line and never
   leaves it; creep speed (2.0 - 0.7) m / 8 s = 0.1625 m/s (was 0.1875 to a 0.5 m strike slot); per-player calibration moves
   to the hold line, ~0.6-0.8 m, range for Kev to confirm (D21, ENC-002, ENC-004).

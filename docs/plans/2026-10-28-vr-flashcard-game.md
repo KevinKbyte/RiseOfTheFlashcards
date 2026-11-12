@@ -256,7 +256,7 @@ D13 Engagement distance = "slash, pop-out, creep" (Kev 2026-10-31, ledgers EN-1;
 D13a Card panel (Kev 2026-10-31, EN-1; picked over "Stop + countdown ring" and head-locked "Stuck to screen"): on reveal (D13, EN-2;
   "on slash" **Superseded by** EN-2) the card face
   pops out as a semi-transparent panel (~70% opaque, dark backing), world/body-locked, never head-locked (comfort; would hide the enemy);
-  ~1.0 m away, ~15 deg below eye line, yaw-only lazy-follow with ~20 deg dead zone, anchored to the D7 baseline; offset so it never
+  ~1.0 m away, 20 deg below eye line (was ~15; ENC-003), yaw-only lazy-follow with ~20 deg dead zone, anchored to the D7 baseline; offset so it never
   hides the target enemy's approach ("engaged enemy" **Superseded by** EN-3 (agent default, Kev to confirm)). Card text sized for the panel at ~1 m, not 0.5 m; S11 checks it at Quest 2 and Quest 3S FoV.
   Prototype: game-iwsdk proto/flashcards test page gets this loop now for an on-device try before G1 (Nov 3); S3 (Nov 6) builds it.
   Risks (EN-1): untested on device; per-card recoil may read as stalling; follow-panel comfort; plan churn before G1.
