@@ -37,7 +37,7 @@
 //   Every function throws RangeError on a non-finite eye component, yaw or slot goal.
 // src/card-enemy.ts exports ENEMY_W, ENEMY_H, HALO_PAD, HALTED_SCALE (glow quad =
 // (ENEMY_W + HALO_PAD) x (ENEMY_H + HALO_PAD), x HALTED_SCALE when halted).
-// CARDS-* IDs are prototype-local; ENC-003 is the panel placement spec line.
+// ENC-003 is the panel placement spec line.
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@iwsdk/core', async () => await import('three'));

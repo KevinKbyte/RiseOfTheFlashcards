@@ -45,7 +45,7 @@ import { openDeckSelect, selectDeck } from '../src/flashcards/menu-flow.js';
 import { recordCorrect, startRun as startRunState, ULTIMATE_CHARGE, type RunState } from '../src/flashcards/run-state.js';
 import type { SaveStorage } from '../src/flashcards/save.js';
 import type { Vec3 } from '../src/flashcards/spawn.js';
-import { createWave, revealEnemy, tickWave, ultimateKnockback, type Wave } from '../src/flashcards/wave.js';
+import { createWave, tickWave, ultimateKnockback, type Wave } from '../src/flashcards/wave.js';
 
 interface PalmSample {
   pos: Vec3;
@@ -259,7 +259,7 @@ function sessionWithCorrect(n: number): { session: GameSession; ids: string[] } 
   let s = createSession({ decks: [BIG], storage: memoryStorage(), clock: () => NOW });
   s = updateMenu(updateMenu(s, openDeckSelect), (m) => selectDeck(m, BIG.id));
   const step = startRun(s);
-  const spawn = step.effects.find((e) => e.type === 'spawnWave') as { cards: { id: string }[] };
+  const spawn = step.effects.find((e) => e.type === 'spawnWave') as { cards: readonly { id: string }[] };
   const ids = spawn.cards.map((c) => c.id);
   let out = step.session;
   for (let i = 0; i < n; i++) {
@@ -273,7 +273,7 @@ const chargeOf = (s: GameSession) => s.run?.run.charge;
 /** Wave over the unanswered cards with the first revealed as the strike-slot target. */
 function targeted(ids: string[]): Wave {
   const rest = ids.slice(5);
-  const w = revealEnemy(tickWave(createWave(rest), 100), rest[0]);
+  const w = tickWave(createWave(rest), 100);
   if (w.targetId === null) throw new Error('setup: no target');
   return w;
 }

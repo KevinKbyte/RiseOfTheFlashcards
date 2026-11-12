@@ -11,6 +11,7 @@
     "reference:status": "iwsdk reference status",
     "reference:warmup": "iwsdk reference warmup",
     "typecheck": "tsc --noEmit",
+    "typecheck:tests": "tsc --noEmit -p tests/tsconfig.json",
     "test": "vitest run",
     "test:e2e": "vitest run --config tests/e2e/vitest.e2e.config.ts",
     "build": "vite build",

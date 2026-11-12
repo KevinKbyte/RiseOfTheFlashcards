@@ -1,7 +1,9 @@
 // Emulator gameplay video: one scripted, human-paced run of the flashcard game in the IWER-emulated
-// Quest 3 (start screen -> Start -> deck -> enemies -> correct answers by controller-tip slash -> one
-// wrong orb (pip lost) -> ultimate charged to 5, glowing, fired (knockback) -> finish to the WIN
-// screen), recorded with Playwright recordVideo (webm). Fallback clip for the submission, not a test:
+// Quest 3: start screen -> Start -> deck -> one stacked enemy at a time, its top card shown by itself
+// at the hold line -> a correct orb (controller-tip slash) STUNS the enemy -> a finishing slash or
+// ray select knocks the top card off -> one wrong orb (pip lost) -> the ultimate once (charged to 5,
+// glowing, fired: knockback) -> the end (WIN) screen. Recorded with Playwright recordVideo (webm).
+// Fallback clip for the submission, not a test:
 // it is not an *.e2e.ts file, so `npm run test:e2e` never collects it.
 //
 // Run (repo root, Git Bash; CAPTURE_DIR is required and must be outside the repo):

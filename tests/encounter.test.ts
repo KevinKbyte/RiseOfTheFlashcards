@@ -1,14 +1,14 @@
-// Requirement: each flashcard is guarded by an enemy that walks in from 3 m. The player can slash
-// (reveal) it at ANY distance while it walks in; if it is never revealed it stops at reach (0.7 m)
-// and waits to be slashed. A slash closer than 2 m knocks it back to 2 m (farther away it stays put)
-// and its card pops out as a see-through panel ~1 m away, slightly below eye level, fixed in the room
-// and turning to face the player only when they look more than 20 degrees away. While the player
-// answers, the enemy keeps coming at a fixed creep speed (2 m -> 0.7 m takes at least 8 s: 6 s
-// no-speech cap + 2 s grading timeout); reaching 0.7 m starts a 2 s telegraph, then the hit lands
-// (at most 1 hit per encounter) and the enemy is knocked back to 2 m.
-// A correct answer (also during the telegraph, cancelling the hit) clears the encounter.
+// Requirement: each flashcard enemy walks in from 3 m; a slash reveals it at ANY distance, and one
+// not yet revealed halts 'slashable' at the 0.7 m hold line, where src/flashcards/wave.ts shows its
+// card by itself (ENC-002 D23). A reveal inside 2 m knocks it back to 2 m (farther out it stays put);
+// its card pops out as a see-through panel ~1 m away, slightly below eye level, fixed in the room,
+// turning only when the player looks more than 20 degrees away. While the player answers, it creeps
+// at a fixed speed (2 m -> 0.7 m takes >= 8 s: 6 s no-speech cap + 2 s grading timeout); at 0.7 m a
+// 2 s telegraph runs, then the hit lands (max 1 per encounter) and it is knocked back to 2 m.
+// A correct answer in time STUNS it and a slash then knocks the card off (ENC-006 D23; stun() is
+// locked in tests/wave-stack.test.ts). resolveCorrect() / phase 'cleared' (correct answer clears) is
+// the pre-stack rule: superseded by ENC-006 D23, unused by src/, kept in the blocks that call it.
 // All functions are pure and time advances only through explicit dt ticks.
-// CARDS-* IDs are prototype-local (no spec-cache home yet).
 import { describe, expect, it } from 'vitest';
 import {
   createEncounter,
@@ -132,7 +132,7 @@ describe('tick: advancing', () => {
 });
 
 // Covers: CARDS-004
-describe('tick: slashable and cleared wait', () => {
+describe('tick: slashable and cleared (superseded, ENC-006 D23) wait', () => {
   it('slashable does not move or change on tick', () => {
     const enc = slashable();
     expect(tick(enc, 5)).toEqual(enc);
@@ -297,7 +297,7 @@ describe('slash', () => {
 });
 
 // Covers: CARDS-004
-// CARDS-004 amended Kev 2026-10-31: reveal at any distance
+// CARDS-004 amended Kev 2026-10-31: reveal at any distance; clear test superseded by ENC-006 D23
 describe('creep after an early reveal', () => {
   const CREEP = (D.knockbackDistance - D.strikeDistance) / D.creepSeconds;
 
@@ -364,7 +364,7 @@ describe('creep after an early reveal', () => {
 });
 
 // Covers: CARDS-004
-describe('resolveCorrect', () => {
+describe('resolveCorrect (superseded by the ENC-006 D23 stun; unused by src/)', () => {
   it('from answering clears the encounter', () => {
     const enc = answering();
     const before = snapshot(enc);

@@ -21,7 +21,6 @@
 // assignFanSlot: nearest free slot by wrapped angular distance; ties -> lowest index; all occupied
 // -> null; non-finite bearing -> treated as 0; never mutates `occupied`. fanSlotGoal: RangeError
 // for a slot index outside 0..2.
-// CARDS-* IDs are prototype-local (no spec-cache home yet).
 import { describe, expect, it } from 'vitest';
 import { ENCOUNTER_DEFAULTS } from '../src/flashcards/encounter.js';
 import {
