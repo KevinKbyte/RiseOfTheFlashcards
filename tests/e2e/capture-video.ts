@@ -16,7 +16,7 @@ import { isAbsolute, join, relative, resolve } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import setup from './global-setup.js';
-import { pickDeck, pressStart, revealNext } from './flow.js';
+import { finishTarget, hudLine, pickDeck, pressStart, revealNext } from './flow.js';
 import { Game, LAUNCH_ARGS, type GameState, type Vec3 } from './harness.js';
 
 const ROOT = resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
@@ -82,31 +82,66 @@ async function slash(g: Game, label: string, onSwing?: (phase: 'mid' | 'after') 
   await onSwing('after');
 }
 
-/** Right controller to its low-ahead rest pose (identity orientation), settled for 2 frames. */
+/** Low-ahead rest pose for the right controller: out of frame, and every aimed select starts here. */
+const LOW_REST: Vec3 = [0.15, 1.1, -0.35];
+
+/** Right controller back to its rest pose (Game.restPose, identity orientation), settled 2 frames. */
 async function restRight(g: Game): Promise<void> {
-  await g.page.evaluate(() =>
-    (window as any).IWER_DEVICE.remote.dispatch('set_transform', {
-      device: 'controller-right',
-      position: { x: 0.15, y: 1.1, z: -0.35 },
-      orientation: { x: 0, y: 0, z: 0, w: 1 },
-    }),
-  );
-  await g.frames(2);
+  await g.rest(2);
 }
 
-async function slashRight(g: Game, s: GameState, onSwing?: (phase: 'mid' | 'after') => Promise<void>): Promise<GameState> {
+/** Correct answer by a visible slash through the answer orb; resolves once the target is stunned. */
+async function slashStun(g: Game, s: GameState, onSwing?: (phase: 'mid' | 'after') => Promise<void>): Promise<GameState> {
   const card = s.cardId;
-  const cleared = (x: GameState) => x.cardId !== card || x.message;
+  const stunned = (x: GameState) => (x.stunned && x.cardId === card) || x.message;
   for (let attempt = 1; attempt <= 3; attempt++) {
+    await restRight(g);
     await slash(g, s.answer!, attempt === 1 ? onSwing : undefined);
-    const ok = await g.until(cleared, `card ${card} cleared`, 4000).then(() => true, () => false);
+    const ok = await g.until(stunned, `card ${card} stunned`, 4000).then(() => true, () => false);
     if (ok) break;
-    log(`slash on ${s.answer} attempt ${attempt} did not clear; retrying`);
-    if (attempt === 3) throw new Error(`3 slashes on ${s.answer} did not clear card ${card}`);
+    log(`slash on ${s.answer} attempt ${attempt} did not stun; retrying`);
+    if (attempt === 3) throw new Error(`3 slashes on ${s.answer} did not stun card ${card}`);
   }
-  const after = await g.until(cleared, `card ${card} cleared`);
+  const after = await g.until(stunned, `card ${card} stunned`);
   if (after.pips < s.pips) log(`WARN: pip lost during correct slash (${s.pips} -> ${after.pips})`);
   return after;
+}
+
+/** Sideways tip slash through the stunned enemy's centre (fallback finish when the ray press misses). */
+async function slashEnemy(g: Game, s: GameState): Promise<void> {
+  const e = s.active.find((x) => x.id === s.targetId);
+  if (!e?.pos) throw new Error(`slashEnemy: no position for ${s.targetId}`);
+  const c = e.pos;
+  const from: Vec3 = [c[0] - 0.5, c[1], c[2]];
+  const to: Vec3 = [c[0] + 0.5, c[1], c[2]];
+  const tip = await g.tip();
+  const lift: Vec3 = [tip[0], c[1] + 0.3, tip[2]];
+  const over: Vec3 = [from[0], c[1] + 0.3, Math.max(c[2], tip[2])];
+  await g.sweepTip([...line(tip, lift, 0.012), ...line(lift, over, 0.012), ...line(over, from, 0.012)]);
+  await beat(250);
+  await g.sweepTip(line(from, to, 0.06));
+}
+
+/** Finishing slash on the stunned target; resolves once its top card is knocked off (or the run ended). */
+async function finish(g: Game, s: GameState): Promise<GameState> {
+  const card = s.cardId;
+  const off = (x: GameState) => x.cardId !== card || x.message;
+  await restRight(g);
+  const pressed = await finishTarget(g, s).then(
+    (x) => x,
+    (err: Error) => {
+      log(`finishing select missed (${err.message.slice(0, 120)}); sideways slash instead`);
+      return null;
+    },
+  );
+  if (pressed) return pressed;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    await restRight(g);
+    await slashEnemy(g, await g.state());
+    if (await g.until(off, `card ${card} knocked off`, 4000).then(() => true, () => false)) break;
+    if (attempt === 3) throw new Error(`3 sideways slashes did not knock off card ${card}`);
+  }
+  return g.until(off, `card ${card} knocked off`);
 }
 
 async function slashWrong(g: Game, s: GameState): Promise<GameState> {
@@ -307,6 +342,7 @@ export async function main(): Promise<number> {
     log(`run started: ${s.waveCards.length} cards, ${s.pips} pips`);
     // Rest the right controller low and ahead: Game.enterXR holds it 5 cm before the eye (the menu
     // presses need that), where it fills the bottom of the frame. Each enemy reveal aims from here.
+    g.restPose = LOW_REST;
     await restRight(g);
     await beat(2500);
     await shoot(g, dir, 'enemies', shots);
@@ -316,14 +352,19 @@ export async function main(): Promise<number> {
     let wrongDone = false;
     let ultimateDone = false;
     let swingDone = false;
-    for (let i = 0; i < 40 && !s.message; i++) {
-      // Back to the rest pose first: a slash leaves the hand at its swing end below the orb row. The
-      // ultimate orb now sits beyond the hold line beside the question panel, out of that ray path;
-      // restRight is kept as a pose reset so each aimed select starts from the same hand pose.
+    let revealShot = false;
+    let stunShot = false;
+    let finishShot = false;
+    for (let i = 0; i < 60 && !s.message; i++) {
+      // Back to the rest pose first: a slash leaves the hand at its swing end below the orb row.
       await restRight(g);
       s = await revealNext(g);
-      log(`revealed ${s.cardId} (answer ${s.answer}); charge ${s.charge}, pips ${s.pips}`);
+      log(`revealed ${s.cardId} on ${s.targetId} (answer ${s.answer}); HUD "${hudLine(s)}"; charge ${s.charge}, pips ${s.pips}`);
       await beat(1400);
+      if (!revealShot) {
+        revealShot = true;
+        await shoot(g, dir, 'revealed', shots);
+      }
 
       if (!ultimateDone && (s.charge ?? 0) >= ULTIMATE_CHARGE) {
         const ready = await g.until(
@@ -346,12 +387,14 @@ export async function main(): Promise<number> {
       }
 
       if (!wrongDone && (s.correct ?? 0) >= 2) {
+        await restRight(g);
         s = await slashWrong(g, s);
         log(`wrong orb: pips ${s.pips}`);
         await shoot(g, dir, 'wrong', shots);
         wrongDone = true;
         await beat(1500);
         if (s.message) break;
+        if (s.cardId === null) continue;
       }
 
       let swingShots: ((phase: 'mid' | 'after') => Promise<void>) | undefined;
@@ -365,9 +408,28 @@ export async function main(): Promise<number> {
           await shoot(g, dir, `slash-${phase}`, shots);
         };
       }
-      s = await slashRight(g, s, swingShots);
-      log(`correct: ${s.correct} correct, charge ${s.charge}, pips ${s.pips}`);
+      s = await slashStun(g, s, swingShots);
+      log(`stunned ${s.targetId}: ${s.correct} correct, charge ${s.charge}, HUD "${hudLine(s)}"`);
+      if (s.message) break;
+      await restRight(g);
+      await beat(900);
+      if (!stunShot) {
+        stunShot = true;
+        await shoot(g, dir, 'stunned', shots);
+      }
+      const before = s.active.find((e) => e.id === s.targetId)?.cards.length ?? 0;
+      const enemy = s.targetId;
+      s = await finish(g, s);
+      const left = s.active.find((e) => e.id === enemy)?.cards.length ?? 0;
+      log(`finished card on ${enemy}: stack ${before} -> ${left}; ${s.active.length} enemy on field, ${s.queue.length} queued`);
       await beat(700);
+      if (!finishShot && left > 0 && left < before && !s.message) {
+        await restRight(g);
+        s = await revealNext(g);
+        finishShot = true;
+        log(`next card ${s.cardId} on the same enemy; HUD "${hudLine(s)}"`);
+        await shoot(g, dir, 'after-finish', shots);
+      }
     }
     s = await g.until((x) => x.message, 'end message', 60_000);
     log(`run over: ${s.runStatus}; ${JSON.stringify(s.endTexts)}`);
