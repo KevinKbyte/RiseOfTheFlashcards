@@ -1,14 +1,27 @@
 // Requirement: on an emulated Quest 3, the question panel stays fully readable while enemies are
 // parked in front of the player: with a card's question showing and an enemy halted at its goal in
-// the centre fan slot, no parked enemy's on-screen box overlaps the question panel's on-screen box
-// (the centre enemy must not cover the top of the question text).
+// the centre fan slot, no parked enemy's projected on-screen outline (per mesh: face, rim, halo)
+// overlaps the question panel's projected outline, and wherever an enemy sits above the panel's
+// horizontal span its lowest point clears the panel top by at least 2 deg (the centre enemy must not
+// cover the top of the question text).
 import { afterEach, describe, expect, inject, it } from 'vitest';
 import { pickDeck, pressStart, revealNext } from './flow.js';
 import { Game } from './harness.js';
-import { boxesIntersect, formatBox, isDrawnBox, readPanelLayout, type PanelLayout } from './layout-helpers.js';
+import {
+  formatBox,
+  formatPoly,
+  isDrawnBox,
+  lowestYInSlab,
+  polysIntersect,
+  readPanelLayout,
+  tanToDeg,
+  type PanelLayout,
+} from './layout-helpers.js';
 
 /** src/flashcards/fan.ts FAN_SLOT_BEARINGS_DEG index of the 0 deg (straight ahead) slot. */
 const CENTRE_SLOT = 1;
+/** Minimum clear gap between the panel top and an enemy above it, in view degrees. */
+const MIN_GAP_DEG = 2;
 
 let game: Game | undefined;
 afterEach(async () => {
@@ -51,14 +64,38 @@ describe('question panel layout on the emulated Quest 3', () => {
 
     const panel = layout.panel!;
     expect(isDrawnBox(panel), `panel box drawn and in front: ${formatBox(panel)}`).toBe(true);
+    expect(layout.panelPolys.length, 'panel has a projected outline').toBeGreaterThan(0);
+    const panelPts = layout.panelPolys.flat();
+    const panelTop = Math.max(...panelPts.map(([, y]) => y));
+    const panelXLo = Math.min(...panelPts.map(([x]) => x));
+    const panelXHi = Math.max(...panelPts.map(([x]) => x));
+    const panelDesc = layout.panelPolys.map(formatPoly).join(' + ');
     const parked = layout.enemies.filter((e) => e.parked);
-    expect(parked.some((e) => e.slot === CENTRE_SLOT), 'centre slot enemy parked').toBe(true);
+    const centre = parked.filter((e) => e.slot === CENTRE_SLOT);
+    expect(centre.length, `centre slot enemy parked: ${JSON.stringify(layout.enemies.map((e) => [e.id, e.slot, e.parked]))}`).toBe(1);
+    expect(isDrawnBox(centre[0].box) && centre[0].polys.length > 0, 'centre slot enemy drawn').toBe(true);
     for (const e of parked) {
       expect(isDrawnBox(e.box), `enemy ${e.id} (slot ${e.slot}) box drawn and in front: ${formatBox(e.box)}`).toBe(true);
-      expect(
-        boxesIntersect(panel, e.box!),
-        `parked enemy ${e.id} (slot ${e.slot}) box ${formatBox(e.box)} overlaps question panel box ${formatBox(panel)}`,
-      ).toBe(false);
+      expect(e.polys.length, `enemy ${e.id} (slot ${e.slot}) has projected meshes`).toBeGreaterThan(0);
+      let lowest: number | null = null;
+      for (const [i, poly] of e.polys.entries()) {
+        for (const pp of layout.panelPolys) {
+          expect(
+            polysIntersect(poly, pp),
+            `parked enemy ${e.id} (slot ${e.slot}) mesh ${i} outline ${formatPoly(poly)} overlaps question panel outline ${formatPoly(pp)}`,
+          ).toBe(false);
+        }
+        const y = lowestYInSlab(poly, panelXLo, panelXHi);
+        if (y !== null && (lowest === null || y < lowest)) lowest = y;
+      }
+      const gap = lowest === null ? null : tanToDeg(lowest) - tanToDeg(panelTop);
+      console.log(`[e2e] enemy ${e.id} slot ${e.slot}: gap above panel ${gap === null ? 'n/a (outside panel x span)' : `${gap.toFixed(2)} deg`}`);
+      if (gap !== null) {
+        expect(
+          gap,
+          `parked enemy ${e.id} (slot ${e.slot}) lowest point over the panel span is ${gap.toFixed(2)} deg above the panel top (need >= ${MIN_GAP_DEG}); enemy ${e.polys.map(formatPoly).join(' + ')} panel ${panelDesc}`,
+        ).toBeGreaterThanOrEqual(MIN_GAP_DEG);
+      }
     }
     expect(g.errors).toEqual([]);
   }, 600_000);
