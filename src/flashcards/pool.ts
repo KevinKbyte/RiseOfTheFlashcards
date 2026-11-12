@@ -2,8 +2,8 @@
 // front card is the one being answered, and each correct answer strips one card. No three.js/DOM;
 // every function returns a new pool (or the same object when nothing changes) and never mutates.
 
-/** D19: the last graded wave is one boss pool of this many cards (also the D14 max pool size). */
-export const BOSS_POOL_SIZE = 3;
+/** D19: the final enemy (boss) carries this many cards (also the D14 max pool size). */
+export const BOSS_POOL_SIZE = 5;
 
 export interface Pool {
   /** Remaining card ids, current card first. */
@@ -36,21 +36,31 @@ export function damage(pool: Pool, amount = 1): Pool {
   return { cards: pool.cards.slice(amount), maxHp: pool.maxHp };
 }
 
+/** Cards per regular (non-boss) stack. */
+const STACK_SIZE = 3;
+/** Below this many cards a run has no boss: a 5-card boss needs at least one regular stack before it. */
+const BOSS_MIN_CARDS = BOSS_POOL_SIZE + STACK_SIZE;
+
 /**
- * Spawn-order pool sizes summing to cardCount (D19 wave packing): pools of 1-3, non-decreasing,
- * ending in one 3-card boss once cardCount >= 3. The pre-boss cards open with a [1, 2] wave and
- * continue in 3s, so a multiple of 3 packs into whole 3-card waves; a remainder of 1 or 2 widens the
- * opening ramp ([1, 1, 2] / [1, 2, 2]) instead of breaking the ramp.
+ * Spawn-order stack sizes summing to cardCount (D19, stacks fought one at a time): regular stacks of
+ * 3, then one 5-card boss once cardCount >= 8. A leftover 1 card joins the last regular stack (4); a
+ * leftover 2 is its own stack, placed first.
  */
 export function planPoolSizes(cardCount: number): number[] {
   if (!Number.isInteger(cardCount) || cardCount < 0) {
     throw new RangeError(`cardCount must be an integer >= 0, got ${cardCount}`);
   }
-  const boss = cardCount >= BOSS_POOL_SIZE ? [BOSS_POOL_SIZE] : [];
+  const boss = cardCount >= BOSS_MIN_CARDS ? [BOSS_POOL_SIZE] : [];
   const rest = cardCount - boss.length * BOSS_POOL_SIZE;
-  const fullWaves = Math.floor(rest / 3);
-  const extra = rest % 3;
-  if (fullWaves === 0) return [...Array<number>(extra).fill(1), ...boss];
-  const ramp = extra === 0 ? [1, 2] : extra === 1 ? [1, 1, 2] : [1, 2, 2];
-  return [...ramp, ...Array<number>(fullWaves - 1).fill(3), ...boss];
+  const regular = Array<number>(Math.floor(rest / STACK_SIZE)).fill(STACK_SIZE);
+  const extra = rest % STACK_SIZE;
+  if (extra === 2) regular.unshift(2);
+  else if (extra === 1 && regular.length > 0) regular[regular.length - 1] += 1;
+  else if (extra === 1) regular.push(1);
+  return [...regular, ...boss];
+}
+
+/** HUD lives text for a stack: the cards it still carries out of its starting count. */
+export function livesLabel(remaining: number, total: number): string {
+  return `Cards ${remaining}/${total}`;
 }
