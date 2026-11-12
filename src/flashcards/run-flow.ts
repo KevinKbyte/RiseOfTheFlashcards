@@ -18,6 +18,8 @@ export interface RunFlowState {
    * this stays bounded by the deck size however long the run: a re-render never starts a new encounter.
    */
   readonly latest: Readonly<Record<string, string>>;
+  /** Every reserved card is answered (run won) but the WIN waits for the finishing slash's wave clear. */
+  readonly winPending: boolean;
 }
 
 export type RunFlowEvent =
@@ -53,7 +55,7 @@ export function startFlow(opts: RunOptions): RunFlowStep {
     run.status === 'practice'
       ? [{ type: 'endScreen', kind: 'practice-done', text: TEXT.practice }]
       : [{ type: 'pips', remaining: run.pips }];
-  return { state: { run, latest: {} }, effects };
+  return { state: { run, latest: {}, winPending: false }, effects };
 }
 
 // Own-property check: a card id like "constructor" must not hit Object.prototype.
@@ -71,6 +73,14 @@ function hitEffects(run: RunState, next: RunState): RunFlowEffect[] {
 export function stepFlow(state: RunFlowState, event: RunFlowEvent): RunFlowStep {
   const noop: RunFlowStep = { state, effects: [] };
   const { run } = state;
+  if (event.type === 'waveCleared') {
+    // The last correct answer only stuns the last enemy; the WIN shows once its card is slashed off.
+    if (!state.winPending || !run.winTier) return noop;
+    return {
+      state: { ...state, winPending: false },
+      effects: [{ type: 'endScreen', kind: 'win', text: TEXT[run.winTier] }],
+    };
+  }
   if (run.status !== 'active') return noop;
 
   switch (event.type) {
@@ -79,7 +89,7 @@ export function stepFlow(state: RunFlowState, event: RunFlowEvent): RunFlowStep 
       const next = beginEncounter(run, event.cardId);
       if (next === run) return noop;
       const latest = { ...state.latest, [event.cardId]: event.encounterId };
-      return { state: { run: next, latest }, effects: [] };
+      return { state: { ...state, run: next, latest }, effects: [] };
     }
     case 'wrongOrb': {
       // No `latest` check here, unlike enemyHit: answer orbs exist only on the question panel, which
@@ -100,14 +110,7 @@ export function stepFlow(state: RunFlowState, event: RunFlowEvent): RunFlowStep 
     case 'correctOrb': {
       const next = recordCorrect(run, event.cardId);
       if (next === run) return noop;
-      const effects: RunFlowEffect[] =
-        next.status === 'won' && next.winTier
-          ? [{ type: 'endScreen', kind: 'win', text: TEXT[next.winTier] }]
-          : [];
-      return { state: { ...state, run: next }, effects };
+      return { state: { ...state, run: next, winPending: next.status === 'won' }, effects: [] };
     }
-    case 'waveCleared':
-      // The WIN fires on the last reserved card's correct orb, so a cleared wave never ends the run.
-      return noop;
   }
 }
