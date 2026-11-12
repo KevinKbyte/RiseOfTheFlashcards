@@ -28,7 +28,7 @@ export interface Encounter {
 export const ENCOUNTER_DEFAULTS: Readonly<EncounterConfig> = Object.freeze({
   spawnDistance: 3.0,
   reachDistance: 0.7,
-  strikeDistance: 0.5,
+  strikeDistance: 0.7,
   knockbackDistance: 2.0,
   advanceSpeed: 1.0,
   creepSeconds: 8,

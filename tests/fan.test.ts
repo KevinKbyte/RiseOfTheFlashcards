@@ -76,9 +76,9 @@ describe('fan slot geometry', () => {
     expect(ENCOUNTER_DEFAULTS.reachDistance).toBe(REACH);
   });
 
-  it('the 0.7 m hold line stays outside the 0.5 m strike distance', () => {
-    expect(ENCOUNTER_DEFAULTS.strikeDistance).toBe(0.5);
-    expect(ENCOUNTER_DEFAULTS.reachDistance).toBeGreaterThan(ENCOUNTER_DEFAULTS.strikeDistance);
+  it('enemies strike from the 0.7 m hold line: strike distance equals reach (Kev 2026-11-11)', () => {
+    expect(ENCOUNTER_DEFAULTS.reachDistance).toBeGreaterThanOrEqual(ENCOUNTER_DEFAULTS.strikeDistance);
+    expect(ENCOUNTER_DEFAULTS.strikeDistance).toBe(REACH);
   });
 
   it('regression: the old 0.6 m line with a 15 degree gap overlapped faces', () => {

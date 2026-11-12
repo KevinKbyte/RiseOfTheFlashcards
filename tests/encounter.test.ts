@@ -3,8 +3,8 @@
 // and waits to be slashed. A slash closer than 2 m knocks it back to 2 m (farther away it stays put)
 // and its card pops out as a see-through panel ~1 m away, slightly below eye level, fixed in the room
 // and turning to face the player only when they look more than 20 degrees away. While the player
-// answers, the enemy keeps coming at a fixed creep speed (2 m -> 0.5 m takes at least 8 s: 6 s
-// no-speech cap + 2 s grading timeout); reaching 0.5 m starts a 2 s telegraph, then the hit lands
+// answers, the enemy keeps coming at a fixed creep speed (2 m -> 0.7 m takes at least 8 s: 6 s
+// no-speech cap + 2 s grading timeout); reaching 0.7 m starts a 2 s telegraph, then the hit lands
 // (at most 1 hit per encounter) and the enemy is knocked back to 2 m.
 // A correct answer (also during the telegraph, cancelling the hit) clears the encounter.
 // All functions are pure and time advances only through explicit dt ticks.
@@ -60,7 +60,7 @@ describe('encounter config and creation', () => {
     expect(ENCOUNTER_DEFAULTS).toEqual({
       spawnDistance: 3.0,
       reachDistance: 0.7,
-      strikeDistance: 0.5,
+      strikeDistance: 0.7,
       knockbackDistance: 2.0,
       advanceSpeed: 1.0,
       creepSeconds: 8,
@@ -149,7 +149,7 @@ describe('tick: answering creep', () => {
   it('creeps at (knockback - strike) / creepSeconds', () => {
     const enc = tick(answering(), 4);
     expect(enc.phase).toBe('answering');
-    expect(enc.distance).toBeCloseTo(2.0 - (1.5 / 8) * 4, 10);
+    expect(enc.distance).toBeCloseTo(2.0 - (1.3 / 8) * 4, 10);
   });
 
   it('reaching strikeDistance starts the telegraph', () => {
@@ -301,8 +301,8 @@ describe('slash', () => {
 describe('creep after an early reveal', () => {
   const CREEP = (D.knockbackDistance - D.strikeDistance) / D.creepSeconds;
 
-  it('creep speed is fixed at 0.1875 m/s with defaults', () => {
-    expect(CREEP).toBeCloseTo(0.1875, 12);
+  it('creep speed is fixed at 0.1625 m/s with defaults', () => {
+    expect(CREEP).toBeCloseTo(0.1625, 12);
   });
 
   it('reveal at 3 m creeps at the fixed speed (no faster to fit creepSeconds)', () => {
@@ -311,7 +311,7 @@ describe('creep after an early reveal', () => {
     expect(enc.distance).toBeCloseTo(3.0 - CREEP * 4, 10);
   });
 
-  it('reveal at 3 m reaches strike after (3.0 - 0.5) / 0.1875 s, not creepSeconds', () => {
+  it('reveal at 3 m reaches strike after (3.0 - 0.7) / 0.1625 s, not creepSeconds', () => {
     const revealed = slash(createEncounter());
     const tStrike = (D.spawnDistance - D.strikeDistance) / CREEP;
     expect(tick(revealed, D.creepSeconds).phase).toBe('answering');
