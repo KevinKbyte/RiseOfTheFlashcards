@@ -278,7 +278,8 @@ function targeted(ids: string[]): Wave {
   return w;
 }
 function untargeted(ids: string[]): Wave {
-  const w = tickWave(createWave(ids.slice(5)), 100);
+  const w = tickWave(createWave(ids.slice(5)), 1);
+  if (w.active.length === 0) throw new Error('setup: no active enemy');
   if (w.targetId !== null) throw new Error('setup: unexpected target');
   return w;
 }
