@@ -21,7 +21,7 @@ export function cardToPresent(before: Wave, after: Wave): string | null {
   return after.targetId !== before.targetId || card !== targetCard(before) ? card : null;
 }
 
-/** Classifies `after = answerTarget(before, true)`: a peel keeps the target, a defeat removes it. */
+/** Classifies `after` = the finishing slash on a stunned target: a peel keeps the target, a defeat removes it. */
 export function correctOutcome(before: Wave, after: Wave): CorrectOutcome {
   const enemyId = before.targetId;
   if (enemyId === null) return { kind: 'none' };

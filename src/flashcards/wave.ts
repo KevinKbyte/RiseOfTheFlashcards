@@ -1,10 +1,11 @@
-// Pure multi-enemy wave: several encounters walk in at once and the player picks which one to
-// reveal. No DOM/IWSDK imports; every function returns a new wave (or the same object when the
-// action does not apply) and never mutates its input.
+// Pure enemy wave: one enemy at a time by default (a larger maxActive lets the player pick which
+// to reveal), each carrying a stack of cards. No DOM/IWSDK imports; every function returns a new
+// wave (or the same object when the action does not apply) and never mutates its input.
 import {
   createEncounter,
   ENCOUNTER_DEFAULTS,
   slash,
+  stun,
   tick,
   type Encounter,
   type EncounterConfig,
@@ -12,7 +13,7 @@ import {
 import { createPool, damage, isDefeated, type Pool } from './pool.js';
 import { RING_FALLBACK_DISTANCE } from './spawn.js';
 
-export const DEFAULT_MAX_ACTIVE = 3;
+export const DEFAULT_MAX_ACTIVE = 1;
 
 export interface WaveEnemy {
   /** The enemy's first card; stays the id while later cards are peeled. */
@@ -77,7 +78,10 @@ export function tickWave(wave: Wave, dt: number): Wave {
   if (!Number.isFinite(dt) || dt < 0) {
     throw new RangeError(`dt must be finite and >= 0, got ${dt}`);
   }
-  return { ...wave, active: wave.active.map((e) => ({ ...e, enc: tick(e.enc, dt) })) };
+  const ticked = { ...wave, active: wave.active.map((e) => ({ ...e, enc: tick(e.enc, dt) })) };
+  // With nothing revealed, the first enemy parked at the hold line shows its card by itself.
+  const parked = ticked.targetId === null ? ticked.active.find((e) => e.enc.phase === 'slashable') : undefined;
+  return parked === undefined ? ticked : revealEnemy(ticked, parked.id);
 }
 
 export function revealEnemy(wave: Wave, id: string): Wave {
@@ -90,11 +94,23 @@ export function revealEnemy(wave: Wave, id: string): Wave {
   return { ...wave, active, targetId: id };
 }
 
+/** A correct answer stuns the target (attack stopped); its card stays on until slashed off. */
 export function answerTarget(wave: Wave, correct: boolean): Wave {
-  // The target is always answering or in its telegraph (slash() only leads there), so a correct
-  // answer always peels its current card.
   if (!correct || wave.targetId === null) return wave;
   const idx = wave.active.findIndex((e) => e.id === wave.targetId);
+  const enc = stun(wave.active[idx].enc);
+  if (enc === wave.active[idx].enc) return wave;
+  return { ...wave, active: wave.active.map((e, i) => (i === idx ? { ...e, enc } : e)) };
+}
+
+/**
+ * A slash on an enemy: reveals one that is still walking in or parked (when nothing is revealed),
+ * or knocks the top card off a stunned target. Anything else returns the same object.
+ */
+export function slashEnemy(wave: Wave, id: string): Wave {
+  const idx = wave.active.findIndex((e) => e.id === id);
+  if (idx < 0) return wave;
+  if (id !== wave.targetId || wave.active[idx].enc.phase !== 'stunned') return revealEnemy(wave, id);
   const target = wave.active[idx];
   const pool = damage(target.pool);
   if (!isDefeated(pool)) {
@@ -127,7 +143,8 @@ export function ultimateKnockback(wave: Wave, opts: { spawnDistance?: number } =
     throw new RangeError(`spawnDistance must be finite and > 0, got ${spawnDistance}`);
   }
   const idx = wave.targetId === null ? -1 : wave.active.findIndex((e) => e.id === wave.targetId);
-  if (idx < 0) return wave;
+  // A stunned target has no attack to cancel, and the ultimate never finishes its card.
+  if (idx < 0 || wave.active[idx].enc.phase === 'stunned') return wave;
   const target = wave.active[idx];
   const enc: Encounter = {
     ...target.enc,
