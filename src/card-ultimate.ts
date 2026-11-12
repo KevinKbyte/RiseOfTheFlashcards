@@ -95,19 +95,26 @@ export class UltimateInput {
     return requests;
   }
 
-  /** Shows the orb while `view.visible`, re-placing it at the head when it appears or starts glowing. */
+  /** Shows the orb while `view.visible`, re-placing it beside the question panel when it appears or starts glowing. */
   syncOrb(view: OrbView, eye: Vector3, headYaw: number, clock: number): void {
     const prev = this.prevView;
-    this.prevView = { visible: view.visible, glowing: view.glowing };
     if (!view.visible) {
+      this.prevView = { visible: view.visible, glowing: view.glowing };
       this.disposeOrb();
       return;
     }
     if (this.orb === undefined) this.createOrb();
     const obj = this.orb?.object3D;
     const material = this.orbMaterial;
-    if (obj === undefined || material === undefined) return;
-    if (shouldPlaceOrb(prev, view)) {
+    if (obj === undefined || material === undefined) {
+      this.prevView = { visible: view.visible, glowing: view.glowing };
+      return;
+    }
+    const place = shouldPlaceOrb(prev, view);
+    // A lost head pose skips placement without committing prevView, so the next frame retries it.
+    if (place && ![eye.x, eye.y, eye.z].every(Number.isFinite)) return;
+    this.prevView = { visible: view.visible, glowing: view.glowing };
+    if (place) {
       // A lost head pose keeps the old fallback (yaw 0) instead of throwing in the frame loop.
       const p = ultimateOrbPosition(eye, Number.isFinite(headYaw) ? headYaw : 0);
       obj.position.set(p.x, p.y, p.z);
