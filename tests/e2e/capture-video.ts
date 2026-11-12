@@ -32,6 +32,15 @@ const log = (msg: string) => console.log(`[capture +${((Date.now() - T0) / 1000)
 const GPU_ARGS = ['--use-angle=d3d11', '--ignore-gpu-blocklist'];
 const beat = (ms = BEAT) => new Promise((r) => setTimeout(r, ms));
 const add = (p: Vec3, dy: number): Vec3 => [p[0], p[1] + dy, p[2]];
+const fmt = (p: Vec3) => `(${p.map((v) => v.toFixed(2)).join(', ')})`;
+/** IWER synthetic room the clip is played in (IWER SEM built-in; see injectEnvironment). */
+const ROOM = 'sunlit_living_room';
+/**
+ * Emulated vertical FOV (rad). IWER's default is pi/2; the game anchors its panel and enemies to the
+ * head pose, so moving the head cannot pull the camera back. A wider lens shows the question panel,
+ * the answer orbs, the health readout and every enemy at once.
+ */
+const FOVY = 1.9;
 
 /** Points from a to b no more than `step` metres apart (excluding a). */
 function line(a: Vec3, b: Vec3, step: number): Vec3[] {
@@ -49,7 +58,7 @@ function line(a: Vec3, b: Vec3, step: number): Vec3[] {
  * Visible slash through the orb labelled `label`: glide the tip (slowly, above the orb row so it
  * touches nothing) to a point above the orb, then a fast downward swing through it.
  */
-async function slash(g: Game, label: string): Promise<void> {
+async function slash(g: Game, label: string, onSwing?: (phase: 'mid' | 'after') => Promise<void>): Promise<void> {
   const orb = await g.orbPivot(label);
   if (!orb) throw new Error(`slash: no orb ${label}`);
   const tip = await g.tip();
@@ -61,14 +70,23 @@ async function slash(g: Game, label: string): Promise<void> {
   const up: Vec3 = [tip[0], high, back[2]];
   await g.sweepTip([...line(tip, back, 0.012), ...line(back, up, 0.012), ...line(up, lead, 0.012)]);
   await beat(350);
-  await g.sweepTip(line(lead, add(orb, -0.3), 0.06));
+  if (!onSwing) {
+    await g.sweepTip(line(lead, add(orb, -0.3), 0.06));
+    return;
+  }
+  // Documented swing: stop just above the orb for a frame grab, then swing on through it.
+  const above = add(orb, 0.12);
+  await g.sweepTip(line(lead, above, 0.06));
+  await onSwing('mid');
+  await g.sweepTip(line(above, add(orb, -0.3), 0.06));
+  await onSwing('after');
 }
 
-async function slashRight(g: Game, s: GameState): Promise<GameState> {
+async function slashRight(g: Game, s: GameState, onSwing?: (phase: 'mid' | 'after') => Promise<void>): Promise<GameState> {
   const card = s.cardId;
   const cleared = (x: GameState) => x.cardId !== card || x.message;
   for (let attempt = 1; attempt <= 3; attempt++) {
-    await slash(g, s.answer!);
+    await slash(g, s.answer!, attempt === 1 ? onSwing : undefined);
     const ok = await g.until(cleared, `card ${card} cleared`, 4000).then(() => true, () => false);
     if (ok) break;
     log(`slash on ${s.answer} attempt ${attempt} did not clear; retrying`);
@@ -169,27 +187,56 @@ export async function inspectVideo(video: string, dir: string, headless: boolean
 }
 
 /**
- * Hides page DOM overlays on top of the XR canvas (IWER DevUI, its "Remote Control Active" badge,
- * the page's import panel): every body child that holds no canvas, now and whenever one is added.
- * IWER has no runtime switch for the DevUI (it is a vite-plugin option), so this is CSS only.
+ * Plays the clip inside IWER's synthetic room: the project config enables no emulator environment
+ * (iwsdk.config.json dev.emulator.environment unset), so the dev plugin's injected runtime module
+ * starts with `"sem": null`. Rewriting that one config field in the served module, for this
+ * browser context only, installs IWER's SEM with ROOM. IWER draws the room under the game canvas
+ * for the game's passthrough (alpha-blend) session. Returns false if the module had no such field.
+ */
+async function injectEnvironment(g: Game): Promise<boolean> {
+  let patched = false;
+  await g.context.route('**/@iwer-injection-runtime*', async (route) => {
+    const res = await route.fetch();
+    const body = (await res.text()).replace(/"sem":\s*null/, `"sem": ${JSON.stringify({ defaultScene: ROOM })}`);
+    patched ||= body.includes(ROOM);
+    await route.fulfill({ response: res, body });
+  });
+  await g.reload();
+  return patched;
+}
+
+/**
+ * Hides page DOM overlays on top of the XR canvas: every body child that holds no canvas (IWER
+ * DevUI, the page's import panel), now and whenever one is added, plus the non-canvas layer inside
+ * IWER's fixed canvas stack (a shadow-root host carrying the "Remote Control Active" badge and the
+ * blue screen-edge glow). IWER has no runtime switch for these, so this is CSS only.
  */
 async function hideOverlays(g: Game): Promise<string[]> {
   return g.page.evaluate(() => {
     const hidden: string[] = [];
+    const hideEl = (el: HTMLElement, what: string) => {
+      if (el.dataset.captureHidden) return;
+      el.dataset.captureHidden = '1';
+      hidden.push(what);
+      el.style.setProperty('display', 'none', 'important');
+    };
     const hide = (el: Element) => {
       if (!(el instanceof HTMLElement)) return;
       if (el.tagName === 'CANVAS' || el.tagName === 'SCRIPT' || el.id === 'scene-container') return;
-      if (el.querySelector('canvas')) return;
-      if (el.dataset.captureHidden) return;
-      el.dataset.captureHidden = '1';
-      hidden.push(`${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}`);
-      el.style.setProperty('display', 'none', 'important');
+      if (el.querySelector('canvas')) {
+        // Canvas stack: keep the canvases, drop the overlay layers between them.
+        for (const c of Array.from(el.children)) {
+          if (c instanceof HTMLElement && c.tagName !== 'CANVAS' && !c.querySelector('canvas')) {
+            hideEl(c, `${el.tagName.toLowerCase()} > ${c.tagName.toLowerCase()}${c.shadowRoot ? ' (shadow host)' : ''}`);
+          }
+        }
+        return;
+      }
+      hideEl(el, `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}`);
     };
-    for (const el of Array.from(document.body.children)) hide(el);
-    new MutationObserver((muts) => muts.forEach((m) => m.addedNodes.forEach((n) => hide(n as Element)))).observe(
-      document.body,
-      { childList: true },
-    );
+    const sweep = () => Array.from(document.body.children).forEach(hide);
+    sweep();
+    new MutationObserver(sweep).observe(document.body, { childList: true, subtree: true });
     return hidden;
   });
 }
@@ -231,7 +278,9 @@ export async function main(): Promise<number> {
     game = await Game.launch(base, { headless, args, viewport: SIZE, recordVideo: { dir, size: SIZE } });
     const g = game;
     const shots: { name: string; std: number }[] = [];
+    log(`synthetic room ${ROOM}: ${(await injectEnvironment(g)) ? 'injected' : 'NOT injected (no "sem": null in the runtime module)'}`);
     await g.enterXR();
+    await g.page.evaluate((f) => ((window as any).IWER_DEVICE.fovy = f), FOVY);
     const hidden = await hideOverlays(g);
     log(`DOM overlays hidden: ${hidden.length ? hidden.join(', ') : 'none found'}`);
 
@@ -244,11 +293,22 @@ export async function main(): Promise<number> {
     await beat();
     let s = await pickDeck(g);
     log(`run started: ${s.waveCards.length} cards, ${s.pips} pips`);
+    // Rest the right controller low and ahead: Game.enterXR holds it 5 cm before the eye (the menu
+    // presses need that), where it fills the bottom of the frame. Enemy reveals aim from anywhere.
+    await g.page.evaluate(() =>
+      (window as any).IWER_DEVICE.remote.dispatch('set_transform', {
+        device: 'controller-right',
+        position: { x: 0.15, y: 1.1, z: -0.35 },
+      }),
+    );
     await beat(2500);
     await shoot(g, dir, 'enemies', shots);
+    s = await g.state();
+    log(`enemy centres (world): ${s.active.map((e) => `${e.id} ${e.pos ? fmt(e.pos) : '-'}`).join('; ')}; camera ${fmt(s.cam)}`);
 
     let wrongDone = false;
     let ultimateDone = false;
+    let swingDone = false;
     for (let i = 0; i < 40 && !s.message; i++) {
       s = await revealNext(g);
       log(`revealed ${s.cardId} (answer ${s.answer}); charge ${s.charge}, pips ${s.pips}`);
@@ -283,7 +343,18 @@ export async function main(): Promise<number> {
         if (s.message) break;
       }
 
-      s = await slashRight(g, s);
+      let swingShots: ((phase: 'mid' | 'after') => Promise<void>) | undefined;
+      if (!swingDone) {
+        swingDone = true;
+        const answer = s.answer!;
+        swingShots = async (phase) => {
+          const tip = await g.tip();
+          const orb = await g.orbPivot(answer);
+          log(`swing ${phase}: tip ${fmt(tip)}, orb ${answer} ${orb ? fmt(orb) : 'gone'}`);
+          await shoot(g, dir, `slash-${phase}`, shots);
+        };
+      }
+      s = await slashRight(g, s, swingShots);
       log(`correct: ${s.correct} correct, charge ${s.charge}, pips ${s.pips}`);
       await beat(700);
     }
