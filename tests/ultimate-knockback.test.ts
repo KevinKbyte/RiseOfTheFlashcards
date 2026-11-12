@@ -40,7 +40,16 @@ function find(w: Wave, id: string) {
 
 /** Three enemies waiting at reach; 'a' revealed (knocked back to 2 m, creeping). */
 function revealedAtReach(deck = ['a', 'b', 'c', 'd']): Wave {
-  return revealEnemy(tickWave(createWave(deck), 100), 'a');
+  return revealEnemy(tickWave(createWave(deck, { maxActive: 3 }), 100), 'a');
+}
+
+/** A correct answer stuns the target; the finishing slash knocks its top card off. */
+function answerAndFinish(w: Wave): Wave {
+  const answered = answerTarget(w, true);
+  if (answered.targetId === null) return answered;
+  const slash = (waveModule as unknown as { slashEnemy?: (w: Wave, id: string) => Wave }).slashEnemy;
+  if (typeof slash !== 'function') throw new Error('wave does not export slashEnemy(wave, id)');
+  return slash(answered, answered.targetId);
 }
 
 /** 'a' has crept into the strike slot and is mid-telegraph. */
@@ -117,7 +126,7 @@ describe('wave: ultimate knockback on the strike-slot enemy', () => {
     expect(find(fired, 'a').enc.hits).toBe(1);
     expect(find(fired, 'a').pool.cards).toEqual(['a', 'a2']);
     // A correct answer afterwards still peels exactly one card.
-    expect(find(answerTarget(fired, true), 'a').pool.cards).toEqual(['a2']);
+    expect(find(answerAndFinish(fired), 'a').pool.cards).toEqual(['a2']);
   });
 
   it('leaves every non-target enemy untouched', () => {
@@ -127,7 +136,7 @@ describe('wave: ultimate knockback on the strike-slot enemy', () => {
   });
 
   it('with no strike-slot enemy it returns the same object', () => {
-    const idle = tickWave(createWave(['a', 'b', 'c']), 100);
+    const idle = tickWave(createWave(['a', 'b', 'c'], { maxActive: 3 }), 1);
     expect(idle.targetId).toBeNull();
     expect(ultimateKnockback(idle)).toBe(idle);
     expect(ultimateKnockback(idle, { spawnDistance: 3 })).toBe(idle);

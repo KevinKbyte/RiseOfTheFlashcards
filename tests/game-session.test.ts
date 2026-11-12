@@ -440,8 +440,8 @@ describe('game-session: enemyHit seam for a landed strike', () => {
 // Requirement: bigger enemies are multi-card health pools (M2). The spawnWave effect tells the scene
 // how many cards each spawned enemy carries, in spawn order, so it can build the wave with pools:
 // poolSizes sums to the spawned card count (every reserved card is on exactly one enemy) and follows
-// D19 wave packing (pools of 1-3, ramp 1 -> 2 -> 3, last graded wave one 3-card boss). The card list
-// itself is unchanged.
+// the stack packing of planPoolSizes (stacks of 3; 8+ cards end in a 5-card boss; a leftover 1 joins
+// the last regular stack, a leftover 2 is its own first stack). The card list itself is unchanged.
 // Contract addition: SessionEffect spawnWave gains `poolSizes: readonly number[]` (= planPoolSizes).
 // Covers: M2, D19, CARDS-010
 describe('game-session: spawnWave carries health-pool sizes', () => {
@@ -451,19 +451,19 @@ describe('game-session: spawnWave carries health-pool sizes', () => {
     return w as typeof w & { poolSizes?: readonly number[] };
   }
 
-  it('a 12-card run spawns the D19 packing for 12, summing to the card count and ending in the boss', () => {
+  it('a 12-card run spawns the stack packing for 12, summing to the card count and ending in the 5-card boss', () => {
     const { step, ids } = started(memoryStorage());
     const w = waveOf(step.effects);
     expect(ids).toHaveLength(12);
     expect(w.poolSizes).toEqual(planPoolSizes(12));
     expect(w.poolSizes?.reduce((a, b) => a + b, 0)).toBe(12);
-    expect(w.poolSizes?.at(-1)).toBe(3);
+    expect(w.poolSizes?.at(-1)).toBe(5);
   });
 
-  it('a 4-card deck spawns a 1-card enemy then the 3-card boss, every card used once', () => {
+  it('a 4-card deck (under 8 cards, no boss) spawns one 4-card stack, every card used once', () => {
     const { step, ids } = started(memoryStorage(), SMALL.id);
     const w = waveOf(step.effects);
     expect(ids).toHaveLength(4);
-    expect(w.poolSizes).toEqual([1, 3]);
+    expect(w.poolSizes).toEqual([4]);
   });
 });

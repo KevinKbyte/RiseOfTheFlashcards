@@ -3,9 +3,12 @@
 // and each correct answer (voice or orb) strips exactly one card (D4 "-1 card"; D11 "one correct answer
 // strips one card"). The enemy is defeated when its last card is stripped. Damage never heals, a
 // defeated pool takes no more damage, and overkill stops at zero. Pool sizes for a run are planned
-// deterministically so every reserved card belongs to exactly one enemy, per D19 wave packing: pools
-// carry 1-3 cards (D14), graded waves hold 3 cards each (12 -> 4 waves, 6 -> 2), pool size ramps
-// 1 -> 2 -> 3, and the last graded wave is one 3-card boss.
+// deterministically so every reserved card belongs to exactly one enemy, as stacks fought one at a
+// time: regular stacks carry 3 cards and the final enemy (boss) carries 5. With 8 or more cards the
+// last stack is the 5-card boss and the rest are 3s; under 8 cards there is no boss, only 3s. A
+// leftover 1 card joins the last regular stack (4); a leftover 2 is its own stack, placed first.
+// Examples: 12 -> 3,4,5; 13 -> 2,3,3,5; 11 -> 3,3,5; 8 -> 3,5; 7 -> 3,4; 5 -> 2,3; 4 -> 4;
+// 20 -> 3,3,3,3,3,5; 1 -> 1; 2 -> 2; 0 -> [].
 //
 // API contract for src/flashcards/pool.ts (pure, immutable, no three.js/DOM):
 //   export interface Pool { readonly cards: readonly string[]; readonly maxHp: number }
@@ -18,12 +21,13 @@
 //     strips `amount` cards from the front; amount <= 0 or a defeated pool -> same object;
 //     overkill clamps to 0 cards; RangeError when amount is not a finite integer.
 //   planPoolSizes(cardCount: number): number[]
-//     spawn-order sizes summing to cardCount, each 1..3, non-decreasing (ramp); for a multiple of 3
-//     no pool straddles a 3-card wave; cardCount >= 3 ends in one 3-card pool (the boss).
+//     spawn-order stack sizes summing to cardCount per the stack rule above.
+//     export const BOSS_POOL_SIZE = 5;
 //     RangeError when cardCount is not an integer >= 0.
 // No input is ever mutated.
 import { describe, expect, it } from 'vitest';
 import {
+  BOSS_POOL_SIZE,
   createPool,
   currentCard,
   damage,
@@ -115,64 +119,56 @@ describe('pool: multi-card health pool', () => {
 });
 
 // Covers: M2, D14, D19
-describe('pool: planned pool sizes for a run (D19 wave packing)', () => {
-  const RUN_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+describe('pool: planned stack sizes for a run (one stack at a time, 5-card boss)', () => {
+  const RUN_SIZES = Array.from({ length: 30 }, (_, i) => i + 1);
 
-  function prefixSums(sizes: readonly number[]): number[] {
-    let acc = 0;
-    return sizes.map((x) => (acc += x));
-  }
-
-  it.each(RUN_SIZES)('n=%i: sizes sum to n and every pool carries 1-3 cards', (n) => {
-    const sizes = planPoolSizes(n);
-    expect(sizes.reduce((a, b) => a + b, 0)).toBe(n);
-    for (const x of sizes) {
-      expect(Number.isInteger(x)).toBe(true);
-      expect(x).toBeGreaterThanOrEqual(1);
-      expect(x).toBeLessThanOrEqual(3);
-    }
-  });
-
-  it.each(RUN_SIZES)('n=%i: pool size never shrinks along spawn order (ramp 1 -> 2 -> 3)', (n) => {
-    const sizes = planPoolSizes(n);
-    for (let i = 1; i < sizes.length; i++) expect(sizes[i], `index ${i} of ${sizes}`).toBeGreaterThanOrEqual(sizes[i - 1]);
-  });
-
-  it.each(RUN_SIZES.filter((n) => n >= 3))('n=%i: the last graded wave is one 3-card boss pool', (n) => {
-    expect(planPoolSizes(n).at(-1)).toBe(3);
-  });
-
-  it.each(RUN_SIZES.filter((n) => n >= 4))('n=%i: the ramp starts with a 1-card enemy', (n) => {
-    expect(planPoolSizes(n)[0]).toBe(1);
+  it('the boss stack carries 5 cards', () => {
+    expect(BOSS_POOL_SIZE).toBe(5);
   });
 
   it.each([
-    [3, 1],
-    [6, 2],
-    [9, 3],
-    [12, 4],
-  ])('n=%i packs into %i waves of 3: no pool straddles a wave boundary', (n, waves) => {
-    const sums = prefixSums(planPoolSizes(n));
-    const boundaries = Array.from({ length: waves }, (_, w) => 3 * (w + 1));
-    for (const b of boundaries) expect(sums, `wave boundary ${b}`).toContain(b);
+    [12, [3, 4, 5]],
+    [13, [2, 3, 3, 5]],
+    [11, [3, 3, 5]],
+    [8, [3, 5]],
+    [7, [3, 4]],
+    [5, [2, 3]],
+    [4, [4]],
+    [20, [3, 3, 3, 3, 3, 5]],
+    [1, [1]],
+    [2, [2]],
+  ])('n=%i packs into %j', (n, expected) => {
+    expect(planPoolSizes(n)).toEqual(expected);
   });
 
-  it('6 cards = 2 waves ramping 1 -> 2 -> 3: [1, 2] then the 3-card boss', () => {
-    expect(planPoolSizes(6)).toEqual([1, 2, 3]);
+  it.each(RUN_SIZES)('n=%i: sizes sum to n', (n) => {
+    expect(planPoolSizes(n).reduce((a, b) => a + b, 0)).toBe(n);
   });
 
-  it('12 cards ramp through every tier: a 1-card, a 2-card and a 3-card enemy', () => {
-    const sizes = planPoolSizes(12);
-    expect(sizes).toContain(1);
-    expect(sizes).toContain(2);
-    expect(sizes.at(-1)).toBe(3);
+  it.each(RUN_SIZES.filter((n) => n >= 8))('n=%i: the last stack is the 5-card boss, the only one', (n) => {
+    const sizes = planPoolSizes(n);
+    expect(sizes.at(-1)).toBe(5);
+    expect(sizes.filter((x) => x === 5)).toHaveLength(1);
   });
 
-  it('the smallest runs: 1 card is one 1-card enemy, 3 cards are one 3-card boss, 4 cards are [1, 3]', () => {
-    expect(planPoolSizes(1)).toEqual([1]);
-    expect(planPoolSizes(3)).toEqual([3]);
-    expect(planPoolSizes(4)).toEqual([1, 3]);
+  it.each(RUN_SIZES.filter((n) => n < 8))('n=%i: under 8 cards there is no 5-card boss', (n) => {
+    expect(planPoolSizes(n)).not.toContain(5);
   });
+
+  it.each(RUN_SIZES.filter((n) => n >= 3))(
+    'n=%i: regular stacks are 3s except one leftover (a 4 last or a 2 first)',
+    (n) => {
+      const sizes = planPoolSizes(n);
+      const regular = n >= 8 ? sizes.slice(0, -1) : sizes;
+      const odd = regular.map((x, i) => [x, i] as const).filter(([x]) => x !== 3);
+      expect(odd.length, `sizes ${sizes}`).toBeLessThanOrEqual(1);
+      for (const [x, i] of odd) {
+        if (x === 4) expect(i, `sizes ${sizes}`).toBe(regular.length - 1);
+        else if (x === 2) expect(i, `sizes ${sizes}`).toBe(0);
+        else throw new Error(`unexpected regular stack ${x} in ${sizes}`);
+      }
+    },
+  );
 
   it('zero cards plan zero enemies', () => {
     expect(planPoolSizes(0)).toEqual([]);

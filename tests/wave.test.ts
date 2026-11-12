@@ -1,12 +1,15 @@
-// Requirement: several flashcard enemies come at the player at once (default up to 3) and the
-// player chooses which one to attack first. Every active enemy walks in on its own and, if never
-// revealed, waits at reach. The player may reveal (slash) any one active enemy at any distance;
-// only one card is revealed at a time, and the other enemies keep walking in while it is answered.
-// A correct answer removes that enemy and the next card in the deck walks in to refill the wave;
-// a wrong answer leaves the revealed card in place. The wave is cleared when no enemies remain.
+// Requirement: flashcard enemies come at the player one at a time by default (DEFAULT_MAX_ACTIVE 1);
+// the next enemy walks in only after the current one falls. A wave may still be built with a
+// larger maxActive, in which case the player chooses which active enemy to attack. Every active
+// enemy walks in on its own; the first to park at the hold line shows its card by itself (the
+// reveal rule knocks it back to knockbackDistance) and becomes the target. The player may also
+// reveal (slash) an advancing enemy early; only one card is revealed at a time. A correct answer
+// stuns the target; the finishing slash then knocks the card off, and on its last card the enemy
+// falls and the next card in the deck walks in to refill the wave. A wrong answer leaves the
+// revealed card in place. The wave is cleared when no enemies remain.
 //
 // API contract for src/flashcards/wave.ts (pure, immutable; reuses encounter.ts per enemy):
-//   export const DEFAULT_MAX_ACTIVE = 3;
+//   export const DEFAULT_MAX_ACTIVE = 1;
 //   export interface WaveEnemy { readonly id: string; readonly enc: Encounter }
 //   export interface Wave {
 //     readonly active: readonly WaveEnemy[];   // spawn order; refills append at the end
@@ -18,11 +21,16 @@
 //   createWave(deck: readonly string[], opts?: { maxActive?: number; cfg?: Readonly<EncounterConfig> }): Wave
 //     RangeError when maxActive is not an integer >= 1 or deck contains a duplicate id;
 //     invalid cfg throws via createEncounter.
-//   tickWave(wave, dt): Wave                 // ticks every active encounter; RangeError on bad dt
+//   tickWave(wave, dt): Wave                 // ticks every active encounter; RangeError on bad dt;
+//                                            // with no target, the first enemy parked at the hold
+//                                            // line is auto-revealed and becomes the target
 //   revealEnemy(wave, id): Wave              // slash() that enemy; same object when not applicable
 //   answerTarget(wave, correct: boolean): Wave
-//     correct: target removed, targetId null, queue head spawns (refill to maxActive);
-//     wrong or no target: same object returned.
+//     correct: target stunned (card stays until slashed); wrong or no target: same object.
+//   slashEnemy(wave, id): Wave
+//     advancing enemy: revealed; stunned target: top card knocked off (last card: enemy removed,
+//     targetId null, queue head spawns to refill maxActive); otherwise the same object.
+//   Tests below finish a correct answer via answerAndFinish = answerTarget(w, true) then slashEnemy.
 //   isWaveCleared(wave): boolean             // active and queue both empty
 // No input is ever mutated. encounter.ts has no grading freeze, so none is modelled here.
 import { describe, expect, it } from 'vitest';
@@ -36,8 +44,17 @@ import {
   tickWave,
   type Wave,
 } from '../src/flashcards/wave.js';
+import * as waveModule from '../src/flashcards/wave.js';
 
 const D = ENCOUNTER_DEFAULTS;
+
+function answerAndFinish(w: Wave): Wave {
+  const answered = answerTarget(w, true);
+  if (answered.targetId === null) return answered;
+  const slash = (waveModule as unknown as { slashEnemy?: (w: Wave, id: string) => Wave }).slashEnemy;
+  if (typeof slash !== 'function') throw new Error('wave does not export slashEnemy(wave, id)');
+  return slash(answered, answered.targetId);
+}
 const creepSpeed = (D.knockbackDistance - D.strikeDistance) / D.creepSeconds;
 
 function ids(w: Wave): string[] {
@@ -52,18 +69,18 @@ function enemy(w: Wave, id: string) {
 
 // Covers: CARDS-010
 describe('wave: creation', () => {
-  it('defaults to 3 active enemies with the rest of the deck queued in order', () => {
-    expect(DEFAULT_MAX_ACTIVE).toBe(3);
+  it('defaults to 1 active enemy with the rest of the deck queued in order', () => {
+    expect(DEFAULT_MAX_ACTIVE).toBe(1);
     const w = createWave(['a', 'b', 'c', 'd', 'e']);
-    expect(w.maxActive).toBe(3);
-    expect(ids(w)).toEqual(['a', 'b', 'c']);
-    expect(w.queue).toEqual(['d', 'e']);
+    expect(w.maxActive).toBe(1);
+    expect(ids(w)).toEqual(['a']);
+    expect(w.queue).toEqual(['b', 'c', 'd', 'e']);
     expect(w.targetId).toBeNull();
     expect(isWaveCleared(w)).toBe(false);
   });
 
   it('each active enemy has its own fresh encounter at spawn distance', () => {
-    const w = createWave(['a', 'b', 'c']);
+    const w = createWave(['a', 'b', 'c'], { maxActive: 3 });
     for (const e of w.active) {
       expect(e.enc.phase).toBe('advancing');
       expect(e.enc.distance).toBe(D.spawnDistance);
@@ -125,17 +142,19 @@ describe('wave: tick', () => {
     }
   });
 
-  it('unrevealed enemies halt at the reach line as slashable', () => {
-    const w = tickWave(createWave(['a', 'b', 'c']), 100);
-    for (const e of w.active) {
-      expect(e.enc.phase).toBe('slashable');
-      expect(e.enc.distance).toBe(D.reachDistance);
+  it('the first enemy to park at the hold line becomes the target; the others stay slashable', () => {
+    const w = tickWave(createWave(['a', 'b', 'c'], { maxActive: 3 }), 100);
+    expect(w.targetId).toBe('a');
+    expect(enemy(w, 'a').phase).toBe('answering');
+    for (const id of ['b', 'c']) {
+      expect(enemy(w, id).phase).toBe('slashable');
+      expect(enemy(w, id).distance).toBe(D.reachDistance);
     }
   });
 
   it('does not tick queued cards (they spawn fresh later)', () => {
     let w = tickWave(createWave(['a', 'b'], { maxActive: 1 }), 100);
-    w = answerTarget(revealEnemy(w, 'a'), true);
+    w = answerAndFinish(revealEnemy(w, 'a'));
     expect(enemy(w, 'b').distance).toBe(D.spawnDistance);
   });
 
@@ -156,7 +175,7 @@ describe('wave: tick', () => {
 // Covers: CARDS-010
 describe('wave: reveal (choose which card to attack)', () => {
   it('reveals any active enemy far away; it keeps its distance beyond knockback', () => {
-    const w = revealEnemy(createWave(['a', 'b', 'c']), 'b');
+    const w = revealEnemy(createWave(['a', 'b', 'c'], { maxActive: 3 }), 'b');
     expect(w.targetId).toBe('b');
     expect(enemy(w, 'b').phase).toBe('answering');
     expect(enemy(w, 'b').distance).toBe(D.spawnDistance);
@@ -164,15 +183,15 @@ describe('wave: reveal (choose which card to attack)', () => {
     expect(enemy(w, 'c').phase).toBe('advancing');
   });
 
-  it('revealing an enemy waiting at reach knocks it back to knockbackDistance', () => {
-    const w = revealEnemy(tickWave(createWave(['a', 'b', 'c']), 100), 'c');
-    expect(w.targetId).toBe('c');
-    expect(enemy(w, 'c').phase).toBe('answering');
-    expect(enemy(w, 'c').distance).toBe(D.knockbackDistance);
+  it('an enemy shows its card by itself at the hold line, knocked back to knockbackDistance', () => {
+    const w = tickWave(createWave(['a', 'b', 'c']), 100);
+    expect(w.targetId).toBe('a');
+    expect(enemy(w, 'a').phase).toBe('answering');
+    expect(enemy(w, 'a').distance).toBe(D.knockbackDistance);
   });
 
   it('only one revealed at a time: revealing a second id is a no-op (same object)', () => {
-    const w = revealEnemy(createWave(['a', 'b', 'c']), 'a');
+    const w = revealEnemy(createWave(['a', 'b', 'c'], { maxActive: 3 }), 'a');
     expect(revealEnemy(w, 'b')).toBe(w);
   });
 
@@ -198,7 +217,7 @@ describe('wave: reveal (choose which card to attack)', () => {
 // Covers: CARDS-010
 describe('wave: other enemies while the target is answered', () => {
   it('non-target enemies keep advancing while the target creeps at fixed speed', () => {
-    const w = tickWave(revealEnemy(createWave(['a', 'b', 'c']), 'a'), 1);
+    const w = tickWave(revealEnemy(createWave(['a', 'b', 'c'], { maxActive: 3 }), 'a'), 1);
     expect(enemy(w, 'a').phase).toBe('answering');
     expect(enemy(w, 'a').distance).toBeCloseTo(D.spawnDistance - creepSpeed, 10);
     expect(enemy(w, 'b').distance).toBeCloseTo(D.spawnDistance - D.advanceSpeed, 10);
@@ -206,7 +225,7 @@ describe('wave: other enemies while the target is answered', () => {
   });
 
   it('non-target enemies still halt at reach while the target is answered', () => {
-    const w = tickWave(revealEnemy(createWave(['a', 'b']), 'a'), 5);
+    const w = tickWave(revealEnemy(createWave(['a', 'b'], { maxActive: 2 }), 'a'), 5);
     expect(enemy(w, 'b').phase).toBe('slashable');
     expect(enemy(w, 'b').distance).toBe(D.reachDistance);
     expect(w.targetId).toBe('a');
@@ -226,8 +245,8 @@ describe('wave: other enemies while the target is answered', () => {
 // Covers: CARDS-010
 describe('wave: answering the target', () => {
   it('a correct answer removes the target, clears targetId and refills from the queue', () => {
-    let w = tickWave(createWave(['a', 'b', 'c', 'd', 'e']), 1);
-    w = answerTarget(revealEnemy(w, 'b'), true);
+    let w = tickWave(createWave(['a', 'b', 'c', 'd', 'e'], { maxActive: 3 }), 1);
+    w = answerAndFinish(revealEnemy(w, 'b'));
     expect(w.targetId).toBeNull();
     expect(ids(w)).toEqual(['a', 'c', 'd']);
     expect(w.queue).toEqual(['e']);
@@ -240,13 +259,13 @@ describe('wave: answering the target', () => {
     let w = revealEnemy(tickWave(createWave(['a', 'b']), 100), 'a');
     w = tickWave(w, D.creepSeconds + 0.01);
     expect(enemy(w, 'a').phase).toBe('telegraph');
-    w = answerTarget(w, true);
+    w = answerAndFinish(w);
     expect(ids(w)).toEqual(['b']);
     expect(w.targetId).toBeNull();
   });
 
   it('after a correct answer another enemy can be revealed', () => {
-    let w = answerTarget(revealEnemy(createWave(['a', 'b', 'c']), 'a'), true);
+    let w = answerAndFinish(revealEnemy(createWave(['a', 'b', 'c'], { maxActive: 3 }), 'a'));
     w = revealEnemy(w, 'c');
     expect(w.targetId).toBe('c');
   });
@@ -258,16 +277,16 @@ describe('wave: answering the target', () => {
 
   it('answering with no target is a no-op (same object)', () => {
     const w = createWave(['a', 'b']);
-    expect(answerTarget(w, true)).toBe(w);
+    expect(answerAndFinish(w)).toBe(w);
     expect(answerTarget(w, false)).toBe(w);
   });
 
   it('without a queue the wave shrinks, then clears when the last enemy is answered', () => {
     let w = createWave(['a', 'b']);
-    w = answerTarget(revealEnemy(w, 'a'), true);
+    w = answerAndFinish(revealEnemy(w, 'a'));
     expect(ids(w)).toEqual(['b']);
     expect(isWaveCleared(w)).toBe(false);
-    w = answerTarget(revealEnemy(w, 'b'), true);
+    w = answerAndFinish(revealEnemy(w, 'b'));
     expect(w.active).toEqual([]);
     expect(w.queue).toEqual([]);
     expect(isWaveCleared(w)).toBe(true);
@@ -276,7 +295,7 @@ describe('wave: answering the target', () => {
   it('does not mutate the input wave', () => {
     const w = revealEnemy(createWave(['a', 'b', 'c', 'd']), 'a');
     const before = structuredClone(w);
-    answerTarget(w, true);
+    answerAndFinish(w);
     expect(w).toEqual(before);
   });
 });
@@ -290,10 +309,10 @@ describe('wave: maxActive 1 behaves like the single-enemy loop', () => {
     w = revealEnemy(w, 'a');
     w = answerTarget(w, false);
     expect(ids(w)).toEqual(['a']);
-    w = answerTarget(w, true);
+    w = answerAndFinish(w);
     expect(ids(w)).toEqual(['b']);
-    w = answerTarget(revealEnemy(w, 'b'), true);
-    w = answerTarget(revealEnemy(w, 'c'), true);
+    w = answerAndFinish(revealEnemy(w, 'b'));
+    w = answerAndFinish(revealEnemy(w, 'c'));
     expect(isWaveCleared(w)).toBe(true);
   });
 });
@@ -319,7 +338,7 @@ describe('wave: multi-card health pools', () => {
   };
 
   it('every enemy carries a 1-card pool by default', () => {
-    const w = createWave(['a', 'b', 'c', 'd']);
+    const w = createWave(['a', 'b', 'c', 'd'], { maxActive: 3 });
     expect(poolOf(w, 'a').cards).toEqual(['a']);
     expect(poolOf(w, 'a').maxHp).toBe(1);
     expect(poolOf(w, 'c').cards).toEqual(['c']);
@@ -336,7 +355,7 @@ describe('wave: multi-card health pools', () => {
   });
 
   it('the last enemy is truncated to the cards left in the deck', () => {
-    const w = createWave(['a', 'b', 'c'], { poolSizes: [2, 3] });
+    const w = createWave(['a', 'b', 'c'], { poolSizes: [2, 3], maxActive: 3 });
     expect(ids(w)).toEqual(['a', 'c']);
     expect(poolOf(w, 'c').cards).toEqual(['c']);
     expect(w.queue).toEqual([]);
@@ -348,7 +367,7 @@ describe('wave: multi-card health pools', () => {
 
   it('a correct answer peels one card; the target stays revealed with the next card', () => {
     let w = revealEnemy(createWave(['a', 'b', 'c', 'd'], { poolSizes: [3], maxActive: 1 }), 'a');
-    w = answerTarget(w, true);
+    w = answerAndFinish(w);
     expect(w.targetId).toBe('a');
     expect(ids(w)).toEqual(['a']);
     expect(poolOf(w, 'a').cards).toEqual(['b', 'c']);
@@ -363,13 +382,13 @@ describe('wave: multi-card health pools', () => {
 
   it('peeling the last card defeats the enemy and refills from the queue with the next pool size', () => {
     let w = createWave(['a', 'b', 'c', 'd', 'e', 'f'], { poolSizes: [2, 1, 3], maxActive: 1 });
-    w = answerTarget(revealEnemy(w, 'a'), true);
+    w = answerAndFinish(revealEnemy(w, 'a'));
     expect(ids(w)).toEqual(['a']);
-    w = answerTarget(w, true);
+    w = answerAndFinish(w);
     expect(w.targetId).toBeNull();
     expect(ids(w)).toEqual(['c']);
     expect(poolOf(w, 'c').cards).toEqual(['c']);
-    w = answerTarget(revealEnemy(w, 'c'), true);
+    w = answerAndFinish(revealEnemy(w, 'c'));
     expect(ids(w)).toEqual(['d']);
     expect(poolOf(w, 'd').cards).toEqual(['d', 'e', 'f']);
     expect(enemy(w, 'd').distance).toBe(D.spawnDistance);
@@ -377,8 +396,8 @@ describe('wave: multi-card health pools', () => {
   });
 
   it('other enemies cannot be revealed until the multi-card target is defeated', () => {
-    let w = revealEnemy(createWave(['a', 'b', 'c'], { poolSizes: [2, 1] }), 'a');
-    w = answerTarget(w, true);
+    let w = revealEnemy(createWave(['a', 'b', 'c'], { poolSizes: [2, 1], maxActive: 2 }), 'a');
+    w = answerAndFinish(w);
     expect(revealEnemy(w, 'c')).toBe(w);
   });
 
@@ -386,11 +405,11 @@ describe('wave: multi-card health pools', () => {
     let near = revealEnemy(tickWave(createWave(['a', 'b'], { poolSizes: [2] }), 100), 'a');
     near = tickWave(near, 4);
     expect(enemy(near, 'a').distance).toBeLessThan(D.knockbackDistance);
-    near = answerTarget(near, true);
+    near = answerAndFinish(near);
     expect(enemy(near, 'a').distance).toBe(D.knockbackDistance);
 
     let far = revealEnemy(createWave(['a', 'b'], { poolSizes: [2] }), 'a');
-    far = answerTarget(far, true);
+    far = answerAndFinish(far);
     expect(enemy(far, 'a').distance).toBe(D.spawnDistance);
   });
 
@@ -401,7 +420,7 @@ describe('wave: multi-card health pools', () => {
     expect(enemy(w, 'a').hits).toBe(1);
     w = tickWave(w, D.creepSeconds + 0.01);
     expect(enemy(w, 'a').phase).toBe('telegraph');
-    w = answerTarget(w, true);
+    w = answerAndFinish(w);
     expect(enemy(w, 'a').phase).toBe('answering');
     expect(enemy(w, 'a').telegraphLeft).toBe(0);
     expect(enemy(w, 'a').distance).toBe(D.knockbackDistance);
@@ -412,16 +431,16 @@ describe('wave: multi-card health pools', () => {
   it('the wave clears only after every card of every pool is peeled', () => {
     let w = createWave(['a', 'b', 'c'], { poolSizes: [3] });
     w = revealEnemy(w, 'a');
-    w = answerTarget(answerTarget(w, true), true);
+    w = answerAndFinish(answerAndFinish(w));
     expect(isWaveCleared(w)).toBe(false);
-    w = answerTarget(w, true);
+    w = answerAndFinish(w);
     expect(isWaveCleared(w)).toBe(true);
   });
 
   it('does not mutate the input wave on a peel', () => {
     const w = revealEnemy(createWave(['a', 'b', 'c'], { poolSizes: [2] }), 'a');
     const before = structuredClone(w);
-    answerTarget(w, true);
+    answerAndFinish(w);
     expect(w).toEqual(before);
   });
 });

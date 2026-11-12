@@ -9,7 +9,7 @@
 //   cardToPresent(before: Wave, after: Wave): string | null
 //     the after-wave target's current card id when the target or its current card changed between
 //     before and after; null when there is no target after, or the same card is still current.
-//   correctOutcome(before: Wave, after: Wave): CorrectOutcome   // after = answerTarget(before, true)
+//   correctOutcome(before: Wave, after: Wave): CorrectOutcome   // after = slash after stun
 //     { kind: 'none' }                                        no target before, or nothing changed
 //     { kind: 'peeled'; enemyId; presentCardId }              same target, next card now current
 //     { kind: 'defeated'; enemyId; waveCleared: boolean }     target left the wave
@@ -17,6 +17,16 @@
 import { describe, expect, it } from 'vitest';
 import { correctOutcome, cardToPresent } from '../src/flashcards/peel-present.js';
 import { answerTarget, createWave, revealEnemy, tickWave, type Wave } from '../src/flashcards/wave.js';
+import * as waveModule from '../src/flashcards/wave.js';
+
+/** A correct answer stuns the target; the finishing slash knocks its top card off. */
+function answerAndFinish(w: Wave): Wave {
+  const answered = answerTarget(w, true);
+  if (answered.targetId === null) return answered;
+  const slash = (waveModule as unknown as { slashEnemy?: (w: Wave, id: string) => Wave }).slashEnemy;
+  if (typeof slash !== 'function') throw new Error('wave does not export slashEnemy(wave, id)');
+  return slash(answered, answered.targetId);
+}
 
 /** Creep to the strike point (telegraph), then let the telegraph land one hit. */
 function strike(w: Wave): Wave {
@@ -37,7 +47,7 @@ describe('peel-present: cardToPresent (one presented event per new current card)
 
   it('a correct answer that peels a pool presents the next card', () => {
     const before = revealedPool();
-    expect(cardToPresent(before, answerTarget(before, true))).toBe('b');
+    expect(cardToPresent(before, answerAndFinish(before))).toBe('b');
   });
 
   it('a wrong answer (retry) presents nothing: the same card is still current', () => {
@@ -59,8 +69,8 @@ describe('peel-present: cardToPresent (one presented event per new current card)
 
   it('defeating the last card presents nothing (no target remains)', () => {
     let w = revealedPool();
-    w = answerTarget(answerTarget(w, true), true);
-    expect(cardToPresent(w, answerTarget(w, true))).toBeNull();
+    w = answerAndFinish(answerAndFinish(w));
+    expect(cardToPresent(w, answerAndFinish(w))).toBeNull();
   });
 
   it('a full fight presents each pool card exactly once, in order', () => {
@@ -74,12 +84,12 @@ describe('peel-present: cardToPresent (one presented event per new current card)
     go(revealEnemy(w, 'a'));
     go(answerTarget(w, false));
     go(strike(w));
-    go(answerTarget(w, true));
+    go(answerAndFinish(w));
     go(answerTarget(w, false));
     go(w);
-    go(answerTarget(w, true));
+    go(answerAndFinish(w));
     go(strike(w));
-    go(answerTarget(w, true));
+    go(answerAndFinish(w));
     expect(shown).toEqual(['a', 'b', 'c']);
   });
 });
@@ -88,7 +98,7 @@ describe('peel-present: cardToPresent (one presented event per new current card)
 describe('peel-present: correctOutcome (peel keeps the target, defeat removes it)', () => {
   it('a peel keeps the enemy as the target and presents its next card', () => {
     const before = revealedPool();
-    expect(correctOutcome(before, answerTarget(before, true))).toEqual({
+    expect(correctOutcome(before, answerAndFinish(before))).toEqual({
       kind: 'peeled',
       enemyId: 'a',
       presentCardId: 'b',
@@ -96,8 +106,8 @@ describe('peel-present: correctOutcome (peel keeps the target, defeat removes it
   });
 
   it('the last card defeats the enemy; the wave is cleared when nothing else remains', () => {
-    const before = answerTarget(answerTarget(revealedPool(), true), true);
-    expect(correctOutcome(before, answerTarget(before, true))).toEqual({
+    const before = answerAndFinish(answerAndFinish(revealedPool()));
+    expect(correctOutcome(before, answerAndFinish(before))).toEqual({
       kind: 'defeated',
       enemyId: 'a',
       waveCleared: true,
@@ -106,7 +116,7 @@ describe('peel-present: correctOutcome (peel keeps the target, defeat removes it
 
   it('a defeated enemy with more cards queued does not clear the wave', () => {
     const before = revealEnemy(createWave(['a', 'b'], { poolSizes: [1, 1], maxActive: 1 }), 'a');
-    expect(correctOutcome(before, answerTarget(before, true))).toEqual({
+    expect(correctOutcome(before, answerAndFinish(before))).toEqual({
       kind: 'defeated',
       enemyId: 'a',
       waveCleared: false,
@@ -114,14 +124,14 @@ describe('peel-present: correctOutcome (peel keeps the target, defeat removes it
   });
 
   it('a single-card enemy is defeated, never peeled', () => {
-    const before = revealEnemy(createWave(['a', 'b', 'c']), 'b');
-    const out = correctOutcome(before, answerTarget(before, true));
+    const before = revealEnemy(createWave(['a', 'b', 'c'], { maxActive: 3 }), 'b');
+    const out = correctOutcome(before, answerAndFinish(before));
     expect(out).toEqual({ kind: 'defeated', enemyId: 'b', waveCleared: false });
   });
 
   it('no target before means no outcome', () => {
     const w = createWave(['a', 'b', 'c']);
-    expect(correctOutcome(w, answerTarget(w, true))).toEqual({ kind: 'none' });
+    expect(correctOutcome(w, answerAndFinish(w))).toEqual({ kind: 'none' });
   });
 
   it('an unchanged wave (wrong answer) is no outcome', () => {
@@ -131,7 +141,7 @@ describe('peel-present: correctOutcome (peel keeps the target, defeat removes it
 
   it('does not mutate either wave', () => {
     const before = revealedPool();
-    const after = answerTarget(before, true);
+    const after = answerAndFinish(before);
     const snapB = JSON.stringify(before);
     const snapA = JSON.stringify(after);
     correctOutcome(before, after);
