@@ -1,5 +1,5 @@
 // Requirement: each flashcard is guarded by an enemy that walks in from 3 m. The player can slash
-// (reveal) it at ANY distance while it walks in; if it is never revealed it stops at reach (0.6 m)
+// (reveal) it at ANY distance while it walks in; if it is never revealed it stops at reach (0.7 m)
 // and waits to be slashed. A slash closer than 2 m knocks it back to 2 m (farther away it stays put)
 // and its card pops out as a see-through panel ~1 m away, slightly below eye level, fixed in the room
 // and turning to face the player only when they look more than 20 degrees away. While the player
@@ -59,7 +59,7 @@ describe('encounter config and creation', () => {
   it('ENCOUNTER_DEFAULTS has the agreed distances, speed and timings', () => {
     expect(ENCOUNTER_DEFAULTS).toEqual({
       spawnDistance: 3.0,
-      reachDistance: 0.6,
+      reachDistance: 0.7,
       strikeDistance: 0.5,
       knockbackDistance: 2.0,
       advanceSpeed: 1.0,
