@@ -1,6 +1,5 @@
 // Requirement: an encounter config with a creep duration that is zero, negative, or not a finite
 // number is rejected up front, so the enemy can never creep at an infinite or NaN speed.
-// CARDS-* IDs are prototype-local (no spec-cache home yet).
 import { describe, expect, it } from 'vitest';
 import { createEncounter, ENCOUNTER_DEFAULTS } from '../src/flashcards/encounter.js';
 

@@ -3,7 +3,6 @@
 // deterministically by an injected rng). Picking the correct orb clears the card and presents the
 // next; picking a wrong orb removes only that orb and keeps the same card. Small decks get as many
 // orbs as answers exist; an empty or fully-cleared deck is finished. All functions are pure.
-// CARDS-* IDs are prototype-local (no spec-cache home yet).
 import { describe, expect, it } from 'vitest';
 import {
   CAPITALS,

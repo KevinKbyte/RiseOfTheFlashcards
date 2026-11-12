@@ -22,7 +22,6 @@
 //     x/z = fanSlotGoal(slot, frame.eye, frame.yawRad, reach); null when every slot is taken.
 //   export function wrap(angleRad: number): number;   // same body as the private copies:
 //     r = a % 2PI, then -2PI if r > PI, +2PI if r < -PI  -> result in [-PI, PI], PI and -PI kept.
-// CARDS-* IDs are prototype-local (no spec-cache home yet).
 import { describe, expect, it } from 'vitest';
 import {
   ENEMY_FACE_WIDTH_M,

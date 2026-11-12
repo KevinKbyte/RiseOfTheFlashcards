@@ -9,7 +9,6 @@
 // telegraphs on its own); slash only reveals while advancing/slashable; during the telegraph a slash
 // does nothing and a correct answer clears the encounter and cancels the hit. A custom config with
 // strikeDistance < reachDistance still creeps to its own strike line at its own speed.
-// CARDS-* IDs are prototype-local (no spec-cache home yet).
 import { describe, expect, it } from 'vitest';
 import {
   createEncounter,

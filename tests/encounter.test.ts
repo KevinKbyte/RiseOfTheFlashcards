@@ -8,7 +8,6 @@
 // (at most 1 hit per encounter) and the enemy is knocked back to 2 m.
 // A correct answer (also during the telegraph, cancelling the hit) clears the encounter.
 // All functions are pure and time advances only through explicit dt ticks.
-// CARDS-* IDs are prototype-local (no spec-cache home yet).
 import { describe, expect, it } from 'vitest';
 import {
   createEncounter,
