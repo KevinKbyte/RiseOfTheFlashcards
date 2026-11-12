@@ -107,6 +107,16 @@ D21 Fixed enemy fan (Kev 2026-11-11, "Fixed fan"; amends the D13 park position a
   Rejected: move in to 0.5 m (overlap, comfort minimum, new view path); 0.7 m plus a ~0.15 m visual lunge (extra overlap and code).
   Q8 per-player strike-slot calibration 0.40-0.60 m (S9) **Superseded by** a per-player hold-line calibration, ~0.6-0.8 m, moving the fan
   and the strike together (range needs Kev's confirmation). Open (headset check): A15 seated reach ~0.4-0.65 m vs the 0.7 m hold line.
+  "~0.6-0.8 m" (range needs Kev's confirmation) **Superseded by** D22 (0.67-0.8 m).
+D22 Hold range, glow frame, ultimate orb placement (Kev 2026-11-11, after an adversary review; amends D21 and spec ENC-002 / ENC-003):
+  (1) Per-player hold-line calibration range 0.67-0.8 m; default stays 0.7 m. Why: adjacent fan slots (35 deg apart) sit
+  2R*sin(17.5 deg) ~ 0.60R apart, so R >= 0.67 m keeps neighbours >= 0.40 m apart (D21, ENC-001). Open (headset check): the 0.8 m end,
+  with enemy faces raised 0.25 m (ENC-003). (2) Enemy glow frame padding `HALO_PAD` 0.18 -> 0.10 m. Why: keeps the halted side enemy's
+  glow inside the Quest 3 horizontal view (54.5 vs 57.6 deg) and widens the side glow-to-panel gap from ~2.5 to ~6 deg. (3) Ultimate orb
+  moves beyond the hold line to ~(0.42, -0.34, -0.94) m from the eye in the head-yaw frame (~1.03 m out, just right of the question
+  panel), positioned from the panel anchor. Why: at eye + (0.35, -0.2, -0.45) it sat on the pointing line from a lap-rest hand to the
+  right-side enemy and swallowed the press. Palm push and grip squeeze do not depend on the orb position; the uncharged orb stays a
+  selectable no-op (D17 / H-2 unchanged).
 
 ## UE spike debug checklist (SP-DBG)
 Kev 2026-11-07; spike repo C:/Users/Kev/ue-spike/MetaXRSpike.

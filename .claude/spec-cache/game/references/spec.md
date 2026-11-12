@@ -121,12 +121,20 @@ Deferred to relay integration:
   calibration ~0.6-0.8 m moves fan and strike together (range: Kev to confirm). Re-slash after a miss is valid at any distance.
   EN-1 always-knockback-to-~2 m wording **Superseded by** EN-2. "toward the 0.5 m strike slot (calibrated 0.40-0.60 m)" and the
   strike-slot-vs-hold-line open question **Superseded by** plan D21 closure (Kev 2026-11-11, "Strike from 0.7 m").
+  Amended 2026-11-11 (Kev, plan D22): hold-line calibration range 0.67-0.8 m, default 0.7 m. Adjacent fan slots (35 deg apart) sit
+  2R*sin(17.5 deg) ~ 0.60R apart, so R >= 0.67 m keeps neighbours >= 0.40 m apart (ENC-001); the 0.8 m end, with faces raised
+  0.25 m (ENC-003), is to be confirmed on the headset. "~0.6-0.8 m (range: Kev to confirm)" **Superseded by** this amendment.
 - ENC-003: Panel ~70% opaque with dark backing, world/body-locked, never head-locked; ~1.0 m away, 20 deg below eye line, yaw-only
   lazy-follow with ~20 deg dead zone, anchored to the D7 baseline (dodge descoped 2026-11-07); never occludes the target enemy (CARDS-010). Text sized at ~1 m. "engaged enemy" **Superseded by** EN-3 (agent default, Kev to confirm).
   Amended 2026-11-11 (Kev, panel numbers from game-iwsdk `src/flashcards/panel-layout.ts`): the 0.28 m panel spans ~-12 to -28 deg;
   fan-slot enemy faces sit 0.25 m above eye height (`ENEMY_RISE_M`), so the centre face bottom (~-9.5 deg at 0.7 m) clears it;
   answer orbs sit 0.35 m below and 0.42 m forward of the eye (yaw-only frame), 0.16 m apart (`ORB_LAYOUT`). "~15 deg below eye
   line" **Superseded by** this amendment.
+  Amended 2026-11-11 (Kev, plan D22): enemy glow frame padding `HALO_PAD` 0.10 m (was 0.18), so a halted side enemy's glow stays
+  inside the Quest 3 horizontal view (54.5 vs 57.6 deg) and the side glow-to-panel gap widens from ~2.5 to ~6 deg. The ultimate
+  orb (decisions D17 / ledgers H-2) sits beyond the hold line at ~(0.42, -0.34, -0.94) m from the eye in the head-yaw frame
+  (~1.03 m out, just right of the panel), positioned from the panel anchor, off the pointing line from a lap-rest hand to the
+  right-side enemy. Palm push and grip squeeze do not depend on its position; the uncharged orb stays a selectable no-op.
 - ENC-004: Creep speed fixed = (2.0 - 0.7) m / 8 s = 0.1625 m/s, so reveal -> strike slot >= 8 s (>= 6 s no-speech cap + 2 s
   grading timeout); earlier reveal = more time; the pacing knob. Grading (GRADE-004) freezes it. EN-1 "creep time, default 8 s"
   **Superseded by** EN-2. "(2.0 - 0.5) m / 8 s = 0.1875 m/s" **Superseded by** plan D21 closure (Kev 2026-11-11).

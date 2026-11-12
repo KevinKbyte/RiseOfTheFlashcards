@@ -7,6 +7,10 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Changed
 
+- Plan/spec (Kev 2026-11-11, after an adversary review): hold-line calibration range 0.67-0.8 m (was ~0.6-0.8, Kev to confirm),
+  default 0.7 m; enemy glow frame padding `HALO_PAD` 0.10 m (was 0.18); ultimate orb moves beyond the hold line to ~(0.42, -0.34,
+  -0.94) m from the eye, just right of the question panel, off the lap-rest pointing line to the right-side enemy (D22, ENC-002,
+  ENC-003).
 - Plan/spec (Kev 2026-11-11, panel numbers from game-iwsdk `panel-layout.ts`): question panel 20 deg below eye line (was ~15);
   fan-slot enemy faces 0.25 m above eye height (was 0.15 in code); answer orbs 0.35 m down / 0.42 m forward, 0.16 m apart
   (ENC-003, D13a).

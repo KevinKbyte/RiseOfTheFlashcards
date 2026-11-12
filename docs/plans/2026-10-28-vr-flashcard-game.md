@@ -239,7 +239,7 @@ D13 Engagement distance = "slash, pop-out, creep" (Kev 2026-10-31, ledgers EN-1;
   successfully (answers it successfully), there should be some feedback"); a multi-card enemy
   (M2) is knocked back per card by the reveal rule (to 2 m only if inside 2 m). Re-slash after a miss or Didn't catch (re-opens the
   answer window) is valid at any distance. Optional later: speed bonus by kill distance.
-  Q8 0.5 m slot, per-player 0.40-0.60 m (S9), 0.1875 m/s creep **Superseded by** D21 closure (hold-line calibration ~0.6-0.8 m, Kev to confirm).
+  Q8 0.5 m slot, per-player 0.40-0.60 m (S9), 0.1875 m/s creep **Superseded by** D21 closure (hold-line calibration 0.67-0.8 m, D22).
   Wave + choose target (EN-3, Kev 2026-10-31: "there should be multiple cards coming at the user, and user gets to choose which card to
   attack first"): up to maxActive (default 3; tuning knob like the D14 speed) card-enemies advance at once, each from its own D8 wall
   spawn (ring fallback). Unrevealed ones halt at the reach line (D21 slot) and never attack. The player picks the target: reveal any one at any
@@ -432,7 +432,7 @@ S9 first correct kill <90 s, timed from D16 intro end or skip (2 testers who hav
   runs) recorded (Q8); D19 WIN on a starter deck: 3 runs, time-to-WIN recorded 3/3; 0/3 WIN or median >15 min -> window 60 s, re-run (E-FIN-15);
   daily-limit steppers change new/reviews, applied next study day 1/1; Retreat -> mastery screen 3/3;
   pause/resume 3/3 AND voice answer works after resume 3/3; system menu open/close then voice works 3/3; cold start <10 s; hold line
-  calibrates in ~0.6-0.8 m 3/3 (D21, Kev to confirm; was slot 0.40-0.60 m); gaze-dwell ON: 1.2 s dwell selects 3/3, shorter glance selects 0/3;
+  calibrates in 0.67-0.8 m 3/3 (D21, D22; was slot 0.40-0.60 m); gaze-dwell ON: 1.2 s dwell selects 3/3, shorter glance selects 0/3;
   Experimental pane lists 2/2 toggles, each flips live and persists across restart 2/2; each toggle run on and off against these S9
   metrics with the result logged 2/2; every underperformer is OFF in the RC build and absent from Devpost + video (D15).
 S10 round-trip 3/3 (headset shows code, page posts, deck in headset <=5 s after POST); oversize/malformed/<4-answers/expired/
