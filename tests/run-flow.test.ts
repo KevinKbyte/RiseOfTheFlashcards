@@ -5,7 +5,9 @@
 // words (never a card id). Rules (Kev 2026-11-07): each presentation of a card starts exactly one
 // encounter; a re-render or retry of the same presentation never starts another, so it never
 // resets the one-pip-per-encounter cap (D14/Q8). A wrong orb counts as a hit (D4). WIN only when
-// every reserved card (at most 12) is cleared; an empty queue is a practice run that ends on a
+// every reserved card (at most 12) is cleared AND the scene then reports the wave cleared (the
+// finishing slash, Kev 2026-11-12); the last correct answer alone shows no end screen (see
+// tests/run-flow-win-timing.test.ts). An empty queue is a practice run that ends on a
 // "practice done" screen, never a WIN (D19). The run is lost when the pips reach 0 (S6). Once the
 // run has ended, no event changes anything. The controller never mutates its inputs.
 //
@@ -226,10 +228,12 @@ describe('winning the run', () => {
     expect(effects).toEqual([]);
   });
 
-  it('clearing the last reserved card shows a "Day cleared" WIN screen', () => {
+  it('clearing the last reserved card then the wave shows a "Day cleared" WIN screen', () => {
     const ids = deck(2);
     const s1 = step(startFlow({ cardIds: ids }).state, presented('card-1', 'e-1'), correctOrb('card-1'), presented('card-2', 'e-2'));
-    const { state, effects } = stepFlow(s1, correctOrb('card-2'));
+    const answered = stepFlow(s1, correctOrb('card-2'));
+    expect(endScreens(answered.effects)).toEqual([]);
+    const { state, effects } = stepFlow(answered.state, waveCleared);
     expect(state.run.status).toBe('won');
     expect(effects).toEqual([{ type: 'endScreen', kind: 'win', text: expect.any(String) }]);
     const text = endScreens(effects)[0].text;
@@ -237,9 +241,9 @@ describe('winning the run', () => {
     expectPlainWords(text, ids);
   });
 
-  it('a fully mastered selection wins with a "Deck conquered" screen', () => {
-    const s1 = step(startFlow({ cardIds: ['a'], deckMastered: true }).state, presented('a', 'e-1'));
-    const screens = endScreens(stepFlow(s1, correctOrb('a')).effects);
+  it('a fully mastered selection wins with a "Deck conquered" screen when the wave clears', () => {
+    const s1 = step(startFlow({ cardIds: ['a'], deckMastered: true }).state, presented('a', 'e-1'), correctOrb('a'));
+    const screens = endScreens(stepFlow(s1, waveCleared).effects);
     expect(screens).toHaveLength(1);
     expect(screens[0].kind).toBe('win');
     expect(screens[0].text).toMatch(/deck conquered/i);
@@ -254,7 +258,9 @@ describe('winning the run', () => {
     expect(r.effects).toEqual([]);
     expect(r.state.run.status).toBe('active');
     const last = stepFlow(step(s, presented('card-12', 'e-last')), correctOrb('card-12'));
-    expect(endScreens(last.effects).map((e) => e.kind)).toEqual(['win']);
+    expect(endScreens(last.effects)).toEqual([]);
+    const cleared = stepFlow(last.state, waveCleared);
+    expect(endScreens(cleared.effects).map((e) => e.kind)).toEqual(['win']);
   });
 
   it('cards beyond the 12-card reservation never count toward or block the WIN', () => {
@@ -263,7 +269,9 @@ describe('winning the run', () => {
     const extra = stepFlow(s, correctOrb('card-13'));
     expect(extra.state).toBe(s);
     for (const id of ids.slice(0, 12)) s = step(s, presented(id, `e-${id}`), correctOrb(id));
-    expect(s.run.status).toBe('won');
+    const r = stepFlow(s, waveCleared);
+    expect(r.state.run.status).toBe('won');
+    expect(endScreens(r.effects).map((e) => e.kind)).toEqual(['win']);
   });
 
   it('a practice run never shows a WIN, even when the wave is cleared', () => {
@@ -295,7 +303,10 @@ describe('after the run ends', () => {
   });
 
   it('no event changes a won run or emits effects', () => {
-    const won = step(startFlow({ cardIds: ['card-3'] }).state, presented('card-3', 'e-1'), correctOrb('card-3'));
+    const answered = step(startFlow({ cardIds: ['card-3'] }).state, presented('card-3', 'e-1'), correctOrb('card-3'));
+    const winStep = stepFlow(answered, waveCleared);
+    expect(endScreens(winStep.effects).map((e) => e.kind)).toEqual(['win']);
+    const won = winStep.state;
     expect(won.run.status).toBe('won');
     for (const e of events) {
       const r = stepFlow(won, e);
@@ -453,7 +464,10 @@ describe('enemyHit: a landed strike costs a pip, capped once per encounter', () 
     expect(r.state).toBe(lost);
     expect(r.effects).toEqual([]);
 
-    const won = step(startFlow({ cardIds: deck(1) }).state, presented('card-1', 'e-1'), correctOrb('card-1'));
+    const answered = step(startFlow({ cardIds: deck(1) }).state, presented('card-1', 'e-1'), correctOrb('card-1'));
+    const winStep = stepFlow(answered, waveCleared);
+    expect(endScreens(winStep.effects).map((e) => e.kind)).toEqual(['win']);
+    const won = winStep.state;
     expect(won.run.status).toBe('won');
     const w = stepFlow(won, enemyHit('card-1'));
     expect(w.state).toBe(won);
