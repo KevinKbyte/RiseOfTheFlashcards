@@ -25,6 +25,7 @@ import {
 import projectOptions from 'virtual:iwsdk-project';
 import { EnemyField } from './card-enemy-field.js';
 import { CorrectFeedback } from './card-feedback.js';
+import { addSceneLights } from './card-lighting.js';
 import { QuestionPanel, showMessage } from './card-question-panel.js';
 import { browserSession, shuffled } from './card-session.js';
 import { CardSlash } from './card-slash.js';
@@ -443,5 +444,6 @@ World.create(document.getElementById('scene-container') as HTMLDivElement, {
   },
   features: { ...projectOptions.features, sceneUnderstanding: true },
 }).then((world) => {
+  addSceneLights(world.scene);
   world.registerSystem(CardsSystem);
 });
