@@ -24,8 +24,8 @@ import {
 type Enc = ReturnType<typeof createEncounter>;
 
 const D = ENCOUNTER_DEFAULTS;
+const ADVANCE = (D.spawnDistance - D.reachDistance) / D.advanceSpeed; // 2.3 s spawn -> reach
 const DZ = (20 * Math.PI) / 180;
-
 function slashable(): Enc {
   const enc = tick(createEncounter(), 10);
   expect(enc.phase).toBe('slashable');
@@ -99,14 +99,14 @@ describe('tick: advancing', () => {
     expect(enc.distance).toBeCloseTo(2.0, 10);
   });
 
-  it('is still advancing just before reach (2.39 s)', () => {
-    const enc = tick(createEncounter(), 2.39);
+  it('is still advancing just before reach (ADVANCE - 0.01 s)', () => {
+    const enc = tick(createEncounter(), ADVANCE - 0.01);
     expect(enc.phase).toBe('advancing');
     expect(enc.distance).toBeGreaterThan(D.reachDistance);
   });
 
   it('becomes slashable at reach, clamped to reachDistance', () => {
-    const enc = tick(createEncounter(), 2.41);
+    const enc = tick(createEncounter(), ADVANCE + 0.01);
     expect(enc.phase).toBe('slashable');
     expect(enc.distance).toBe(D.reachDistance);
   });
@@ -118,7 +118,7 @@ describe('tick: advancing', () => {
     expect(enc.hits).toBe(0);
   });
 
-  it('reaches slashable after ~2.4 s of small ticks', () => {
+  it('reaches slashable after ~ADVANCE (2.3 s) of small ticks', () => {
     let enc = createEncounter();
     let t = 0;
     for (let i = 0; i < 1000 && enc.phase === 'advancing'; i++) {
@@ -126,8 +126,8 @@ describe('tick: advancing', () => {
       t += 0.01;
     }
     expect(enc.phase).toBe('slashable');
-    expect(t).toBeGreaterThan(2.39);
-    expect(t).toBeLessThan(2.42);
+    expect(t).toBeGreaterThan(ADVANCE - 0.01);
+    expect(t).toBeLessThan(ADVANCE + 0.02);
   });
 });
 
@@ -329,7 +329,7 @@ describe('creep after an early reveal', () => {
   });
 
   it('time to strike is (max(d, knockback) - strike) / fixed creep for any reveal distance', () => {
-    for (let adv = 0; adv < 2.4; adv += 0.1) {
+    for (let adv = 0; adv < ADVANCE - 0.05; adv += 0.1) {
       const pre = tick(createEncounter(), adv);
       expect(pre.phase).toBe('advancing');
       const revealed = slash(pre);
@@ -408,7 +408,7 @@ describe('full encounter loop with defaults', () => {
       t += 0.1;
     }
     expect(enc.phase).toBe('slashable');
-    expect(t).toBeCloseTo(2.4, 0);
+    expect(t).toBeCloseTo(ADVANCE, 1);
 
     enc = slash(enc);
     expect(enc.phase).toBe('answering');

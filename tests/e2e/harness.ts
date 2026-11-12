@@ -277,7 +277,7 @@ export class Game {
       if (ok) break;
     }
     // Hold the right controller just in front of the head: from IWER's default hand position
-    // (0.25,1.5,-0.4) the ray starts beside enemies standing at reach (0.6 m) and misses them.
+    // (0.25,1.5,-0.4) the ray starts beside enemies standing at reach (0.7 m) and misses them.
     await this.page.evaluate(() =>
       (window as any).IWER_DEVICE.remote.dispatch('set_transform', {
         device: 'controller-right',
