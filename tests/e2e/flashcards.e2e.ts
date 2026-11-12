@@ -235,6 +235,7 @@ describe('flashcards emulator playthrough (IWER Quest 3, real controller input)'
       if (!isLastCard(shown)) {
         s = await answerRight(g, shown);
         expect(s.message, `run ended after card ${i + 1} of ${RUN_CARDS}`).toBe(false);
+        expect(s.runStatus, `run won after card ${i + 1} of ${RUN_CARDS}`).not.toBe('won');
         continue;
       }
       reachedLast = true;
@@ -245,13 +246,15 @@ describe('flashcards emulator playthrough (IWER Quest 3, real controller input)'
       expect(waiting.message, 'end screen before the last finishing select').toBe(false);
       expect(waiting.endTexts).toEqual([]);
       expect(waiting.stunned).toBe(true);
-      expect(waiting.runStatus).not.toBe('won');
+      // The run is already won here; only the WIN screen waits for the finishing slash.
+      expect(waiting.winPending, 'win held until the finishing select').toBe(true);
       s = await finishTarget(g, waiting);
     }
     expect(reachedLast, 'the last card was reached').toBe(true);
     s = await g.until((x) => x.message, 'end message');
     await g.screenshot(join(SHOTS, 'win.png'));
     expect(s.runStatus).toBe('won');
+    expect(s.winPending).toBe(false);
     expect(s.endTexts).toHaveLength(1);
     expect(WIN_TEXTS).toContain(s.endTexts[0]);
     expect(s.menuOpen).toBe(true);

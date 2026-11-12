@@ -29,6 +29,8 @@ export interface GameState {
   orbs: { label: string; pos: Vec3 }[];
   answer: string | null;
   runStatus: string | null;
+  /** Run already won but the WIN screen is held until the last enemy's finishing slash; null outside a run. */
+  winPending: boolean | null;
   endTexts: string[];
   cam: Vec3;
   camForward: Vec3;
@@ -148,6 +150,7 @@ const PAGE_HELPERS = `
       orbs: [...s.panel.orbLabels.entries()].map(([e, label]) => ({ label, pos: H.center(e.object3D) })),
       answer: card ? card.answer : null,
       runStatus: run && run.run ? run.run.status : null,
+      winPending: run ? !!run.winPending : null,
       endTexts: s.__e2eEndTexts.slice(),
       cam: H.arr(cam),
       camForward: H.arr(fwd),
