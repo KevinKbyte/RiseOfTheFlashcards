@@ -210,7 +210,14 @@ const PAGE_HELPERS = `
 })();
 `;
 
-const LAUNCH_ARGS = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
+export interface LaunchOptions {
+  headless?: boolean;
+  args?: string[];
+  viewport?: { width: number; height: number };
+  recordVideo?: { dir: string; size: { width: number; height: number } };
+}
+
+export const LAUNCH_ARGS = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
 
 export class Game {
   readonly errors: string[] = [];
@@ -228,10 +235,17 @@ export class Game {
     page.on('pageerror', (e) => this.errors.push(`pageerror: ${e.message}`));
   }
 
-  /** Fresh browser + context (empty localStorage), cards.html loaded and the world running. */
-  static async launch(baseUrl: string): Promise<Game> {
-    const browser = await chromium.launch({ headless: true, args: LAUNCH_ARGS });
-    const context = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 1280, height: 800 } });
+  /**
+   * Fresh browser + context (empty localStorage), cards.html loaded and the world running. `opts`
+   * is for the video capture script (headed mode, viewport, recordVideo); tests use the defaults.
+   */
+  static async launch(baseUrl: string, opts: LaunchOptions = {}): Promise<Game> {
+    const browser = await chromium.launch({ headless: opts.headless ?? true, args: opts.args ?? LAUNCH_ARGS });
+    const context = await browser.newContext({
+      ignoreHTTPSErrors: true,
+      viewport: opts.viewport ?? { width: 1280, height: 800 },
+      ...(opts.recordVideo ? { recordVideo: opts.recordVideo } : {}),
+    });
     await context.addInitScript({ content: PAGE_HELPERS });
     const page = await context.newPage();
     const game = new Game(browser, context, page, `${baseUrl}/cards.html`);
