@@ -33,6 +33,7 @@ import { UltimateInput } from './card-ultimate.js';
 import { stepFrameClocks, type FrameClocks } from './flashcards/input-clock.js';
 import { finishGamepad, swingGamepad } from './flashcards/finish-haptic.js';
 import { mergeOrbPick, type OrbPick } from './flashcards/orb-pick.js';
+import { slashTargets } from './flashcards/slash-targets.js';
 import { resolveUltimate, ultimateOrb } from './flashcards/ultimate-input.js';
 import { WallTracker } from './card-wall-tracker.js';
 import { pickOrbs, type Card } from './flashcards/deck.js';
@@ -267,13 +268,10 @@ export class CardsSystem extends createSystem({
   }
 
   // Slashes fill the same pending slots as trigger select, so a same-frame slash and select on one
-  // target count once. Enemies are slash targets while none is revealed (reveal early), and the
-  // target only while stunned (knock its card off).
+  // target count once. Which enemies and orbs are slash targets this frame: slashTargets.
   private collectSlash(): void {
-    const target = this.targetEnemy();
-    const enemyIds =
-      target === undefined ? this.wave.active.map((e) => e.id) : target.enc.phase === 'stunned' ? [target.id] : [];
-    const hits = this.slash.step(this.clocks.input,this.panel.orbs(), enemyIds, (id, out) =>
+    const { orbs, enemyIds } = slashTargets(this.wave, [...this.panel.orbs()]);
+    const hits = this.slash.step(this.clocks.input, orbs, enemyIds, (id, out) =>
       this.enemies.worldPosition(id, out),
     );
     for (const hit of hits) {
