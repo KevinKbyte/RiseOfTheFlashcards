@@ -7,7 +7,8 @@
 // run with the selected deck's FSRS queue (at most 12 cards, deck order for New cards); each
 // presentation is reported once and a re-render never resets the one-pip-per-encounter cap; a
 // wrong orb costs a pip and writes exactly one Again rating; a correct orb clears the card and
-// writes exactly one rating; clearing every reserved card is a WIN and the mastery text then
+// writes exactly one rating; clearing every reserved card and then the wave (the finishing slash,
+// Kev 2026-11-12) is a WIN, never the last correct orb alone, and the mastery text then
 // reflects the new ratings; losing every pip is a LOSE; an empty queue is a practice run that
 // never WINs; progress survives a reload (a new session on the same storage sees prior ratings);
 // a storage read failure leaves the game playable but never writes (it would clobber a save we
@@ -247,7 +248,7 @@ describe('game-session: menu -> run -> review glue for the cards scene', () => {
     expect(deckCards(loadSave(storage), BIG.id)[id]).toEqual(applyRating(undefined, 'again', NOW));
   });
 
-  it('clearing all 12 reserved cards ends in a win and the mastery text reflects the ratings', () => {
+  it('clearing all 12 reserved cards then the wave ends in a win and the mastery text reflects the ratings', () => {
     const storage = memoryStorage();
     const { step, ids } = started(storage);
     expect(ids).toHaveLength(12);
@@ -258,8 +259,10 @@ describe('game-session: menu -> run -> review glue for the cards scene', () => {
       s = presented(s, id, `e${i}`).session;
       last = correctOrb(s, id);
       s = last.session;
-      if (i < ids.length - 1) expect(endScreens(last.effects)).toEqual([]);
+      expect(endScreens(last.effects)).toEqual([]);
     });
+    last = waveCleared(s);
+    s = last.session;
     const ends = endScreens(last.effects);
     expect(ends).toHaveLength(1);
     expect(ends[0].kind).toBe('win');
