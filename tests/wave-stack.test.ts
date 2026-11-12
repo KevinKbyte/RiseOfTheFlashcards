@@ -1,8 +1,8 @@
 // Requirement: the fight is one enemy at a time, each carrying a stack of flashcards. The enemy
 // walks in and shows its top card by itself when it parks at the hold line (knocked back to
 // knockbackDistance, which opens the answer window); a slash before that reveals it early. A
-// correct answer in time stuns the enemy: its attack stops, no strike lands and there is no time
-// limit. Any slash on a stunned enemy knocks exactly one card off its stack, then its next card
+// correct answer in time stuns the enemy: its attack stops, no strike lands, there is no time
+// limit, and it lunges to the 0.7 m hold line (ENC-006 amendment). Any slash on a stunned enemy knocks exactly one card off its stack, then its next card
 // shows by itself, or the enemy falls on its last card and the next enemy walks in. A slash on a
 // revealed enemy that is not stunned does nothing, and the ultimate never finishes a stunned card.
 // The wave is cleared only after the last card of the last enemy is knocked off.
@@ -188,7 +188,7 @@ describe('wave stack: slashing a stunned enemy knocks one card off', () => {
   });
 });
 
-// Covers: CARDS-004
+// Covers: CARDS-004, ENC-006
 describe('encounter: stunned phase', () => {
   function answering(): Encounter {
     return slash(createEncounter(NEAR));
@@ -220,10 +220,23 @@ describe('encounter: stunned phase', () => {
     expect(stun(enc)).toBe(enc);
   });
 
-  it('tick and slash on a stunned enemy return the same object', () => {
+  // ENC-006 lunge amendment: a stunned enemy no longer freezes where it is; ticking it lunges it to
+  // the hold line (pinned in tests/encounter-lunge.test.ts). It still never strikes.
+  it('slash on a stunned enemy returns the same object; ticking it ends on the hold line with no strike', () => {
     const enc = stun(inTelegraph());
-    expect(tick(enc, 50)).toBe(enc);
     expect(slash(enc)).toBe(enc);
+    const later = tick(enc, 50);
+    expect(later.phase).toBe('stunned');
+    expect(later.distance).toBe(D.reachDistance);
+    expect(later.telegraphLeft).toBe(0);
+    expect(later.hits).toBe(0);
+  });
+
+  it('an enemy stunned at the 2 m push-back does not stay frozen there', () => {
+    const later = tick(stun(answering()), 50);
+    expect(later.phase).toBe('stunned');
+    expect(later.distance).toBe(D.reachDistance);
+    expect(later.hits).toBe(0);
   });
 
   it('does not mutate its input', () => {
