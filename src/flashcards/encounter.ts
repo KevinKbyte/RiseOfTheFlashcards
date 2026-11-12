@@ -25,6 +25,9 @@ export interface Encounter {
   readonly hits: number;
   readonly telegraphLeft: number;
   readonly cfg: Readonly<EncounterConfig>;
+  /** Stunned only: distance at the stun and dt accumulated since, so the lunge is frame-size independent. */
+  readonly stunFrom?: number;
+  readonly stunElapsed?: number;
 }
 
 export const ENCOUNTER_DEFAULTS: Readonly<EncounterConfig> = Object.freeze({
@@ -43,6 +46,9 @@ export const PANEL = Object.freeze({
   opacity: 0.7,
   deadzoneDeg: 20,
 });
+
+/** Seconds a stunned enemy takes to lunge (eased) to the hold line. */
+export const LUNGE_S = 0.3;
 
 const MAX_HITS = 1;
 const TWO_PI = 2 * Math.PI;
@@ -97,8 +103,17 @@ export function tick(enc: Encounter, dt: number): Encounter {
       }
       return { ...enc, telegraphLeft };
     }
+    case 'stunned': {
+      const from = enc.stunFrom ?? enc.distance;
+      const stunElapsed = (enc.stunElapsed ?? 0) + dt;
+      // Only ever toward the player: a stun at or inside the hold line stays put.
+      if (from <= cfg.reachDistance) return { ...enc, stunElapsed };
+      if (stunElapsed >= LUNGE_S) return { ...enc, stunElapsed, distance: cfg.reachDistance };
+      const t = stunElapsed / LUNGE_S;
+      const eased = t * t * (3 - 2 * t);
+      return { ...enc, stunElapsed, distance: from + (cfg.reachDistance - from) * eased };
+    }
     case 'slashable':
-    case 'stunned':
     case 'cleared':
       return enc;
   }
@@ -117,11 +132,12 @@ export function slash(enc: Encounter): Encounter {
 
 /**
  * Correct answer in time: the attack stops (a pending telegraph is cancelled) and the card waits,
- * with no time limit, for the slash that knocks it off.
+ * with no time limit, for the slash that knocks it off. The lunge to the hold line starts on the
+ * next tick.
  */
 export function stun(enc: Encounter): Encounter {
   if (enc.phase !== 'answering' && enc.phase !== 'telegraph') return enc;
-  return { ...enc, phase: 'stunned', telegraphLeft: 0 };
+  return { ...enc, phase: 'stunned', telegraphLeft: 0, stunFrom: enc.distance, stunElapsed: 0 };
 }
 
 /** Correct answer; during the telegraph this cancels the pending hit. */
