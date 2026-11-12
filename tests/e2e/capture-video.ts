@@ -317,9 +317,9 @@ export async function main(): Promise<number> {
     let ultimateDone = false;
     let swingDone = false;
     for (let i = 0; i < 40 && !s.message; i++) {
-      // Back to the rest pose first: a slash leaves the hand at its swing end below the orb row, and
-      // from the low right the ray up to a right-side enemy passes through the ultimate orb
-      // (eye + (0.35, -0.2, -0.45)), which takes the press instead.
+      // Back to the rest pose first: a slash leaves the hand at its swing end below the orb row. The
+      // ultimate orb now sits beyond the hold line beside the question panel, out of that ray path;
+      // restRight is kept as a pose reset so each aimed select starts from the same hand pose.
       await restRight(g);
       s = await revealNext(g);
       log(`revealed ${s.cardId} (answer ${s.answer}); charge ${s.charge}, pips ${s.pips}`);
