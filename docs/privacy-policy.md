@@ -1,47 +1,62 @@
 # Privacy policy (draft)
 
-Last updated: 2026-11-07. Applies to the game Rise of the Flashcards for Meta Quest and its companion deck-paste page.
+Effective date: TBD (Kev). Applies to the web game Rise of the Flashcards, played in the Meta Quest browser (or a desktop browser),
+including its 2D deck-import page.
 
-The game has no accounts. This page lists everything it sends off your headset, how long it is kept, and how to have it deleted.
+The game has no accounts, no analytics, and no game server. Your progress and decks never leave your device.
 
 ## Permissions the game asks for
 
-- Microphone: used only to hear your spoken answers. The mic opens when you slash a card and closes when you stop speaking (6 s at most
-  with no speech). Deny it, or turn on silent mode, and you answer by slashing orbs instead; nothing is recorded.
-- Scene / spatial data: lets enemies come out of your real walls. The game does not read raw camera images; the headset shows passthrough
-  itself.
+- Spatial / room data (WebXR plane detection, optional): lets enemies come out of your real walls. Wall shapes are used in the page
+  while you play and are never stored or sent anywhere. Deny it and enemies spawn on a ring around you instead. The game does not read
+  camera images; the headset shows passthrough itself.
+- The game does not use the microphone or camera and does not ask for those permissions.
 
-## What leaves the headset
+## What is stored on your device
 
-1. Voice audio of each spoken answer is processed on the headset only (on-device recognizer, ADR 0002) and never uploaded or stored.
-   Its text transcript stays on the headset too, unless you turn on Live AI grading in Settings: then the transcript of an answer the
-   game could not match is sent, with that card's text, through our relay to Anthropic (Claude API) for a correct/incorrect verdict.
-   We do not store it.
-2. Bystander speech: anyone talking near you while the mic is open is captured too, and handled the same as item 1.
-3. Your IP address is used as a rate-limit key when you start pairing or post a deck (relay on Vercel + Upstash). The key expires after
-   the 60 s rate-limit window.
-4. Relay function logs (Vercel) record request path, status and timing, never the request body or deck text. Kept per Vercel's log
-   retention for the hosting plan.
-5. A deck you paste on the companion page is held in the relay store (Upstash Redis). It is deleted the moment the headset collects it,
-   and in any case after 15 minutes. When the deck is posted, its card text is sent through our relay to Anthropic (Claude API) once,
-   to suggest extra accepted answers.
+All saved data lives in this browser's local storage on your device, under these keys:
 
-Audio never leaves the headset; text transcripts leave it only as item 1 describes.
+| Key | What it holds |
+|---|---|
+| `flashcards.fsrs.save` | Study progress (spaced-repetition schedule) per deck |
+| `flashcards.fsrs.save.backup` | Backup copy of the progress save |
+| `flashcards.decks` | Decks you imported |
+| `flashcards.decks.backup` | Backup copy of imported decks |
 
-Text sent to Anthropic (answer transcripts and card text in item 1, deck card text in item 5) goes to Anthropic's API, and
-Anthropic's API data-retention terms apply: how long Anthropic keeps it follows Anthropic's API policy, not ours. See
-https://www.anthropic.com/legal/privacy and Anthropic's commercial terms (https://www.anthropic.com/legal/commercial-terms).
+A deck you paste or choose as a file on the deck-import page is read in the browser and saved only to the keys above. To delete
+everything, clear this site's data in the browser settings.
 
-## What stays on the headset
+## What leaves your device
 
-- 6. Scene and room data (walls, room layout): used on the headset only, never uploaded.
-- Your study progress and imported decks: saved on the headset only. Uninstalling the game removes them.
+- Gameplay sends nothing: no answers, progress, decks, or room data are transmitted.
+- Loading the page: your browser downloads the game files from the site host, which sees your IP address as part of any web request.
+  Host name and its log retention: TBD (Kev).
+- Controller models: when you use controllers, the browser may download their 3D models from a public CDN (cdn.jsdelivr.net), which
+  also sees your IP address.
 
-## After judging
+## If voice / relay grading is enabled later
 
-After the competition results (about 2026-12-11), all relay (Upstash) keys are purged.
+Not in the current build. Earlier drafts made the commitments below; they apply only if a later version turns these features on, and
+this policy will be updated (with a new effective date) before that happens.
 
-## Deletion and contact
+- Microphone: used only to hear spoken answers. Opens when you slash a card, closes when you stop speaking (6 s at most with no
+  speech). Deny it, or turn on silent mode, and you answer by slashing orbs; nothing is recorded.
+- Voice audio is processed on the device only (on-device recognizer) and never uploaded or stored. The text transcript stays on the
+  device too, unless you turn on Live AI grading in Settings: then the transcript of an answer the game could not match is sent, with
+  that card's text, through our relay to Anthropic (Claude API) for a correct/incorrect verdict. We do not store it.
+- Bystander speech: anyone talking near you while the mic is open is captured too, and handled the same way.
+- Relay (Vercel + Upstash): your IP address is a rate-limit key when you start pairing or post a deck, expiring after the 60 s window.
+  Function logs record request path, status and timing, never the request body or deck text, kept per Vercel's log retention for the
+  hosting plan.
+- A deck pasted on the companion page is held in the relay store (Upstash Redis), deleted the moment the headset collects it and in
+  any case after 15 minutes. When posted, its card text is sent through the relay to Anthropic (Claude API) once, to suggest extra
+  accepted answers.
+- Audio never leaves the device; text transcripts leave it only as Live AI grading describes.
+- Text sent to Anthropic follows Anthropic's API data-retention terms, not ours: https://www.anthropic.com/legal/privacy and
+  https://www.anthropic.com/legal/commercial-terms.
+- After the competition results (about 2026-12-11), all relay (Upstash) keys are purged.
 
-7. To ask for your data to be deleted, or with any privacy question, email `<CONTACT_EMAIL>`. Include the approximate date and time you
-played so the matching voice entries can be found.
+## Contact
+
+Privacy questions: TBD (Kev) (contact email). Because the game keeps no data off your device, there is nothing for us to delete;
+clearing the site's data in your browser removes everything.
