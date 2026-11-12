@@ -7,6 +7,9 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Changed
 
+- Docs: `docs/devpost-draft.md` and `docs/privacy-policy.md` now match the shipped IWSDK WebXR build (silent orb slash,
+  localStorage-only data, no mic/relay/Claude/dodge); the old voice, relay, Claude grading and dodge commitments moved to an
+  "If voice / relay grading is enabled later" section in each; owner-only facts marked `TBD (Kev)`.
 - Plan/spec (Kev 2026-11-07): dodge descoped (M3, D7, ENC-005); strikes always hit unless the card is answered;
   D7 upward-dodge question closed.
 - Plan (Kev 2026-11-07, ledgers H-2): hands sufficient, controllers allowed (M1, M6); controller slash promoted from SX to S3b
