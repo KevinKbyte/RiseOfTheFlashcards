@@ -161,6 +161,7 @@ export class EnemyField {
     const aim = this.views.size === 0 ? this.fanFrame.yawRad : Math.atan2(-ux, -uz);
     const placed = placeInFan(this.fanFrame, occupied, aim, reach);
     const slot = placed === null ? null : placed.slot;
+    // No free slot: places off the live eye; reachable only if maxActive > 3 (FAN_SLOT_BEARINGS_DEG).
     const g = placed ?? { x: eye.x + ux * reach, z: eye.z + uz * reach };
     // Rides above the eye line, clear of the below-eye question panel (panel-layout.ts).
     const c = parkedEnemyCenter(eye, g);

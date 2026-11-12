@@ -18,3 +18,10 @@ export function swingGamepad<P>(
 ): P | undefined {
   return hand === undefined ? undefined : (pads[hand]?.gamepad ?? undefined);
 }
+
+type PendingEnemy<P> = { id: string; gamepad: P | undefined };
+
+/** A same-frame swing on the enemy a trigger press already queued keeps the pressing pad. */
+export function mergePendingEnemy<P>(prev: PendingEnemy<P> | null, hit: PendingEnemy<P>): PendingEnemy<P> {
+  return prev !== null && prev.id === hit.id && prev.gamepad !== undefined ? { id: hit.id, gamepad: prev.gamepad } : hit;
+}

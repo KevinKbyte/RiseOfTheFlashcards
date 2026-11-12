@@ -31,7 +31,7 @@ import { browserSession, shuffled } from './card-session.js';
 import { CardSlash } from './card-slash.js';
 import { UltimateInput } from './card-ultimate.js';
 import { stepFrameClocks, type FrameClocks } from './flashcards/input-clock.js';
-import { finishGamepad, swingGamepad } from './flashcards/finish-haptic.js';
+import { finishGamepad, mergePendingEnemy, swingGamepad } from './flashcards/finish-haptic.js';
 import { mergeOrbPick, type OrbPick } from './flashcards/orb-pick.js';
 import { slashTargets } from './flashcards/slash-targets.js';
 import { resolveUltimate, ultimateOrb } from './flashcards/ultimate-input.js';
@@ -276,7 +276,10 @@ export class CardsSystem extends createSystem({
     );
     for (const hit of hits) {
       if (hit.kind === 'enemy') {
-        this.pendingEnemy = { id: hit.id, gamepad: swingGamepad(hit.handedness, this.input.xr.gamepads) };
+        this.pendingEnemy = mergePendingEnemy(this.pendingEnemy, {
+          id: hit.id,
+          gamepad: swingGamepad(hit.handedness, this.input.xr.gamepads),
+        });
       } else this.pendingOrb = mergeOrbPick(this.pendingOrb, { orb: hit.orb, gamepad: undefined });
     }
   }
