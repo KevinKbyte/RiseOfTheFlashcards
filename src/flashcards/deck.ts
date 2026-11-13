@@ -1,4 +1,5 @@
 // Pure flashcard deck logic: no DOM/IWSDK imports so it runs under vitest's node environment.
+import { matchKey } from './matcher.js';
 
 export interface Card {
   id: string;
@@ -46,8 +47,14 @@ function shuffle<T>(items: readonly T[], rng: () => number): T[] {
   return out;
 }
 
-export function pickOrbs(card: Card, deck: readonly Card[], rng: () => number): Orb[] {
-  const distractors = [...new Set(deck.map((c) => c.answer))].filter((a) => a !== card.answer);
+export function pickOrbs(
+  card: Card & { aliases?: readonly string[] },
+  deck: readonly Card[],
+  rng: () => number,
+): Orb[] {
+  // A distractor the matcher would grade correct (alias, accent/case variant) would make two orbs right.
+  const accepted = new Set([card.answer, ...(card.aliases ?? [])].map(matchKey));
+  const distractors = [...new Set(deck.map((c) => c.answer))].filter((a) => !accepted.has(matchKey(a)));
   const labels = [card.answer, ...shuffle(distractors, rng).slice(0, MAX_ORBS - 1)];
   return shuffle(labels, rng).map((label, i) => ({ id: `${card.id}-orb${i}`, label }));
 }
