@@ -53,7 +53,7 @@ const BASIC_SCIENCE: Deck = {
     { id: 'sci-pump', prompt: 'Organ that pumps blood through the body?', answer: 'Heart' },
     { id: 'sci-star', prompt: 'Star at the center of our solar system?', answer: 'The Sun', aliases: ['Sun'] },
     { id: 'sci-pull', prompt: 'Force that pulls objects toward Earth?', answer: 'Gravity' },
-    { id: 'sci-co2', prompt: 'Gas plants absorb from the air?', answer: 'Carbon dioxide', aliases: ['CO2'] },
+    { id: 'sci-co2', prompt: 'Gas plants take in for photosynthesis?', answer: 'Carbon dioxide', aliases: ['CO2'] },
     { id: 'sci-fe', prompt: 'Chemical element with the symbol Fe?', answer: 'Iron' },
     { id: 'sci-enamel', prompt: 'Hardest substance in the human body?', answer: 'Tooth enamel', aliases: ['Enamel'] },
   ],
