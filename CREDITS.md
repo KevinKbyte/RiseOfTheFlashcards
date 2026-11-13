@@ -56,15 +56,22 @@ Transitive packages that ship in the build or are used directly:
 | `elics` | 3.4.2 | ECS used by IWSDK | MIT |
 | `onnxruntime-web` | 1.31.0-dev | wasm runtime bundled for the Whisper probe | MIT |
 | `playwright` | 1.64.1 | headless Chromium for `npm run test:e2e` (imported by `tests/e2e/harness.ts`; installed via `@iwsdk/*`, not declared directly) | Apache-2.0 |
+| `@webxr-input-profiles/assets` | 1.0.20 | WebXR controller profiles, fetched at runtime from cdn.jsdelivr.net by `@iwsdk/xr-input` (not installed) | MIT (`LICENSE.md` in the npm tarball, Copyright (c) 2019 Amazon; no `license` field) |
+| Whisper model `onnx-community/whisper-tiny.en` | n/a | ONNX conversion of `openai/whisper-tiny.en`, downloaded at runtime from Hugging Face by the probe page | Apache-2.0 (Hugging Face model card `license` tag; base model also Apache-2.0) |
+
+Python dev-only tools (`scripts/fsrs/requirements.txt`, not installed alongside the repo).
+Licenses read from PyPI registry metadata.
+
+| Package | Version | Use | License |
+| --- | --- | --- | --- |
+| `fsrs` (py-fsrs) | 6.3.2 | generates `tests/fixtures/fsrs/vectors.json` | MIT (Copyright (c) 2022 Open Spaced Repetition) |
+| `pytest` | 8.4.2 | tests for `scripts/fsrs/` | MIT |
 
 ## UNVERIFIED: needs origin from Kev
 
-Origin or license could not be established from the repo or `node_modules`. None of
-these are committed to the repo.
+Origin or license could not be established from a primary source. None of these are
+committed to the repo.
 
 | Item | Why unverified |
 | --- | --- |
-| `@drawcall/uikitml` 0.1.8 (transitive, UIKitML parser in the runtime graph) | package has no `license` field and no `LICENSE` file |
-| Whisper model `onnx-community/whisper-tiny.en` | downloaded at runtime from Hugging Face by the probe page; model license not recorded in the repo |
-| WebXR controller profiles (`@webxr-input-profiles/assets` 1.0.20) | fetched at runtime from cdn.jsdelivr.net by `@iwsdk/xr-input`; package not installed, license not readable |
-| py-fsrs 6.3.2, pytest 8.4.2 (`scripts/fsrs/requirements.txt`) | Python dev-only tools; not installed alongside the repo, license not readable |
+| `@drawcall/uikitml` 0.1.8 (transitive, UIKitML parser in the runtime graph) | package has no `license` field and no `LICENSE` file; upstream repo `github.com/drawcall-ai/uikitml` has no root `LICENSE` and GitHub reports no license (checked 2026-11-13) |
