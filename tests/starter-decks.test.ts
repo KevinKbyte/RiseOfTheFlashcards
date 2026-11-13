@@ -76,3 +76,23 @@ describe('STARTER_DECKS', () => {
     }
   });
 });
+
+// Requirement: every starter-deck question has exactly one correct reply among its deck-mates' answers.
+// The carbon dioxide card asks which gas plants take in for photosynthesis, so a deck-mate answer such as
+// Oxygen (which plants also absorb, for respiration) is not a second correct reply; the old wording
+// "Gas plants absorb from the air?" was ambiguous and must not ship (owner decision, 2026-11-13).
+// Covers: M11, A10
+describe('STARTER_DECKS unambiguous plant-gas card', () => {
+  const cards = STARTER_DECKS.flatMap((d) => d.cards);
+
+  it('the carbon dioxide card asks about photosynthesis', () => {
+    const co2 = cards.filter((c) => key(c.answer) === 'carbon dioxide');
+    expect(co2).toHaveLength(1);
+    expect(co2[0].prompt).toMatch(/photosynthesis/i);
+  });
+
+  it('no starter deck ships the ambiguous "absorb from the air" wording', () => {
+    const prompts = cards.map((c) => key(c.prompt));
+    expect(prompts).not.toContain(key('Gas plants absorb from the air?'));
+  });
+});
