@@ -219,7 +219,9 @@ const PAGE_HELPERS = `
   // recorded during the sweep (tip in world space, slash input clock = CardsSystem clocks.input,
   // real elapsed seconds), read from CardSlash state right after each step(), so the trace is
   // exactly the path and timing the classifier judged, not a separate read that can straddle frames.
-  H.sweepTip = async (points) => {
+  // With stepS, CardsSystem.update receives exactly stepS as its frame delta during the sweep, so
+  // the slash input clock (and every speed and sample gap the classifier sees) is wall-clock free.
+  H.sweepTip = async (points, stepS) => {
     const dev = window.IWER_DEVICE; const c = dev.controllers.right; const V = H.V();
     const orientation = { x: 0, y: 0, z: 0, w: 1 };
     await dev.remote.dispatch('set_transform', { device: 'controller-right', orientation });
@@ -228,7 +230,9 @@ const PAGE_HELPERS = `
     const inv = origin.clone().invert();
     const lifted = new V(c.position.x, c.position.y, c.position.z).applyMatrix4(origin);
     const delta = new V(...H.tip()).sub(lifted);
-    const slash = H.sys().slash; const origStep = slash.step;
+    const sys = H.sys(); const slash = sys.slash; const origStep = slash.step;
+    const hadOwnUpdate = Object.prototype.hasOwnProperty.call(sys, 'update'); const origUpdate = sys.update;
+    if (stepS !== undefined) sys.update = function (_delta, ...rest) { return origUpdate.call(this, stepS, ...rest); };
     const trace = [];
     slash.step = function (...args) {
       const hits = origStep.apply(this, args);
@@ -246,6 +250,7 @@ const PAGE_HELPERS = `
       await H.frames(1);
     } finally {
       slash.step = origStep;
+      if (hadOwnUpdate) sys.update = origUpdate; else delete sys.update;
     }
     return trace;
   };
@@ -433,9 +438,15 @@ export class Game {
     return this.page.evaluate(() => (window as any).__e2e.tip());
   }
 
-  /** Real input: sweeps the right controller tip through `points`, one point per XR frame. */
-  async sweepTip(points: Vec3[]): Promise<TipSample[]> {
-    const trace: TipSample[] = await this.page.evaluate((pts) => (window as any).__e2e.sweepTip(pts), points);
+  /**
+   * Real input: sweeps the right controller tip through `points`, one point per XR frame. With
+   * `stepS`, every frame of the sweep advances the slash input clock by exactly `stepS` seconds.
+   */
+  async sweepTip(points: Vec3[], stepS?: number): Promise<TipSample[]> {
+    const trace: TipSample[] = await this.page.evaluate(
+      ([pts, step]) => (window as any).__e2e.sweepTip(pts, step ?? undefined),
+      [points, stepS ?? null] as const,
+    );
     const bad = trace.findIndex((s) => typeof s.clock !== 'number' || !Number.isFinite(s.clock));
     if (bad >= 0) {
       throw new Error(

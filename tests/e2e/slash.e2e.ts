@@ -11,8 +11,11 @@ import { Game, type GameState, type TipSample, type Vec3 } from './harness.js';
 const SLASH_MIN_SPEED = 1.0;
 /** src/flashcards/slash.ts SLASH_MAX_SAMPLE_GAP_S: the classifier cuts the tip path at larger gaps. */
 const SLASH_MAX_SAMPLE_GAP_S = 0.1;
-/** Fast swings tried before a run of frame hitches fails the test. */
-const MAX_SWINGS = 3;
+/**
+ * Slash input clock step per sweep frame (Quest 3 at 72 Hz), pinned by Game.sweepTip so tip speeds
+ * and sample gaps do not depend on how long a headless frame really took.
+ */
+const FRAME_S = 1 / 72;
 /** Answer orb radius (src/card-question-panel.ts ORB_RADIUS); the collider adds a 0.02 m tip margin. */
 const ORB_RADIUS = 0.05;
 /** src/flashcards/stun-look.ts STUN_PANEL_TEXT: panel line 1 while the target is stunned. */
@@ -88,28 +91,16 @@ describe('controller tip slash on the emulated Quest 3 (IWER set_transform input
     const g = await openRun();
     const shown = await revealNext(g);
     const cleared = (x: GameState) => x.stunned || x.message;
-    // 0.25 m per frame on the uncapped input clock. The classifier cuts the path at sample gaps
-    // over 0.1 s (SLASH_MAX_SAMPLE_GAP_S), so any frame that can land a slash measures >= 2.5 m/s.
-    // A frame hitch on the crossing segment (gap > 0.1 s) means that swing could not slash by
-    // design; redo it, bounded, and judge speed and outcome only on a hitch-free swing.
-    const hitched: string[] = [];
-    for (let attempt = 1; ; attempt++) {
-      const orb = (await g.orbPivot(shown.answer!))!;
-      expect(orb, `pivot of the correct orb ${shown.answer}`).not.toBeNull();
-      const swing: Vec3[] = [add(orb, 0.125), add(orb, -0.125), add(orb, -0.375)];
-      const trace = await g.sweepTip([...(await approachAbove(g, orb, 0.375)), ...swing]);
-      const crossing = crossingSegments(trace, orb);
-      expect(crossing.length, `tip never crossed the orb; trace ${JSON.stringify(trace)}`).toBeGreaterThan(0);
-      if (crossing.every((c) => c.gap <= SLASH_MAX_SAMPLE_GAP_S)) {
-        expect(Math.max(...crossing.map((c) => c.speed))).toBeGreaterThanOrEqual(SLASH_MIN_SPEED);
-        break;
-      }
-      hitched.push(JSON.stringify(trace));
-      await g.frames(10);
-      expect(cleared(await g.state()), `card cleared by a swing with a frame gap > ${SLASH_MAX_SAMPLE_GAP_S} s`).toBeFalsy();
-      if (attempt >= MAX_SWINGS) throw new Error(`all ${MAX_SWINGS} swings hitched on the crossing frame; traces ${hitched.join(' | ')}`);
-    }
-    if (hitched.length) console.warn(`[e2e] slash swing redone after ${hitched.length} hitched crossing frame(s)`);
+    // 0.25 m per FRAME_S frame on the pinned input clock: 18 m/s, every sample gap 1/72 s, well
+    // under the classifier's 0.1 s path cut (SLASH_MAX_SAMPLE_GAP_S), however slow the real frame.
+    const orb = (await g.orbPivot(shown.answer!))!;
+    expect(orb, `pivot of the correct orb ${shown.answer}`).not.toBeNull();
+    const swing: Vec3[] = [add(orb, 0.125), add(orb, -0.125), add(orb, -0.375)];
+    const trace = await g.sweepTip([...(await approachAbove(g, orb, 0.375)), ...swing], FRAME_S);
+    const crossing = crossingSegments(trace, orb);
+    expect(crossing.length, `tip never crossed the orb; trace ${JSON.stringify(trace)}`).toBeGreaterThan(0);
+    expect(Math.max(...crossing.map((c) => c.gap)), 'crossing sample gap on the pinned clock').toBeLessThanOrEqual(SLASH_MAX_SAMPLE_GAP_S);
+    expect(Math.max(...crossing.map((c) => c.speed))).toBeGreaterThanOrEqual(SLASH_MIN_SPEED);
 
     const after = await g.until(cleared, `target stunned by the slash on card ${shown.cardId}`, 5000);
     expect(after.stunned).toBe(true);
@@ -139,10 +130,11 @@ describe('controller tip slash on the emulated Quest 3 (IWER set_transform input
     const shown = await revealNext(g);
     const orb = (await g.orbPivot(shown.answer!))!;
     expect(orb, `pivot of the correct orb ${shown.answer}`).not.toBeNull();
-    // 3 mm per frame through the collider: under 1.0 m/s unless a frame took < 3 ms.
+    // 3 mm per FRAME_S frame through the collider: 0.216 m/s on the pinned input clock, whatever
+    // the real frame length.
     const slow: Vec3[] = [];
     for (let dy = 0.1; dy >= -0.1; dy -= 0.003) slow.push(add(orb, dy));
-    const trace = await g.sweepTip([...(await approachAbove(g, orb, 0.1)), ...slow]);
+    const trace = await g.sweepTip([...(await approachAbove(g, orb, 0.1)), ...slow], FRAME_S);
     const speeds = crossingSpeeds(trace, orb);
     expect(speeds.length, `tip never crossed the orb; trace ${JSON.stringify(trace)}`).toBeGreaterThan(0);
     expect(Math.max(...speeds)).toBeLessThan(SLASH_MIN_SPEED);
