@@ -5,8 +5,9 @@
 // stacks of 3, 4 and a 5-card boss) walks into the centre slot and shows its card by itself when it
 // parks at the hold line (an early select still reveals it), with the HUD line `Shields: N   Cards r/t`;
 // a wrong orb costs one shield pip and is removed while the card stays; the right orb only stuns the
-// enemy (panel and orbs stay, further orb hits are ignored, nothing is removed) and selecting the
-// stunned enemy knocks the card off: the next card of the same enemy shows (`Cards r/t` down by one)
+// enemy (panel line 1 reads "SLASH IT", its answer orbs are disposed, and over 0.3 s it lunges to the
+// 0.7 m hold line and stays there; no card is removed) and selecting the stunned enemy knocks the
+// card off: the next card of the same enemy shows with its question and fresh orbs (`Cards r/t` down by one)
 // or, on its last card, the enemy leaves and the next stack walks into the centre slot; a select on a
 // revealed, not stunned enemy does nothing; the win message shows only after the last finishing
 // select, and losing all 5 shields shows "Shields down. Try again."; progress is saved per deck to
@@ -44,6 +45,11 @@ const CENTRE_SLOT = 1;
 const START_PIPS = 5;
 const LOSE_TEXT = 'Shields down. Try again.';
 const WIN_TEXTS = ['Day cleared! Well done.', 'Deck conquered! Every card mastered.'];
+/** src/flashcards/stun-look.ts STUN_PANEL_TEXT: panel line 1 while the target is stunned. */
+const STUN_PANEL_TEXT = 'SLASH IT';
+/** src/flashcards/encounter.ts DEFAULT reachDistance: the hold line the stunned target lunges to. */
+const REACH_DISTANCE = 0.7;
+const DIST_TOL = 0.01;
 const SHOTS = process.env.E2E_SCREENSHOT_DIR ?? join(tmpdir(), 'flashcards-e2e');
 mkdirSync(SHOTS, { recursive: true });
 
@@ -72,7 +78,7 @@ function readSave(g: Game): Promise<string | null> {
   return g.page.evaluate((k) => window.localStorage.getItem(k), SAVE_KEY);
 }
 
-// Covers: CARDS-012, CARDS-004, CARDS-005, CARDS-010
+// Covers: CARDS-012, CARDS-004, CARDS-005, CARDS-010, ENC-006
 describe('flashcards emulator playthrough (IWER Quest 3, real controller input)', () => {
   it('loads without console errors and enters XR', async () => {
     const g = await open();
@@ -129,7 +135,7 @@ describe('flashcards emulator playthrough (IWER Quest 3, real controller input)'
     expect(g.errors).toEqual([]);
   });
 
-  it('a wrong orb costs one pip and is removed; a correct orb only stuns; the finishing select knocks the card off', async () => {
+  it('a wrong orb costs one pip and is removed; a correct orb stuns (SLASH IT, no orbs, lunge to the hold line); the finishing select knocks the card off', async () => {
     const g = await open();
     await pickDeck(g);
     const shown = await revealNext(g);
@@ -157,28 +163,42 @@ describe('flashcards emulator playthrough (IWER Quest 3, real controller input)'
     expect(stunned.cardId).toBe(shown.cardId);
     expect(stunned.active.map((e) => e.id)).toEqual([shown.targetId]);
     expect(stunned.active[0].cards).toEqual(idle.active[0].cards);
-    expect(stunned.orbs.map((o) => o.label).sort(), 'panel orbs stay up while stunned').toEqual(idle.orbs.map((o) => o.label).sort());
-    expect(stunned.panelText).not.toBeNull();
+    // Stunned look (CARDS-012): the panel reads SLASH IT and the answer orbs are gone.
+    const slash = await g.until((x) => x.panelText?.[0] === STUN_PANEL_TEXT && x.orbs.length === 0, 'stunned panel reads SLASH IT with no orbs');
+    expect(slash.panelText?.[0]).toBe(STUN_PANEL_TEXT);
+    expect(slash.orbs, 'no answer orbs while stunned').toEqual([]);
 
-    // Further orb hits on a stunned card are ignored: no pip, no orb removed, still stunned.
-    const other = stunned.orbs.find((o) => o.label !== stunned.answer)!;
-    await g.aimAndSelect({ kind: 'orb', label: other.label });
+    // ENC-006: over LUNGE_S the stunned target lunges to the hold line and stays there.
+    const lunged = await g.until(
+      (x) => x.targetDistance !== null && Math.abs(x.targetDistance - REACH_DISTANCE) < DIST_TOL,
+      'stunned target lunges to the hold line',
+    );
+    expect(lunged.stunned).toBe(true);
     await g.frames(10);
-    const ignored = await g.state();
-    expect(ignored.pips).toBe(stunned.pips);
-    expect(ignored.stunned).toBe(true);
-    expect(ignored.cardId).toBe(shown.cardId);
-    expect(ignored.correct).toBe(stunned.correct);
-    expect(ignored.orbs.map((o) => o.label).sort()).toEqual(stunned.orbs.map((o) => o.label).sort());
+    const held = await g.state();
+    expect(held.stunned).toBe(true);
+    expect(held.targetDistance!, 'stunned target stays at the hold line').toBeCloseTo(REACH_DISTANCE, 2);
+    expect(held.pips).toBe(stunned.pips);
+    expect(held.cardId).toBe(shown.cardId);
+    expect(held.correct).toBe(stunned.correct);
+    expect(held.orbs).toEqual([]);
+    expect(held.panelText?.[0]).toBe(STUN_PANEL_TEXT);
 
-    const cleared = await finishTarget(g, ignored);
+    const cleared = await finishTarget(g, held);
     expect(cleared.targetId).toBe(shown.targetId);
     expect(cleared.cardId).not.toBe(shown.cardId);
     expect(cleared.active.flatMap((e) => e.cards)).not.toContain(shown.cardId);
     expect(cleared.stunned).toBe(false);
     expect(cleared.pips).toBe(START_PIPS - 1);
+    // The next card's reveal brings the question and fresh orbs back.
+    const next = await revealNext(g);
+    expect(next.cardId).toBe(cleared.cardId);
+    expect(next.stunned).toBe(false);
+    expect(next.panelText?.[0]).not.toBe(STUN_PANEL_TEXT);
+    expect(next.orbs.length).toBeGreaterThanOrEqual(2);
+    expect(next.orbs.map((o) => o.label)).toContain(next.answer);
     expect(g.errors).toEqual([]);
-  });
+  }, 120_000);
 
   it('Cards r/t counts down by one per finishing select, and a knocked-out stack is replaced by the next in the centre slot', async () => {
     const g = await open();
