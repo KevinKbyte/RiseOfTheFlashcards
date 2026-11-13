@@ -106,8 +106,8 @@ export function tick(enc: Encounter, dt: number): Encounter {
     case 'stunned': {
       const from = enc.stunFrom;
       const stunElapsed = (enc.stunElapsed ?? 0) + dt;
-      // No stunFrom means already at the hold line. Only ever toward the player: a stun at or
-      // inside the hold line stays put.
+      // No stunFrom: no lunge anchor, so it holds its current distance. Only ever toward the
+      // player: a stun at or inside the hold line stays put.
       if (from === undefined || from <= cfg.reachDistance) return { ...enc, stunElapsed };
       if (stunElapsed >= LUNGE_S) return { ...enc, stunElapsed, distance: cfg.reachDistance };
       const t = stunElapsed / LUNGE_S;
