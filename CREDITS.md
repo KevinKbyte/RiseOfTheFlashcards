@@ -74,4 +74,4 @@ committed to the repo.
 
 | Item | Why unverified |
 | --- | --- |
-| `@drawcall/uikitml` 0.1.8 (transitive, UIKitML parser in the runtime graph) | package has no `license` field and no `LICENSE` file; upstream repo `github.com/drawcall-ai/uikitml` has no root `LICENSE` and GitHub reports no license (checked 2026-11-13) |
+| `@drawcall/uikitml` 0.1.8 (UIKitML parser; kept per Kev 2026-11-13, credited via Meta's SDK) | never imported by game code; ships only as a dependency of Meta's MIT `@iwsdk/core` 1.1.0-rc.2 (runtime, loads UIKitML panels) and `@iwsdk/vite-plugin-dev` 1.1.0-rc.2 (dev only). Its own license is unstated upstream: no `license` field, no `LICENSE` file, none in `github.com/drawcall-ai/uikitml` or via the GitHub license API (checked 2026-11-13) |
