@@ -92,8 +92,7 @@ export class EnemyField {
       const t = span > 0 ? Math.min(Math.max((enc.distance - reachDistance) / span, 0), 1) : 0;
       obj.position.lerpVectors(view.goal, view.start, t);
       const scale = applyGlow(view.parts, enemyGlow(enc.phase, id === wave.targetId), pulse);
-      // Pool-less waves (layout-only test fixtures) keep whatever stack the view already shows.
-      if (pool !== undefined) setCardCount(view.parts, hp(pool));
+      setCardCount(view.parts, hp(pool));
       view.age += dt;
       obj.scale.setScalar(scale * Math.min(view.age / EMERGE_SECONDS, 1));
     }
