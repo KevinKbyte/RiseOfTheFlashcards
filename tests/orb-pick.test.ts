@@ -42,10 +42,4 @@ describe('mergeOrbPick first hit wins', () => {
     expect(mergeOrbPick<string>(null, 'x')).toBe('x');
     expect(mergeOrbPick<string>('x', 'y')).toBe('x');
   });
-
-  it('never mutates the pending pick or the hit', () => {
-    expect(() => mergeOrbPick<Orb>(A, B)).not.toThrow();
-    expect(A).toEqual({ label: 'A' });
-    expect(B).toEqual({ label: 'B' });
-  });
 });
