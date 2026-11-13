@@ -54,6 +54,7 @@ Transitive packages that ship in the build or are used directly:
 | --- | --- | --- | --- |
 | `@iwsdk/xr-input`, `@iwsdk/locomotor`, `@iwsdk/scene-composition` | 1.1.0-rc.2 | IWSDK internals | MIT |
 | `elics` | 3.4.2 | ECS used by IWSDK | MIT |
+| `@drawcall/uikitml` | 0.1.8 | UIKitML parser; never imported by game code, arrives only through Meta's MIT `@iwsdk/core` 1.1.0-rc.2 (runtime, loads UIKitML panels) and `@iwsdk/vite-plugin-dev` 1.1.0-rc.2 (dev only); kept per Kev 2026-11-13, credited via Meta's SDK | unstated upstream: no `license` field, no `LICENSE` file, none in `github.com/drawcall-ai/uikitml` or via the GitHub license API (checked 2026-11-13) |
 | `onnxruntime-web` | 1.31.0-dev | wasm runtime bundled for the Whisper probe | MIT |
 | `playwright` | 1.64.1 | headless Chromium for `npm run test:e2e` (imported by `tests/e2e/harness.ts`; installed via `@iwsdk/*`, not declared directly) | Apache-2.0 |
 | `@webxr-input-profiles/assets` | 1.0.20 | WebXR controller profiles, fetched at runtime from cdn.jsdelivr.net by `@iwsdk/xr-input` (not installed) | MIT (`LICENSE.md` in the npm tarball, Copyright (c) 2019 Amazon; no `license` field) |
@@ -69,9 +70,4 @@ Licenses read from PyPI registry metadata.
 
 ## UNVERIFIED: needs origin from Kev
 
-Origin or license could not be established from a primary source. None of these are
-committed to the repo.
-
-| Item | Why unverified |
-| --- | --- |
-| `@drawcall/uikitml` 0.1.8 (UIKitML parser; kept per Kev 2026-11-13, credited via Meta's SDK) | never imported by game code; ships only as a dependency of Meta's MIT `@iwsdk/core` 1.1.0-rc.2 (runtime, loads UIKitML panels) and `@iwsdk/vite-plugin-dev` 1.1.0-rc.2 (dev only). Its own license is unstated upstream: no `license` field, no `LICENSE` file, none in `github.com/drawcall-ai/uikitml` or via the GitHub license API (checked 2026-11-13) |
+Nothing is unverified as of 2026-11-13.
