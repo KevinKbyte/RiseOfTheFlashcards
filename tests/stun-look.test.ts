@@ -46,7 +46,7 @@ async function look(): Promise<StunLook> {
   return mod as unknown as StunLook;
 }
 
-const ALL_PHASES: readonly EncounterPhase[] = ['advancing', 'slashable', 'answering', 'telegraph', 'stunned', 'cleared'];
+const ALL_PHASES: readonly EncounterPhase[] = ['advancing', 'slashable', 'answering', 'telegraph', 'stunned'];
 const NOT_STUNNED = ALL_PHASES.filter((p) => p !== 'stunned');
 const QUESTION = 'What is the capital of France?';
 

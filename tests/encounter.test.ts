@@ -6,8 +6,7 @@
 // at a fixed speed (2 m -> 0.7 m takes >= 8 s: 6 s no-speech cap + 2 s grading timeout); at 0.7 m a
 // 2 s telegraph runs, then the hit lands (max 1 per encounter) and it is knocked back to 2 m.
 // A correct answer in time STUNS it and a slash then knocks the card off (ENC-006 D23; stun() is
-// locked in tests/wave-stack.test.ts). resolveCorrect() / phase 'cleared' (correct answer clears) is
-// the pre-stack rule: superseded by ENC-006 D23, unused by src/, kept in the blocks that call it.
+// locked in tests/wave-stack.test.ts).
 // All functions are pure and time advances only through explicit dt ticks.
 import { describe, expect, it } from 'vitest';
 import {
@@ -15,7 +14,6 @@ import {
   ENCOUNTER_DEFAULTS,
   PANEL,
   panelYaw,
-  resolveCorrect,
   slash,
   tick,
   type EncounterPhase,
@@ -41,12 +39,6 @@ function answering(): Enc {
 function telegraph(): Enc {
   const enc = tick(answering(), D.creepSeconds);
   expect(enc.phase).toBe('telegraph');
-  return enc;
-}
-
-function cleared(): Enc {
-  const enc = resolveCorrect(answering());
-  expect(enc.phase).toBe('cleared');
   return enc;
 }
 
@@ -132,14 +124,9 @@ describe('tick: advancing', () => {
 });
 
 // Covers: CARDS-004
-describe('tick: slashable and cleared (superseded, ENC-006 D23) wait', () => {
+describe('tick: slashable waits', () => {
   it('slashable does not move or change on tick', () => {
     const enc = slashable();
-    expect(tick(enc, 5)).toEqual(enc);
-  });
-
-  it('cleared does not change on tick', () => {
-    const enc = cleared();
     expect(tick(enc, 5)).toEqual(enc);
   });
 });
@@ -208,7 +195,6 @@ describe('tick: dt validation and purity', () => {
     ['slashable', slashable],
     ['answering', answering],
     ['telegraph', telegraph],
-    ['cleared', cleared],
   ] as const)('dt 0 leaves %s unchanged', (_name, make) => {
     const enc = make();
     expect(tick(enc, 0)).toEqual(enc);
@@ -289,7 +275,6 @@ describe('slash', () => {
   it.each([
     ['answering', answering],
     ['telegraph', telegraph],
-    ['cleared', cleared],
   ] as const)('from %s returns the same object', (_name, make) => {
     const enc = make();
     expect(slash(enc)).toBe(enc);
@@ -297,7 +282,7 @@ describe('slash', () => {
 });
 
 // Covers: CARDS-004
-// CARDS-004 amended Kev 2026-10-31: reveal at any distance; clear test superseded by ENC-006 D23
+// CARDS-004 amended Kev 2026-10-31: reveal at any distance
 describe('creep after an early reveal', () => {
   const CREEP = (D.knockbackDistance - D.strikeDistance) / D.creepSeconds;
 
@@ -352,50 +337,6 @@ describe('creep after an early reveal', () => {
     expect(tick(enc, D.creepSeconds - 0.01).phase).toBe('answering');
     expect(tick(enc, D.creepSeconds).phase).toBe('telegraph');
   });
-
-  it('a correct answer clears an early-revealed encounter while creeping and during telegraph', () => {
-    const creeping = tick(slash(createEncounter()), 1);
-    expect(resolveCorrect(creeping).phase).toBe('cleared');
-    const tel = tick(slash(createEncounter()), (D.spawnDistance - D.strikeDistance) / CREEP + 0.01);
-    const next = resolveCorrect(tel);
-    expect(next.phase).toBe('cleared');
-    expect(next.hits).toBe(0);
-  });
-});
-
-// Covers: CARDS-004
-describe('resolveCorrect (superseded by the ENC-006 D23 stun; unused by src/)', () => {
-  it('from answering clears the encounter', () => {
-    const enc = answering();
-    const before = snapshot(enc);
-    const next = resolveCorrect(enc);
-    expect(next.phase).toBe('cleared');
-    expect(next.hits).toBe(0);
-    expect(enc).toEqual(before);
-  });
-
-  it('during the telegraph clears it and cancels the hit', () => {
-    const next = resolveCorrect(telegraph());
-    expect(next.phase).toBe('cleared');
-    expect(next.hits).toBe(0);
-    expect(tick(next, 10).hits).toBe(0);
-  });
-
-  it('after a landed hit keeps hits unchanged', () => {
-    const hit = tick(telegraph(), 2);
-    const next = resolveCorrect(hit);
-    expect(next.phase).toBe('cleared');
-    expect(next.hits).toBe(1);
-  });
-
-  it.each([
-    ['advancing', () => createEncounter()],
-    ['slashable', slashable],
-    ['cleared', cleared],
-  ] as const)('from %s returns the same object', (_name, make) => {
-    const enc = make();
-    expect(resolveCorrect(enc)).toBe(enc);
-  });
 });
 
 // Covers: CARDS-004
@@ -426,9 +367,6 @@ describe('full encounter loop with defaults', () => {
     enc = tick(enc, 2);
     expect(enc.phase).toBe('answering');
     expect(enc.hits).toBe(1);
-
-    enc = resolveCorrect(enc);
-    expect(enc.phase).toBe('cleared');
   });
 });
 

@@ -8,15 +8,13 @@
 // Reveal rules: an enemy not yet revealed halts slashable at 0.7 m and never telegraphs on its own
 // (the wave layer, src/flashcards/wave.ts, then shows its card by itself: ENC-002 D23 amendment);
 // slash only reveals while advancing/slashable; during the telegraph a slash does nothing. A correct
-// answer in time stuns the enemy (ENC-006 D23 amendment, stun() locked in tests/wave-stack.test.ts);
-// the resolveCorrect() "clears the encounter" check below is the pre-stack rule, superseded by that
-// amendment and not called from src/. A custom config with strikeDistance < reachDistance still
-// creeps to its own strike line at its own speed.
+// answer in time stuns the enemy (ENC-006 D23 amendment, stun() locked in tests/wave-stack.test.ts).
+// A custom config with strikeDistance < reachDistance still creeps to its own strike line at its
+// own speed.
 import { describe, expect, it } from 'vitest';
 import {
   createEncounter,
   ENCOUNTER_DEFAULTS,
-  resolveCorrect,
   slash,
   tick,
   type EncounterConfig,
@@ -106,15 +104,11 @@ describe('reveal rules at the hold line when reach == strike', () => {
     expect(revealed.hits).toBe(0);
   });
 
-  // The resolveCorrect() half is superseded by the ENC-006 D23 amendment (stun, then slash).
-  it('during the telegraph at 0.7 m a slash does nothing and a correct answer cancels the hit', () => {
+  it('during the telegraph at 0.7 m a slash does nothing', () => {
     const tel = tick(revealedAtReach(), D.creepSeconds);
     expect(tel.phase).toBe('telegraph');
     expect(tel.distance).toBe(0.7);
     expect(slash(tel)).toBe(tel);
-    const cleared = resolveCorrect(tel);
-    expect(cleared.phase).toBe('cleared');
-    expect(cleared.hits).toBe(0);
   });
 });
 
