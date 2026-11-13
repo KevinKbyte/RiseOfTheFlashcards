@@ -28,11 +28,13 @@ const MIN_LENGTH_RATIO = 0.75;
 export const MAX_KEY_CHARS = 200;
 const HEDGE_TOKENS = new Set(['or', 'and']);
 
-// NORM-001: NFKD, drop combining marks, lowercase, punctuation -> space, collapse, trim.
+// NORM-001: NFKD, drop combining marks and invisible format chars (ZWSP, soft hyphen, BOM),
+// lowercase, punctuation -> space, collapse, trim.
 export function normalize(s: string): string {
   return s
     .normalize('NFKD')
     .replace(/\p{Mn}/gu, '')
+    .replace(/\p{Cf}/gu, '')
     .toLowerCase()
     .replace(/\p{P}/gu, ' ')
     .replace(/\s+/gu, ' ')
