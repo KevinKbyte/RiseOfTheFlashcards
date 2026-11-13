@@ -43,8 +43,8 @@ Source plan: docs/plans/2026-10-28-vr-flashcard-game.md (D-, S-, M-IDs there).
 
 ## Normalization (plan D3/D6)
 
-- NORM-001: normalize(s) = NFKD, drop combining marks (Unicode Mn), lowercase, each punctuation char (Unicode P)
-  -> space, collapse whitespace runs to one space, trim. Shared fixture tests/fixtures/normalize.json
+- NORM-001: normalize(s) = NFKD, drop combining marks (Unicode Mn), drop format characters (Unicode Cf), lowercase,
+  each punctuation char (Unicode P) -> space, collapse whitespace runs to one space, trim. Shared fixture tests/fixtures/normalize.json
   ([{input, expected}]) is the contract for every implementation (JS relay now, engine side later).
 
 ## Answer matcher (plan D3, S2)

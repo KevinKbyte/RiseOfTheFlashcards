@@ -55,6 +55,12 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 - Plan/spec (Kev 2026-11-07): an enemy arriving unanswered now writes FSRS Again, max one Again per encounter (D4, ENC-005);
   D7 upward-dodge question logged as open.
 
+### Fixed
+
+- NORM-001: the relay normalizer (`relay/lib/normalize.mjs`) now drops Unicode format characters (Cf: zero-width space/joiner,
+  soft hyphen, BOM) after the combining marks, so an answer pasted with an invisible character matches; 5 new rows in
+  `tests/fixtures/normalize.json`.
+
 ## [0.1.0] - 2026-10-28
 
 ### Added
