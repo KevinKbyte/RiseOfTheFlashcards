@@ -104,10 +104,11 @@ export function tick(enc: Encounter, dt: number): Encounter {
       return { ...enc, telegraphLeft };
     }
     case 'stunned': {
-      const from = enc.stunFrom ?? enc.distance;
+      const from = enc.stunFrom;
       const stunElapsed = (enc.stunElapsed ?? 0) + dt;
-      // Only ever toward the player: a stun at or inside the hold line stays put.
-      if (from <= cfg.reachDistance) return { ...enc, stunElapsed };
+      // No stunFrom means already at the hold line. Only ever toward the player: a stun at or
+      // inside the hold line stays put.
+      if (from === undefined || from <= cfg.reachDistance) return { ...enc, stunElapsed };
       if (stunElapsed >= LUNGE_S) return { ...enc, stunElapsed, distance: cfg.reachDistance };
       const t = stunElapsed / LUNGE_S;
       const eased = t * t * (3 - 2 * t);
