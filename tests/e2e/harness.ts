@@ -220,7 +220,8 @@ const PAGE_HELPERS = `
   // real elapsed seconds), read from CardSlash state right after each step(), so the trace is
   // exactly the path and timing the classifier judged, not a separate read that can straddle frames.
   // With stepS, CardsSystem.update receives exactly stepS as its frame delta during the sweep, so
-  // the slash input clock (and every speed and sample gap the classifier sees) is wall-clock free.
+  // both the game clock and the slash input clock are pinned (each advances by a fixed stepS, e.g.
+  // 1/72 s, per frame): every speed, sample gap and game-time step is wall-clock free.
   H.sweepTip = async (points, stepS) => {
     const dev = window.IWER_DEVICE; const c = dev.controllers.right; const V = H.V();
     const orientation = { x: 0, y: 0, z: 0, w: 1 };
@@ -232,16 +233,16 @@ const PAGE_HELPERS = `
     const delta = new V(...H.tip()).sub(lifted);
     const sys = H.sys(); const slash = sys.slash; const origStep = slash.step;
     const hadOwnUpdate = Object.prototype.hasOwnProperty.call(sys, 'update'); const origUpdate = sys.update;
-    if (stepS !== undefined) sys.update = function (_delta, ...rest) { return origUpdate.call(this, stepS, ...rest); };
     const trace = [];
-    slash.step = function (...args) {
-      const hits = origStep.apply(this, args);
-      const ss = this.state && this.state.rightController && this.state.rightController.samples;
-      const last = ss && ss.length ? ss[ss.length - 1] : null;
-      trace.push(last ? { tip: [last.pos.x, last.pos.y, last.pos.z], clock: last.t } : { tip: null, clock: args[0] });
-      return hits;
-    };
     try {
+      if (stepS !== undefined) sys.update = function (_delta, ...rest) { return origUpdate.call(this, stepS, ...rest); };
+      slash.step = function (...args) {
+        const hits = origStep.apply(this, args);
+        const ss = this.state && this.state.rightController && this.state.rightController.samples;
+        const last = ss && ss.length ? ss[ss.length - 1] : null;
+        trace.push(last ? { tip: [last.pos.x, last.pos.y, last.pos.z], clock: last.t } : { tip: null, clock: args[0] });
+        return hits;
+      };
       for (const p of points) {
         const r = new V(p[0], p[1], p[2]).sub(delta).applyMatrix4(inv);
         await dev.remote.dispatch('set_transform', { device: 'controller-right', position: { x: r.x, y: r.y, z: r.z }, orientation });
