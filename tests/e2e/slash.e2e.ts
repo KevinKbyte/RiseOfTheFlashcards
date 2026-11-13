@@ -1,7 +1,8 @@
 // Requirement: on an emulated Quest 3 the controller works as a blade: sweeping the right
 // controller tip (grip + 0.12 m along grip -Z) through the correct answer orb at 1.0 m/s or faster
 // answers it exactly like selecting it (the enemy is stunned: answer counted, no shield pip lost, the
-// card and its orbs stay up until the finishing slash), while a slow crossing picks nothing.
+// card stays up until the finishing slash, its answer orbs are disposed, panel line 1 reads "SLASH IT",
+// and it lunges to the 0.7 m hold line), while a slow crossing picks nothing.
 import { afterEach, describe, expect, inject, it } from 'vitest';
 import { pickDeck, pressStart, revealNext } from './flow.js';
 import { Game, type GameState, type TipSample, type Vec3 } from './harness.js';
@@ -14,6 +15,11 @@ const SLASH_MAX_SAMPLE_GAP_S = 0.1;
 const MAX_SWINGS = 3;
 /** Answer orb radius (src/card-question-panel.ts ORB_RADIUS); the collider adds a 0.02 m tip margin. */
 const ORB_RADIUS = 0.05;
+/** src/flashcards/stun-look.ts STUN_PANEL_TEXT: panel line 1 while the target is stunned. */
+const STUN_PANEL_TEXT = 'SLASH IT';
+/** src/flashcards/encounter.ts DEFAULT reachDistance: the hold line the stunned target lunges to. */
+const REACH_DISTANCE = 0.7;
+const DIST_TOL = 0.01;
 
 let game: Game | undefined;
 afterEach(async () => {
@@ -76,7 +82,7 @@ async function approachAbove(g: Game, orb: Vec3, lead: number): Promise<Vec3[]> 
   ];
 }
 
-// Covers: M1, M6, S3, CARDS-010
+// Covers: M1, M6, S3, CARDS-010, CARDS-012, ENC-006
 describe('controller tip slash on the emulated Quest 3 (IWER set_transform input)', () => {
   it('a fast tip swing through the correct orb answers the card like selecting it (stun)', async () => {
     const g = await openRun();
@@ -112,7 +118,19 @@ describe('controller tip slash on the emulated Quest 3 (IWER set_transform input
     expect(after.pips).toBe(shown.pips);
     expect(after.cardId).toBe(shown.cardId);
     expect(after.active.flatMap((e) => e.cards)).toContain(shown.cardId);
-    expect(after.orbs.map((o) => o.label).sort()).toEqual(shown.orbs.map((o) => o.label).sort());
+    // CARDS-012: while stunned the answer orbs are gone and the panel reads SLASH IT.
+    const look = await g.until((x) => x.panelText?.[0] === STUN_PANEL_TEXT && x.orbs.length === 0, 'stunned panel reads SLASH IT with no orbs');
+    expect(look.stunned).toBe(true);
+    expect(look.orbs, 'no answer orbs while stunned').toEqual([]);
+    expect(look.panelText?.[0]).toBe(STUN_PANEL_TEXT);
+    // ENC-006: the stunned target lunges to the hold line, where the finishing slash lands.
+    const held = await g.until(
+      (x) => x.targetDistance !== null && Math.abs(x.targetDistance - REACH_DISTANCE) < DIST_TOL,
+      'stunned target lunges to the hold line',
+    );
+    expect(held.stunned).toBe(true);
+    expect(held.cardId).toBe(shown.cardId);
+    expect(held.orbs).toEqual([]);
     expect(g.errors).toEqual([]);
   });
 
