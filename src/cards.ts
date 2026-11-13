@@ -32,7 +32,7 @@ import { CardSlash } from './card-slash.js';
 import { UltimateInput } from './card-ultimate.js';
 import { stepFrameClocks, type FrameClocks } from './flashcards/input-clock.js';
 import { finishGamepad, mergePendingEnemy, swingGamepad } from './flashcards/finish-haptic.js';
-import { mergeOrbPick, type OrbPick } from './flashcards/orb-pick.js';
+import { mergeOrbPick } from './flashcards/orb-pick.js';
 import { slashTargets } from './flashcards/slash-targets.js';
 import { panelPrompt, showsAnswerOrbs } from './flashcards/stun-look.js';
 import { resolveUltimate, ultimateOrb } from './flashcards/ultimate-input.js';
@@ -106,7 +106,7 @@ export class CardsSystem extends createSystem({
   // The gamepad is captured in the press callback (trigger still held) or from the swinging hand; it
   // rumbles only if this turns out to be the finishing slash (finishGamepad). Hand tracking has none.
   private pendingEnemy: { id: string; gamepad: Gamepad | undefined } | null = null;
-  private pendingOrb: OrbPick<Entity, Gamepad> | null = null;
+  private pendingOrb: Entity | null = null;
   private pendingUltimateOrb = false;
   private ultimate!: UltimateInput;
   private fxRoot!: Entity;
@@ -264,7 +264,7 @@ export class CardsSystem extends createSystem({
       const pad = left?.getSelecting() ? left : right?.getSelecting() ? right : undefined;
       this.pendingEnemy = { id, gamepad: pad?.gamepad };
     } else if (this.panel.hasOrb(entity)) {
-      this.pendingOrb = mergeOrbPick(this.pendingOrb, { orb: entity, gamepad: undefined });
+      this.pendingOrb = mergeOrbPick(this.pendingOrb, entity);
     }
   }
 
@@ -281,7 +281,7 @@ export class CardsSystem extends createSystem({
           id: hit.id,
           gamepad: swingGamepad(hit.handedness, this.input.xr.gamepads),
         });
-      } else this.pendingOrb = mergeOrbPick(this.pendingOrb, { orb: hit.orb, gamepad: undefined });
+      } else this.pendingOrb = mergeOrbPick(this.pendingOrb, hit.orb);
     }
   }
 
@@ -331,10 +331,9 @@ export class CardsSystem extends createSystem({
   }
 
   private applyOrb(): void {
-    const pick = this.pendingOrb;
-    if (pick === null) return;
+    const orb = this.pendingOrb;
+    if (orb === null) return;
     this.pendingOrb = null;
-    const { orb } = pick;
     const label = this.panel.labelOf(orb);
     if (label === undefined) return;
     if (this.menuOpen) {
