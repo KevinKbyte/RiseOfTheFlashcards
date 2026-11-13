@@ -4,7 +4,7 @@
 
 import { PANEL_LAYOUT } from './panel-layout.js';
 
-export type EncounterPhase = 'advancing' | 'slashable' | 'answering' | 'telegraph' | 'stunned' | 'cleared';
+export type EncounterPhase = 'advancing' | 'slashable' | 'answering' | 'telegraph' | 'stunned';
 
 export interface EncounterConfig {
   spawnDistance: number;
@@ -115,7 +115,6 @@ export function tick(enc: Encounter, dt: number): Encounter {
       return { ...enc, stunElapsed, distance: from + (cfg.reachDistance - from) * eased };
     }
     case 'slashable':
-    case 'cleared':
       return enc;
   }
 }
@@ -139,12 +138,6 @@ export function slash(enc: Encounter): Encounter {
 export function stun(enc: Encounter): Encounter {
   if (enc.phase !== 'answering' && enc.phase !== 'telegraph') return enc;
   return { ...enc, phase: 'stunned', telegraphLeft: 0, stunFrom: enc.distance, stunElapsed: 0 };
-}
-
-/** Correct answer; during the telegraph this cancels the pending hit. */
-export function resolveCorrect(enc: Encounter): Encounter {
-  if (enc.phase !== 'answering' && enc.phase !== 'telegraph') return enc;
-  return { ...enc, phase: 'cleared', telegraphLeft: 0 };
 }
 
 function wrapAngle(a: number): number {

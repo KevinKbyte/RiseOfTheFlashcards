@@ -120,7 +120,7 @@ export function slashEnemy(wave: Wave, id: string): Wave {
     const active = wave.active.map((e, i) => (i === idx ? { ...e, enc, pool } : e));
     return { ...wave, active };
   }
-  // Defeated: it leaves the wave instead of lingering in the 'cleared' phase.
+  // Defeated: it leaves the wave.
   const kept = wave.active.filter((_, i) => i !== idx);
   const refill = spawn(wave.queue, wave.queueSizes, wave.maxActive - kept.length, wave.cfg);
   return {
