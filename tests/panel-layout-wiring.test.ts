@@ -26,6 +26,7 @@ import { EnemyField } from '../src/card-enemy-field.js';
 import { QuestionPanel } from '../src/card-question-panel.js';
 import { createEncounter, ENCOUNTER_DEFAULTS } from '../src/flashcards/encounter.js';
 import { ENEMY_RISE_M, orbPositions, panelPlacement } from '../src/flashcards/panel-layout.js';
+import { createPool } from '../src/flashcards/pool.js';
 import type { Wave } from '../src/flashcards/wave.js';
 
 interface FakeEntity {
@@ -103,7 +104,7 @@ describe('enemy field parks enemies at the panel-layout rise', () => {
       const field = new EnemyField(world);
       const cfg = ENCOUNTER_DEFAULTS;
       const enc = { ...createEncounter(cfg), phase: 'slashable' as const, distance: cfg.reachDistance };
-      const wave = { active: [{ id: 'e1', enc }], targetId: null, cfg } as unknown as Wave;
+      const wave = { active: [{ id: 'e1', enc, pool: createPool(['e1']) }], targetId: null, cfg } as unknown as Wave;
       const eye = new Vector3(0, eyeY, 0);
       field.spawnMissing(wave, [], eye, () => 0);
       field.update(wave, 1, 0);

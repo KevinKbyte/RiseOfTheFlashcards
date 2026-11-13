@@ -14,6 +14,7 @@ import { EnemyField } from '../src/card-enemy-field.js';
 import { createEncounter, ENCOUNTER_DEFAULTS } from '../src/flashcards/encounter.js';
 import { FAN_SLOT_BEARINGS_DEG, fanSlotGoal } from '../src/flashcards/fan.js';
 import { ENEMY_RISE_M } from '../src/flashcards/panel-layout.js';
+import { createPool } from '../src/flashcards/pool.js';
 import type { Wave } from '../src/flashcards/wave.js';
 
 interface FakeEntity {
@@ -42,6 +43,7 @@ function arrivedWave(ids: readonly string[]): Wave {
   const active = ids.map((id) => ({
     id,
     enc: { ...createEncounter(CFG), phase: 'slashable' as const, distance: HOLD },
+    pool: createPool([id]),
   }));
   return { active, targetId: null, cfg: CFG } as unknown as Wave;
 }

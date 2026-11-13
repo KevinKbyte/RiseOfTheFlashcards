@@ -20,6 +20,7 @@ import type { World } from '@iwsdk/core';
 import { applyGlow, buildEnemy, type EnemyParts, type Glow } from '../src/card-enemy.js';
 import { EnemyField } from '../src/card-enemy-field.js';
 import { createEncounter, ENCOUNTER_DEFAULTS, type EncounterPhase } from '../src/flashcards/encounter.js';
+import { createPool } from '../src/flashcards/pool.js';
 import type { Wave } from '../src/flashcards/wave.js';
 
 const PURPLE = new Color(0x7c3aed);
@@ -82,7 +83,7 @@ function fieldWith(phase: EncounterPhase): { rim: Color } {
   } as unknown as World;
   const field = new EnemyField(world);
   const wave = {
-    active: [{ id: 'a', enc: { ...createEncounter(CFG), phase, distance: CFG.reachDistance } }],
+    active: [{ id: 'a', enc: { ...createEncounter(CFG), phase, distance: CFG.reachDistance }, pool: createPool(['a']) }],
     targetId: 'a',
     cfg: CFG,
   } as unknown as Wave;
