@@ -372,7 +372,6 @@ export class CardsSystem extends createSystem({
   // Stunned target (CARDS-012): its answer orbs go and the panel reads "SLASH IT" until the
   // finishing slash; the next card's showPanel brings back the question and fresh orbs.
   private showStunLook(): void {
-    if (this.menuOpen || !this.panel.isOpen) return;
     if (!showsAnswerOrbs(this.targetEnemy()?.enc.phase ?? null)) {
       for (const orb of [...this.panel.orbs()]) this.panel.removeOrb(orb);
     }
