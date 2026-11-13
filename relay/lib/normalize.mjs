@@ -4,6 +4,7 @@ export function normalize(s) {
   return s
     .normalize('NFKD')
     .replace(/\p{Mn}/gu, '')
+    .replace(/\p{Cf}/gu, '')
     .toLowerCase()
     .replace(/\p{P}/gu, ' ')
     .replace(/\s+/gu, ' ')
