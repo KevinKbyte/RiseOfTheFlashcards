@@ -11,9 +11,9 @@ browser). Anything marked `TBD (Kev)` is owner-only.
 | Tagline (140 chars, hackathon.md:80) | Humanity forgot them. They didn't forget. |
 | Track (rules.md:143) | Gaming |
 | Division (rules.md:144) | New Experience (editable until 2026-11-18 12:00 PT, guidelines.md:101) |
-| Team name | TBD (Kev) |
+| Team name | Rise of the Flashcards |
 | Project link (rules.md:140) | TBD (Kev): public demo URL of the hosted web build (opens in the Quest browser) |
-| Repo link | TBD (Kev) |
+| Repo link | https://github.com/KevinKbyte/RiseOfTheFlashcards |
 | Video (rules.md:141) | TBD (Kev): YouTube URL on the game's own channel, under 3 min, public |
 | Screenshots | TBD (Kev): at least 3, each passing the frame review (no people, logos, brands, screens, photos) |
 | Content rating (rules.md:154) | Target 10+ |
