@@ -1,0 +1,500 @@
+{
+  "generator": {
+    "script": "scripts/fsrs/gen_vectors.py",
+    "py_fsrs_version": "6.3.2"
+  },
+  "parameters": [
+    0.212,
+    1.2931,
+    2.3065,
+    8.2956,
+    6.4133,
+    0.8334,
+    3.0194,
+    0.001,
+    1.8722,
+    0.1666,
+    0.796,
+    1.4835,
+    0.0614,
+    0.2629,
+    1.6483,
+    0.6014,
+    1.8729,
+    0.5425,
+    0.0912,
+    0.0658,
+    0.1542
+  ],
+  "desired_retention": 0.9,
+  "maximum_interval": 365,
+  "learning_steps": [],
+  "relearning_steps": [],
+  "enable_fuzzing": false,
+  "cases": [
+    {
+      "id": "first-again",
+      "card_created": "2026-01-01T09:00:00Z",
+      "steps": [
+        {
+          "rating": 1,
+          "review": "2026-01-01T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 0.212,
+            "difficulty": 6.4133,
+            "due": "2026-01-02T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-01-02T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 1.8867876195204154,
+            "difficulty": 6.402115069296838,
+            "due": "2026-01-04T09:00:00Z"
+          }
+        }
+      ]
+    },
+    {
+      "id": "first-hard",
+      "card_created": "2026-01-01T09:00:00Z",
+      "steps": [
+        {
+          "rating": 2,
+          "review": "2026-01-01T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 1.2931,
+            "difficulty": 5.112170705601056,
+            "due": "2026-01-02T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-01-02T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 4.546029441066125,
+            "difficulty": 5.102286904192293,
+            "due": "2026-01-07T09:00:00Z"
+          }
+        }
+      ]
+    },
+    {
+      "id": "first-good",
+      "card_created": "2026-01-01T09:00:00Z",
+      "steps": [
+        {
+          "rating": 3,
+          "review": "2026-01-01T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 2.3065,
+            "difficulty": 2.118103970459016,
+            "due": "2026-01-03T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-01-03T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 10.964332335820698,
+            "difficulty": 2.111214235785395,
+            "due": "2026-01-14T09:00:00Z"
+          }
+        }
+      ]
+    },
+    {
+      "id": "first-easy",
+      "card_created": "2026-01-01T09:00:00Z",
+      "steps": [
+        {
+          "rating": 4,
+          "review": "2026-01-01T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 8.2956,
+            "difficulty": 1.0,
+            "due": "2026-01-09T09:00:00Z"
+          }
+        },
+        {
+          "rating": 4,
+          "review": "2026-01-09T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 65.62422616189994,
+            "difficulty": 1.0,
+            "due": "2026-03-16T09:00:00Z"
+          }
+        }
+      ]
+    },
+    {
+      "id": "good-streak-to-cap",
+      "card_created": "2026-01-01T09:00:00Z",
+      "steps": [
+        {
+          "rating": 3,
+          "review": "2026-01-01T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 2.3065,
+            "difficulty": 2.118103970459016,
+            "due": "2026-01-03T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-01-03T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 10.964332335820698,
+            "difficulty": 2.111214235785395,
+            "due": "2026-01-14T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-01-14T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 46.28021728755693,
+            "difficulty": 2.1043313908464483,
+            "due": "2026-03-01T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-03-01T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 162.86220163874916,
+            "difficulty": 2.0974554287524403,
+            "due": "2026-08-11T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-08-11T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 497.4471936002745,
+            "difficulty": 2.0905863426205262,
+            "due": "2027-08-11T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2027-08-11T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 1172.3755535348007,
+            "difficulty": 2.083724125574744,
+            "due": "2028-08-10T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2028-08-10T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 1854.0776350986175,
+            "difficulty": 2.0768687707460076,
+            "due": "2029-08-10T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2029-08-10T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 2517.3218988689123,
+            "difficulty": 2.0700202712721,
+            "due": "2030-08-10T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2030-08-10T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 3162.824727481385,
+            "difficulty": 2.0631786202976663,
+            "due": "2031-08-10T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2031-08-10T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 3793.1971799828148,
+            "difficulty": 2.056343810974207,
+            "due": "2032-08-09T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2032-08-09T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 4410.73020754522,
+            "difficulty": 2.049515836460071,
+            "due": "2033-08-09T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2033-08-09T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 5017.239935611297,
+            "difficulty": 2.0426946899204492,
+            "due": "2034-08-09T09:00:00Z"
+          }
+        }
+      ]
+    },
+    {
+      "id": "lapse-mid-streak",
+      "card_created": "2026-01-01T09:00:00Z",
+      "steps": [
+        {
+          "rating": 3,
+          "review": "2026-01-01T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 2.3065,
+            "difficulty": 2.118103970459016,
+            "due": "2026-01-03T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-01-03T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 10.964332335820698,
+            "difficulty": 2.111214235785395,
+            "due": "2026-01-14T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-01-14T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 46.28021728755693,
+            "difficulty": 2.1043313908464483,
+            "due": "2026-03-01T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-03-01T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 162.86220163874916,
+            "difficulty": 2.0974554287524403,
+            "due": "2026-08-11T09:00:00Z"
+          }
+        },
+        {
+          "rating": 1,
+          "review": "2026-08-11T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 4.716043938383379,
+            "difficulty": 7.387715706030851,
+            "due": "2026-08-16T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-08-16T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 12.104700830201201,
+            "difficulty": 7.375556359621658,
+            "due": "2026-08-28T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-08-28T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 27.609809706090214,
+            "difficulty": 7.363409172558875,
+            "due": "2026-09-25T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-09-25T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 59.045595281869524,
+            "difficulty": 7.351274132683154,
+            "due": "2026-11-23T09:00:00Z"
+          }
+        }
+      ]
+    },
+    {
+      "id": "early-review",
+      "card_created": "2026-01-01T09:00:00Z",
+      "steps": [
+        {
+          "rating": 3,
+          "review": "2026-01-01T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 2.3065,
+            "difficulty": 2.118103970459016,
+            "due": "2026-01-03T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-01-03T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 10.964332335820698,
+            "difficulty": 2.111214235785395,
+            "due": "2026-01-14T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-01-08T21:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 30.13323120791683,
+            "difficulty": 2.1043313908464483,
+            "due": "2026-02-07T21:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-02-07T21:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 111.76099647796741,
+            "difficulty": 2.0974554287524403,
+            "due": "2026-05-30T21:00:00Z"
+          }
+        }
+      ]
+    },
+    {
+      "id": "late-review",
+      "card_created": "2026-01-01T09:00:00Z",
+      "steps": [
+        {
+          "rating": 3,
+          "review": "2026-01-01T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 2.3065,
+            "difficulty": 2.118103970459016,
+            "due": "2026-01-03T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-01-03T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 10.964332335820698,
+            "difficulty": 2.111214235785395,
+            "due": "2026-01-14T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-02-05T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 80.75845496012795,
+            "difficulty": 2.1043313908464483,
+            "due": "2026-04-27T09:00:00Z"
+          }
+        },
+        {
+          "rating": 2,
+          "review": "2026-04-27T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 192.9907776207181,
+            "difficulty": 4.743715608383524,
+            "due": "2026-11-06T09:00:00Z"
+          }
+        }
+      ]
+    },
+    {
+      "id": "mixed-ratings",
+      "card_created": "2026-01-01T09:00:00Z",
+      "steps": [
+        {
+          "rating": 4,
+          "review": "2026-01-01T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 8.2956,
+            "difficulty": 1.0,
+            "due": "2026-01-09T09:00:00Z"
+          }
+        },
+        {
+          "rating": 2,
+          "review": "2026-01-09T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 26.704183359371363,
+            "difficulty": 4.010608969296839,
+            "due": "2026-02-05T09:00:00Z"
+          }
+        },
+        {
+          "rating": 1,
+          "review": "2026-02-05T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 2.243101208886583,
+            "difficulty": 8.016556265363716,
+            "due": "2026-02-07T09:00:00Z"
+          }
+        },
+        {
+          "rating": 4,
+          "review": "2026-02-07T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 7.675020836045853,
+            "difficulty": 7.339010167023143,
+            "due": "2026-02-15T09:00:00Z"
+          }
+        },
+        {
+          "rating": 3,
+          "review": "2026-02-23T09:00:00Z",
+          "expect": {
+            "state": 2,
+            "stability": 25.07872505820399,
+            "difficulty": 7.326899526152959,
+            "due": "2026-03-20T09:00:00Z"
+          }
+        }
+      ]
+    }
+  ]
+}

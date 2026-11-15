@@ -1,0 +1,117 @@
+<!--
+  Device-spike probe board. ProbeSystem writes each row's status and evidence
+  text by element id (row-<premise>-status, row-<premise>-evidence).
+-->
+<style>
+  .panel-root {
+    flex-direction: column;
+    width: 640px;
+  }
+
+  .panel-content {
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 18px;
+    padding-bottom: 12px;
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .heading {
+    color: #fafaf7;
+    font-size: 26px;
+    font-weight: 700;
+  }
+
+  .label {
+    color: #f5d90a;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .row {
+    flex-direction: column;
+    gap: 2px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  .row-head {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .title {
+    color: #fafaf7;
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .status {
+    color: #dddfe3;
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .evidence {
+    color: #b8bbc2;
+    font-size: 18px;
+  }
+
+  .controls {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding-left: 18px;
+    padding-right: 18px;
+    padding-bottom: 18px;
+  }
+
+  .load-value {
+    color: #fafaf7;
+    font-size: 18px;
+    font-weight: 700;
+  }
+</style>
+<Panel class="panel-root">
+  <div class="panel-content">
+    <div class="heading">Device spike probe</div>
+    <div id="probe-label" class="label">Quest 2 evidence; judges use Quest 3/3S</div>
+    <div class="row">
+      <div class="row-head"><div class="title">a Mic in immersive session</div><div id="row-a-status" class="status">PENDING</div></div>
+      <div id="row-a-evidence" class="evidence">-</div>
+    </div>
+    <div class="row">
+      <div class="row-head"><div class="title">b Whisper tiny.en WebGPU p50</div><div id="row-b-status" class="status">PENDING</div></div>
+      <div id="row-b-evidence" class="evidence">-</div>
+    </div>
+    <div class="row">
+      <div class="row-head"><div class="title">c Input sources</div><div id="row-c-status" class="status">PENDING</div></div>
+      <div id="row-c-evidence" class="evidence">-</div>
+    </div>
+    <div class="row">
+      <div class="row-head"><div class="title">d Persistence</div><div id="row-d-status" class="status">PENDING</div></div>
+      <div id="row-d-evidence" class="evidence">-</div>
+    </div>
+    <div class="row">
+      <div class="row-head"><div class="title">e Frame rate</div><div id="row-e-status" class="status">PENDING</div></div>
+      <div id="row-e-evidence" class="evidence">-</div>
+    </div>
+    <div class="row">
+      <div class="row-head"><div class="title">f immersive-ar + planes/mesh</div><div id="row-f-status" class="status">PENDING</div></div>
+      <div id="row-f-evidence" class="evidence">-</div>
+    </div>
+    <div class="row">
+      <div class="row-head"><div class="title">g Offline reload</div><div id="row-g-status" class="status">PENDING</div></div>
+      <div id="row-g-evidence" class="evidence">-</div>
+    </div>
+  </div>
+  <div class="controls">
+    <Button id="load-minus"><ButtonLabel>Load -</ButtonLabel></Button>
+    <div id="load-value" class="load-value">load 0</div>
+    <Button id="load-plus"><ButtonLabel>Load +</ButtonLabel></Button>
+    <Button id="ar-button"><ButtonLabel>Run AR probe</ButtonLabel></Button>
+    <Button id="audio-button"><ButtonLabel>Re-run audio</ButtonLabel></Button>
+  </div>
+</Panel>
