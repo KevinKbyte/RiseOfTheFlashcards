@@ -4,9 +4,9 @@
 
 Seated mixed-reality flashcard combat for Meta Quest 3/3S. Humanity abandoned its flashcards, deciding they were boring and
 procrastinating on them all the time, so now the flashcards are on a rampage. Card-enemies emerge from your real walls (scene
-understanding); you slash a card with your hand, then say the answer aloud. Correct answers deal damage, bigger enemies carry multi-card
-health pools, and you dodge their attacks by leaning or ducking. Silent mode swaps voice for slashable answer orbs. Spaced repetition
-decides which cards come back.
+understanding), one at a time, each a stack of cards. Slash an enemy with your hand to reveal its question, then slash the answer orb
+you think is right. A correct answer stuns the enemy (green glow, panel reads "SLASH IT") and a finishing slash knocks the card off; a
+wrong orb or a landed attack costs one of your Shields. FSRS spaced repetition decides which cards come back.
 
 - Status: pre-alpha. Entry for Meta VR Start Developer Competition 2026 (Gaming track). The play link above is not live until the
   GitHub Pages deploy (prebuilt `gh-pages` branch) is done.

@@ -7,6 +7,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Changed
 
+- README intro describes the shipped WebXR gameplay (answer orbs, stun and finishing slash, Shields); retired dodge and voice
+  wording removed.
 - Plan/spec (Kev 2026-11-12, stun cue and reach): a stunned enemy lunges (short ease, 0.3 s build default) from the 2 m push-back
   to the 0.7 m hold line so a hand slash reaches it; its glow switches to a distinct stun colour, its answer orbs are removed and
   the panel reads "SLASH IT" (D23 (h), (i), ENC-006, CARDS-004, CARDS-012).
