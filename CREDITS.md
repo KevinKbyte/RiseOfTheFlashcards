@@ -14,6 +14,9 @@ asset (rules.md:179), so a row lands in the same commit as the asset.
   which would mark every asset as credited.
 - Starter decks: Kev-authored, public domain, or CC only.
 
+The WebXR game in the webxr/ folder keeps its own asset and dependency credits in webxr/CREDITS.md (unbackticked here: backticks
+are coverage claims).
+
 ## Assets
 
 | Path | Author | License | Source URL | Notes |

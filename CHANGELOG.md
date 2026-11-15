@@ -40,6 +40,8 @@ All notable changes to this project are documented here. Format: [Keep a Changel
 
 ### Added
 
+- WebXR game source (former `game-iwsdk` repo, main `f8e7c34`) imported with full history under `webxr/` via git subtree; README
+  now leads with the GitHub Pages play link (`cards.html`), documents `webxr/`, and runs root tests by explicit path.
 - MATCH-001..004: deterministic answer matcher (`relay/lib/matcher.mjs`) with 62 golden cases (`tests/fixtures/matcher-golden.json`);
   early start approved by Kev 2026-10-31.
 - Matcher round-2 fixes: MATCH-002 margin tolerance, MATCH-003 hedge guard checks aliases, MATCH-005 input limits.
