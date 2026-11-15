@@ -46,3 +46,6 @@ pids/
 .cursor/mcp.json
 .vscode/mcp.json
 .codex/config.toml
+
+# local agent config with machine-specific paths
+opencode.json
