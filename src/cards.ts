@@ -435,7 +435,7 @@ export class CardsSystem extends createSystem({
     const prompt = panelPrompt(target?.enc.phase ?? null, question);
     const pool = target?.pool;
     const cards = pool === undefined ? '' : `   ${livesLabel(hp(pool), pool.maxHp)}`;
-    return [prompt, `Shields: ${this.pips}${cards}`];
+    return [prompt, `Braincells: ${this.pips}${cards}`];
   }
 }
 

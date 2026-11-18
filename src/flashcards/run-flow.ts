@@ -44,7 +44,7 @@ export interface RunFlowStep {
 const TEXT = {
   'day-cleared': 'Day cleared! Well done.',
   'deck-conquered': 'Deck conquered! Every card mastered.',
-  lose: 'Shields down. Try again.',
+  lose: 'Braincells down. Try again.',
   practice: 'Practice done. No cards due today.',
 } as const;
 
