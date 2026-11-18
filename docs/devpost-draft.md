@@ -8,7 +8,7 @@ browser). Anything marked `TBD (Kev)` is owner-only.
 | Field | Value |
 |---|---|
 | Submission name | Rise of the Flashcards |
-| Tagline (140 chars, hackathon.md:80) | Humanity forgot them. They didn't forget. |
+| Tagline (140 chars, hackathon.md:80) | the flashcards you never reviewed are back and they're hunting you. Slash the right answer to save your braincells. |
 | Track (rules.md:143) | Gaming |
 | Division (rules.md:144) | New Experience (editable until 2026-11-18 12:00 PT, guidelines.md:101) |
 | Team name | Rise of the Flashcards |
