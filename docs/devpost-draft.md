@@ -12,7 +12,7 @@ browser). Anything marked `TBD (Kev)` is owner-only.
 | Track (rules.md:143) | Gaming |
 | Division (rules.md:144) | New Experience (editable until 2026-11-18 12:00 PT, guidelines.md:101) |
 | Team name | Rise of the Flashcards |
-| Project link (rules.md:140) | TBD (Kev): public demo URL of the hosted web build (opens in the Quest browser) |
+| Project link (rules.md:140) | https://kevinkbyte.github.io/RiseOfTheFlashcards/cards.html (opens in the Quest browser) |
 | Repo link | https://github.com/KevinKbyte/RiseOfTheFlashcards |
 | Video (rules.md:141) | TBD (Kev): YouTube URL on the game's own channel, under 3 min, public |
 | Screenshots | TBD (Kev): at least 3, each passing the frame review (no people, logos, brands, screens, photos) |
@@ -52,8 +52,9 @@ ends. Correct answers charge an ultimate that knocks the attacking enemy back. A
 back and when, and your progress is saved per deck.
 
 **How we built it.** Built on Meta's Immersive Web SDK (IWSDK), so it runs as a WebXR page in the Quest browser with nothing to install;
-the desktop IWER emulator runs it too. The session uses passthrough and WebXR plane detection: enemies emerge from your detected walls,
-and if no walls are known they spawn on an even ring around you. The FSRS spaced-repetition algorithm (ts-fsrs) schedules each card.
+in local development (`npm run dev`) the desktop IWER emulator runs it too. The session uses passthrough and WebXR plane detection:
+enemies emerge from your detected walls, and if no walls are known they spawn on an even ring around you. The FSRS spaced-repetition
+algorithm (ts-fsrs) schedules each card.
 Three starter decks are built in (World Capitals, Opposites, Basic Science), and you can import your own deck as JSON (paste or file) on
 the 2D page before entering VR; duplicate cards get a keep/drop review with a confirm step and Undo. Everything is stored in the
 browser's local storage on your device; there are no accounts and no game server.
@@ -73,8 +74,9 @@ shield pips and a gesture-fired ultimate.
 
 ## Testing instructions
 
-1. On a Quest 3 or 3S, open TBD (Kev) (demo URL) in the Quest browser and enter VR. Hands or controllers both work. On desktop, the same
-   URL runs in the IWER emulator.
+1. On a Quest 3 or 3S, open https://kevinkbyte.github.io/RiseOfTheFlashcards/cards.html in the Quest browser and enter VR. Hands
+   or controllers both work. A Quest 3 or 3S headset is required for the hosted build; a desktop browser shows the 2D deck page but cannot
+   enter XR.
 2. Optional: before entering VR, import your own deck as JSON on the 2D page (paste or choose a file). The three starter decks need no
    setup.
 3. The browser may ask for spatial / room data. Allow it so enemies come out of your walls; deny it (or skip Space Setup) and enemies
