@@ -54,7 +54,8 @@ suite that runs without a headset.
 
 We learned that a scheduler's math is only half the story: how limits are shared across decks matters as much as the forgetting
 curve itself. We learned that an emulator plus automated browser tests can stand in for a headset for most of development. And we
-learned that good questions need careful editing, because one ambiguous card can make a fair fight feel unfair.
+learned that IWSDK is much faster to build on than Unreal Engine: Felix's video on building a tower defense game inspired us to try
+IWSDK, and it let us iterate quickly.
 
 ## What's next for Rise of the Flashcards
 
