@@ -35,6 +35,22 @@ export interface ImportPanelHandle {
   setHidden(hidden: boolean): void;
 }
 
+/** A small valid deck users can copy to write their own; its id clashes with no starter deck. */
+export const EXAMPLE_DECK_JSON = JSON.stringify(
+  {
+    id: 'my-animals',
+    title: 'Animal Sounds (example)',
+    cards: [
+      { id: 'animal-dog', prompt: 'Which animal barks?', answer: 'Dog', aliases: ['Puppy'] },
+      { id: 'animal-cat', prompt: 'Which animal meows?', answer: 'Cat' },
+      { id: 'animal-cow', prompt: 'Which animal moos?', answer: 'Cow' },
+      { id: 'animal-duck', prompt: 'Which animal quacks?', answer: 'Duck' },
+    ],
+  },
+  null,
+  2,
+);
+
 let panelSeq = 0;
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string): HTMLElementTagNameMap[K] {
@@ -125,7 +141,17 @@ export function mountImportPanel(root: HTMLElement, options: ImportPanelOptions)
     file.accept = '.json,.txt,application/json,text/plain';
     file.setAttribute('aria-label', 'Deck file');
     file.addEventListener('change', () => readFile(file));
-    section.append(area, btn('Import', () => update(submitImport(toImport(state)))), file, error);
+    const example = el('pre', EXAMPLE_DECK_JSON);
+    example.dataset.testid = 'import-example';
+    section.append(
+      area,
+      btn('Import', () => update(submitImport(toImport(state)))),
+      btn('Load example', () => update(setImportText(toImport(state), EXAMPLE_DECK_JSON))),
+      file,
+      error,
+      el('p', 'Example deck (copy this shape):'),
+      example,
+    );
     return section;
   }
 
