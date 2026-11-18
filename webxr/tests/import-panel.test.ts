@@ -405,3 +405,74 @@ describe('import panel: hide during XR', () => {
     expect(deckListText(root).some((t) => t.includes('My Deck'))).toBe(true);
   });
 });
+
+// Requirement: the import panel shows users an example deck they can follow to write their own
+// (user ask, 2026-11-18: "shouldn't the deck json have some sort of example that the user can follow
+// so they know how to make cards for import"). src/import-panel.ts exports EXAMPLE_DECK_JSON, the
+// pretty-printed JSON of a small valid deck (id, title, cards with id/prompt/answer; at least 4
+// cards with 4 distinct non-numeric answers; at least one card shows the optional aliases array)
+// whose id clashes with no starter deck. The import section renders it as text in a <pre>
+// (data-testid="import-example"). A "Load example" button puts it into the textarea and the
+// MenuState importText without importing; Import then adds the example deck to the deck list.
+// Covers: M11, A10
+describe('import panel: example deck to follow', () => {
+  async function example(): Promise<string> {
+    const mod = (await import('../src/import-panel.js')) as unknown as Record<string, unknown>;
+    const json = mod.EXAMPLE_DECK_JSON;
+    if (typeof json !== 'string') throw new Error('import-panel does not export EXAMPLE_DECK_JSON: string');
+    return json;
+  }
+
+  it('EXAMPLE_DECK_JSON is pretty-printed JSON of a deck parseDeck accepts', async () => {
+    const { parseDeck } = await import('../src/flashcards/deck-schema.js');
+    const json = await example();
+    expect(json).toContain('\n');
+    const parsed = JSON.parse(json) as { id: string; title: string; cards: DeckCard[] };
+    expect(JSON.stringify(parsed, null, 2)).toBe(json.trim());
+    expect(parseDeck(parsed).ok).toBe(true);
+    expect(parsed.cards.length).toBeGreaterThanOrEqual(4);
+    for (const card of parsed.cards) {
+      expect(typeof card.id).toBe('string');
+      expect(typeof card.prompt).toBe('string');
+      expect(typeof card.answer).toBe('string');
+    }
+    const answers = new Set(parsed.cards.map((card) => card.answer.trim().toLowerCase()));
+    expect(answers.size).toBeGreaterThanOrEqual(4);
+    for (const a of answers) expect(a).not.toMatch(/^[+-]?[\d.,]+$/);
+    expect(parsed.cards.some((card) => Array.isArray(card.aliases) && card.aliases.length > 0)).toBe(true);
+  });
+
+  it('the example deck id does not collide with any starter deck id', async () => {
+    const parsed = JSON.parse(await example()) as { id: string };
+    expect(STARTER_DECKS.map((d) => d.id)).not.toContain(parsed.id);
+  });
+
+  it('renders the example as text in a <pre> with data-testid="import-example"', async () => {
+    const json = await example();
+    const { root } = mount();
+    const shown = byTestId(root, 'import-example');
+    expect(shown.tagName).toBe('PRE');
+    expect(shown.textContent).toBe(json);
+  });
+
+  it('"Load example" fills the textarea and importText without importing', async () => {
+    const json = await example();
+    const { root, last } = mount();
+    const before = importState().decks.length;
+    button(root, /^Load example$/).click();
+    const area = root.querySelector('textarea');
+    expect(area?.value).toBe(json);
+    expect(last().importText).toBe(json);
+    expect(last().screen).toBe('import');
+    expect(last().decks).toHaveLength(before);
+  });
+
+  it('Import after "Load example" adds the example deck to the deck list', async () => {
+    const parsed = JSON.parse(await example()) as { id: string; title: string };
+    const { root, last } = mount();
+    button(root, /^Load example$/).click();
+    button(root, /^import$/i).click();
+    expect(last().decks.some((d) => d.id === parsed.id)).toBe(true);
+    expect(deckListText(root).some((t) => t.includes(parsed.title))).toBe(true);
+  });
+});

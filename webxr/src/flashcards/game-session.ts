@@ -8,7 +8,7 @@ import { loadReview, startEncounter, submitAnswer, type Attempt, type Encounter,
 import { startFlow, stepFlow, type RunFlowEffect, type RunFlowEvent, type RunFlowState } from './run-flow.js';
 import { readDecks, writeDecks, type DeckRead } from './deck-store.js';
 import { planPoolSizes } from './pool.js';
-import { fireUltimate as fireRunUltimate } from './run-state.js';
+import { fireUltimate as fireRunUltimate, RUN_CARD_CAP } from './run-state.js';
 import { readSave, type SaveStorage } from './save.js';
 
 export interface SessionEnv {
@@ -115,7 +115,11 @@ export function startRun(s: GameSession): SessionStep {
   if (!deck || menu === s.menu) return same(s);
   const env = envOf(s);
   const review = loadReview(env.storage, deck.cards, env.clock(), { deckId: deck.id, knownDecks: s.menu.decks });
-  const flow = startFlow({ cardIds: review.queue.ids });
+  // The daily New-card budget is shared by every deck, so once it is spent each queue is empty;
+  // a practice replay over the deck's first cards keeps every deck playable.
+  const cardIds =
+    review.queue.ids.length === 0 ? deck.cards.slice(0, RUN_CARD_CAP).map((c) => c.id) : review.queue.ids;
+  const flow = startFlow({ cardIds });
   const byId = new Map(deck.cards.map((c) => [c.id, c]));
   const cards = flow.state.run.cards.flatMap((id) => byId.get(id) ?? []);
   return {
