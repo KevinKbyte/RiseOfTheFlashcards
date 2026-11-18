@@ -143,11 +143,23 @@ export function mountImportPanel(root: HTMLElement, options: ImportPanelOptions)
     file.addEventListener('change', () => readFile(file));
     const example = el('pre', EXAMPLE_DECK_JSON);
     example.dataset.testid = 'import-example';
-    section.append(
-      area,
+    area.style.display = 'block';
+    area.style.width = '100%';
+    area.style.boxSizing = 'border-box';
+    const actions = el('div');
+    actions.dataset.testid = 'import-actions';
+    actions.style.display = 'flex';
+    actions.style.gap = '8px';
+    actions.style.flexWrap = 'wrap';
+    actions.style.alignItems = 'center';
+    actions.append(
       btn('Import', () => update(submitImport(toImport(state)))),
       btn('Load example', () => update(setImportText(toImport(state), EXAMPLE_DECK_JSON))),
       file,
+    );
+    section.append(
+      area,
+      actions,
       error,
       el('p', 'Example deck (copy this shape):'),
       example,
