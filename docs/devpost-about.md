@@ -38,8 +38,8 @@ Our biggest bug surfaced on submission day. The daily limit of 12 new cards was 
 emptied every other deck's queue too, and every deck showed "Practice done" at once. We fixed it the same day with a replay run, so
 you can keep practicing.
 
-Testing VR input without a headset was hard. We leaned on the IWSDK emulator to drive hand and controller interactions in
-automated tests.
+We had a Quest 2 but no Quest 3, so we could not try every device ourselves, and putting a headset on for every change is slow.
+We leaned on the IWSDK emulator to drive hand and controller interactions in automated tests.
 
 Writing fair multiple-choice distractors was harder than expected. A wrong option has to be plausible but clearly wrong; one card
 had to be reworded so that only one answer was right.
