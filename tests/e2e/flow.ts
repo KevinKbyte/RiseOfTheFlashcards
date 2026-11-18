@@ -8,7 +8,7 @@ export const START = 'Start';
 /** HUD stack label on the question panel's second line (src/flashcards/pool.ts livesLabel). */
 export const cardsLabel = (remaining: number, total: number): string => `Cards ${remaining}/${total}`;
 
-/** The panel's HUD line (`Shields: N   Cards r/t`), or null while no question panel is drawn. */
+/** The panel's HUD line (`Braincells: N   Cards r/t`), or null while no question panel is drawn. */
 export const hudLine = (s: GameState): string | null => s.panelText?.[1] ?? null;
 
 /** The revealed card is the run's last: one enemy left on the field, on its last card, nothing queued. */

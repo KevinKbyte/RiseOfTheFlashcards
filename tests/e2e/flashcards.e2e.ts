@@ -3,14 +3,14 @@
 // player behind a start screen whose 'Start' orb leads to deck select; pointing the ray at a deck orb
 // and pulling the trigger starts a run fought one stack at a time: a single card enemy (12 cards ->
 // stacks of 3, 4 and a 5-card boss) walks into the centre slot and shows its card by itself when it
-// parks at the hold line (an early select still reveals it), with the HUD line `Shields: N   Cards r/t`;
+// parks at the hold line (an early select still reveals it), with the HUD line `Braincells: N   Cards r/t`;
 // a wrong orb costs one shield pip and is removed while the card stays; the right orb only stuns the
 // enemy (panel line 1 reads "SLASH IT", its answer orbs are disposed, and over 0.3 s it lunges to the
 // 0.7 m hold line and stays there; no card is removed) and selecting the stunned enemy knocks the
 // card off: the next card of the same enemy shows with its question and fresh orbs (`Cards r/t` down by one)
 // or, on its last card, the enemy leaves and the next stack walks into the centre slot; a select on a
 // revealed, not stunned enemy does nothing; the win message shows only after the last finishing
-// select, and losing all 5 shields shows "Shields down. Try again."; progress is saved per deck to
+// select, and losing all 5 braincells shows "Braincells down. Try again."; progress is saved per deck to
 // localStorage under flashcards.fsrs.save (other decks' progress untouched), survives a reload
 // unchanged, and cards already answered correctly are not served again in the next run that day.
 import { mkdirSync } from 'node:fs';
@@ -43,7 +43,7 @@ const RUN_STACKS = [3, 4, 5];
 /** src/flashcards/fan.ts FAN_SLOT_BEARINGS_DEG index of the 0 deg (straight ahead) slot. */
 const CENTRE_SLOT = 1;
 const START_PIPS = 5;
-const LOSE_TEXT = 'Shields down. Try again.';
+const LOSE_TEXT = 'Braincells down. Try again.';
 const WIN_TEXTS = ['Day cleared! Well done.', 'Deck conquered! Every card mastered.'];
 /** src/flashcards/stun-look.ts STUN_PANEL_TEXT: panel line 1 while the target is stunned. */
 const STUN_PANEL_TEXT = 'SLASH IT';
@@ -67,7 +67,7 @@ async function open(): Promise<Game> {
   return game;
 }
 
-const hud = (pips: number, remaining: number, total: number) => `Shields: ${pips}   ${cardsLabel(remaining, total)}`;
+const hud = (pips: number, remaining: number, total: number) => `Braincells: ${pips}   ${cardsLabel(remaining, total)}`;
 
 /** Fan slot of the enemy view `id`, read from the drawn enemy field. */
 async function slotOf(g: Game, id: string): Promise<number | null | undefined> {

@@ -451,7 +451,7 @@ describe('enemyHit: a landed strike costs a pip, capped once per encounter', () 
     expect(r.state.run.pips).toBe(0);
     expect(r.effects).toEqual([
       { type: 'pips', remaining: 0 },
-      { type: 'endScreen', kind: 'lose', text: 'Shields down. Try again.' },
+      { type: 'endScreen', kind: 'lose', text: 'Braincells down. Try again.' },
     ]);
     expectPlainWords(endScreens(r.effects)[0].text, ids);
   });

@@ -74,7 +74,7 @@ describe('question panel takes its placement from panel-layout', () => {
       const panel = new QuestionPanel(world);
       const eye = new Vector3(0.2, eyeY, -0.3);
       const labels = ['a', 'b', 'c', 'd'];
-      const orbs = panel.show(eye, yaw, ['Capital of France?', 'Shields 3  Hits 0'], labels);
+      const orbs = panel.show(eye, yaw, ['Capital of France?', 'Braincells 3  Hits 0'], labels);
 
       const anchor = created[0].object3D;
       const panelMesh = anchor.children[0];
