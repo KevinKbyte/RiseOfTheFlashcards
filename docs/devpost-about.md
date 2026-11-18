@@ -7,10 +7,10 @@ flashcards are on a rampage. Rise of the Flashcards turns every card you skipped
 ## What it does
 
 Flashcards are enemies that approach you in passthrough mixed reality. Each card's question floats with a set of answer orbs, and you
-slash the right answer with your hand or a controller. A wrong answer, or a card that reaches you, costs one of your five lives. Five
-right answers charge your ultimate, a gold orb that blasts the attacker back. A spaced-repetition scheduler decides which cards come
-back and when. The game ships with starter decks, and you can import your own deck as JSON, with a built-in example to copy from.
-Progress saves on your device; there is no account.
+slash the right answer with your hand or a controller. A wrong answer, or a card that reaches you, costs one of your five
+braincells; run out of braincells and you lose. Five right answers charge your ultimate, a gold orb that blasts the attacker back.
+A spaced-repetition scheduler decides which cards come back and when. The game ships with starter decks, and you can import your
+own deck as JSON, with a built-in example to copy from. Progress saves on your device; there is no account.
 
 ## How we built it
 
