@@ -9,8 +9,9 @@
 // wrong orb costs a pip and writes exactly one Again rating; a correct orb clears the card and
 // writes exactly one rating; clearing every reserved card and then the wave (the finishing slash,
 // Kev 2026-11-12) is a WIN, never the last correct orb alone, and the mastery text then
-// reflects the new ratings; losing every pip is a LOSE; an empty queue is a practice run that
-// never WINs; progress survives a reload (a new session on the same storage sees prior ratings);
+// reflects the new ratings; losing every pip is a LOSE; an empty FSRS queue (every card rated
+// today, or the shared daily New-card budget spent) is a replay run over the deck's first 12 cards
+// with no immediate end screen (see tests/game-session-deck-replay.test.ts); progress survives a reload (a new session on the same storage sees prior ratings);
 // a storage read failure leaves the game playable but never writes (it would clobber a save we
 // never saw). Progress is per deck (see tests/per-deck-progress.test.ts). The clock and storage are
 // injected; the session is immutable.
@@ -300,21 +301,17 @@ describe('game-session: menu -> run -> review glue for the cards scene', () => {
     expect(storage.writes).toHaveLength(5);
   });
 
-  it('an empty queue (every card already rated today) is a practice run that never wins', () => {
+  it('an empty queue (every card already rated today) is a replay run over the deck cards with no immediate end screen', () => {
     const storage = memoryStorage();
     const cards = Object.fromEntries(SMALL.cards.map((c) => [c.id, applyRating(undefined, 'good', NOW)]));
     expect(writeSave({ ...emptySave(), decks: { [SMALL.id]: cards } }, storage)).toBe(true);
-    const writesBefore = storage.writes.length;
     const { step, ids } = started(storage, SMALL.id);
-    expect(ids).toEqual([]);
-    const ends = endScreens(step.effects);
-    expect(ends.map((e) => e.kind)).toEqual(['practice-done']);
+    expect(ids).toEqual(SMALL.cards.map((c) => c.id));
+    expect(pips(step.effects)).toEqual([5]);
+    expect(endScreens(step.effects)).toEqual([]);
+    expect(step.session.run?.run.status).toBe('active');
     const cleared = waveCleared(step.session);
     expect(endScreens(cleared.effects)).toEqual([]);
-    const id = SMALL.cards[0].id;
-    const tryCorrect = correctOrb(presented(step.session, id, 'e1').session, id);
-    expect(endScreens(tryCorrect.effects)).toEqual([]);
-    expect(storage.writes).toHaveLength(writesBefore);
   });
 
   it('progress survives a reload: a new session on the same storage sees prior ratings', () => {
